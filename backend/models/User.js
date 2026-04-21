@@ -1,0 +1,163 @@
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+
+const userSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 50
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true
+    },
+
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+      select: false
+    },
+
+    avatar: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    full_name: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: ""
+    },
+
+    gender: {
+      type: String,
+      trim: true,
+      enum: ["male", "female", "other"],
+      default: ""
+    },
+
+    bodyShape: {
+      type: String,
+      trim: true,
+      enum: ["rectangle", "triangle", "inverted_triangle", "hourglass", "round", ""],
+      default: ""
+    },
+
+    favoriteStyles: {
+      type: [String],
+      default: []
+    },
+
+    favoriteColors: {
+      type: [String],
+      default: []
+    },
+
+    sizeProfile: {
+      top: {
+        type: String,
+        trim: true,
+        default: ""
+      },
+      bottom: {
+        type: String,
+        trim: true,
+        default: ""
+      },
+      shoes: {
+        type: String,
+        trim: true,
+        default: ""
+      }
+    },
+
+    budgetRange: {
+      min: {
+        type: Number,
+        min: 0,
+        default: 0
+      },
+      max: {
+        type: Number,
+        min: 0,
+        default: 0
+      }
+    },
+
+    role: {
+      type: String,
+      trim: true,
+      enum: ["user", "admin"],
+      default: "user"
+    },
+
+    address: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    phone_number: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  },
+  { timestamps: true }
+);
+
+userSchema.index({ username: 1 });
+userSchema.index({ favoriteStyles: 1 });
+userSchema.index({ favoriteColors: 1 });
+
+userSchema.pre("save", async function savePassword(next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+userSchema.methods.comparePassword = function comparePassword(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.pre("findOneAndUpdate", async function hashPasswordOnUpdate(next) {
+  const update = this.getUpdate();
+
+  if (!update || !update.password) {
+    return next();
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    update.password = await bcrypt.hash(update.password, salt);
+    this.setUpdate(update);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+export default mongoose.model("User", userSchema);

@@ -1,0 +1,15 @@
+export { default as categoryController } from "./category.controller.js";
+export { default as userController } from "./user.controller.js";
+export { default as productController } from "./product.controller.js";
+export { default as productVariantController } from "./productVariant.controller.js";
+export { default as productImageController } from "./productImage.controller.js";
+export { default as outfitController } from "./outfit.controller.js";
+export { default as searchHistoryController } from "./searchHistory.controller.js";
+export { default as userBehaviorController } from "./userBehavior.controller.js";
+export { default as wishlistController } from "./wishlist.controller.js";
+export { default as cartController } from "./cart.controller.js";
+export { default as cartItemController } from "./cartItem.controller.js";
+export { default as orderController } from "./order.controller.js";
+export { default as orderItemController } from "./orderItem.controller.js";
+export { default as paymentController } from "./payment.controller.js";
+export { default as reviewController } from "./review.controller.js";

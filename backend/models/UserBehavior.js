@@ -1,0 +1,114 @@
+import mongoose from "mongoose";
+
+const behaviorSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null
+    },
+
+    outfitId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Outfit",
+      default: null
+    },
+
+    actionType: {
+      type: String,
+      required: true,
+      trim: true,
+      enum: [
+        "view_product",
+        "view_outfit",
+        "search",
+        "click",
+        "favorite",
+        "add_to_cart",
+        "remove_from_cart",
+        "add_to_wishlist",
+        "remove_from_wishlist",
+        "purchase"
+      ]
+    },
+
+    source: {
+      type: String,
+      trim: true,
+      enum: [
+        "home",
+        "search",
+        "category",
+        "recommendation",
+        "wishlist",
+        "cart",
+        "product_page",
+        "outfit",
+        "other"
+      ],
+      default: "other"
+    },
+
+    duration: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
+
+    searchKeyword: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    metadata: {
+      categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+        default: null
+      },
+      style: {
+        type: String,
+        trim: true,
+        default: ""
+      },
+      color: {
+        type: String,
+        trim: true,
+        default: ""
+      },
+      position: {
+        type: Number,
+        min: 0,
+        default: null
+      },
+      deviceType: {
+        type: String,
+        trim: true,
+        enum: ["desktop", "mobile", "tablet", ""],
+        default: ""
+      }
+    },
+
+    sessionId: {
+      type: String,
+      trim: true,
+      default: ""
+    }
+  },
+  { timestamps: true }
+);
+
+behaviorSchema.index({ userId: 1, createdAt: -1 });
+behaviorSchema.index({ userId: 1, actionType: 1, createdAt: -1 });
+behaviorSchema.index({ productId: 1, actionType: 1 });
+behaviorSchema.index({ outfitId: 1, actionType: 1 });
+
+export default mongoose.model("UserBehavior", behaviorSchema);
