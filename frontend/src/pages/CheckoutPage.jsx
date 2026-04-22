@@ -36,19 +36,19 @@ export default function CheckoutPage() {
     }
   };
 
-  const inputClass = "border border-slate-200 rounded-xl px-4 py-3.5 bg-slate-50/50 text-slate-900 transition-all focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 focus:outline-none w-full text-[0.95rem]";
-  const labelClass = "flex flex-col gap-2 font-medium text-slate-700 text-[0.95rem]";
+  const inputClass = "border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full text-sm";
+  const labelClass = "flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest";
 
   return (
-    <div className="px-4 md:px-8 py-8 md:py-12 max-w-3xl mx-auto">
+    <div className="px-4 md:px-0 py-8 max-w-3xl mx-auto">
       <PageHeader
-        title="Thanh toán"
-        description="Điền thông tin để hoàn tất đơn hàng của bạn."
+        title="THANH TOÁN"
+        description="ĐIỀN THÔNG TIN ĐỂ HOÀN TẤT ĐƠN HÀNG CỦA BẠN."
       />
-      <form className="bg-white p-8 md:p-10 rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-slate-100 mt-8" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <form className="bg-white border border-gray-200 p-8 md:p-10 mt-8" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <label className={labelClass}>
-            Tên người nhận
+            TÊN NGƯỜI NHẬN
             <input
               className={inputClass}
               value={form.receiverName}
@@ -59,7 +59,7 @@ export default function CheckoutPage() {
             />
           </label>
           <label className={labelClass}>
-            Số điện thoại
+            SỐ ĐIỆN THOẠI
             <input
               className={inputClass}
               value={form.receiverPhone}
@@ -71,9 +71,9 @@ export default function CheckoutPage() {
           </label>
         </div>
         
-        <div className="flex flex-col gap-6 mb-8">
+        <div className="flex flex-col gap-8 mb-10">
           <label className={labelClass}>
-            Địa chỉ giao hàng
+            ĐỊA CHỈ GIAO HÀNG
             <input
               className={inputClass}
               value={form.shippingAddress}
@@ -84,7 +84,7 @@ export default function CheckoutPage() {
             />
           </label>
           <label className={labelClass}>
-            Ghi chú đơn hàng (Tùy chọn)
+            GHI CHÚ ĐƠN HÀNG (TÙY CHỌN)
             <textarea
               className={`${inputClass} resize-none`}
               rows="3"
@@ -94,29 +94,32 @@ export default function CheckoutPage() {
             />
           </label>
           <label className={labelClass}>
-            Phương thức thanh toán
-            <select
-              className={inputClass}
-              value={form.paymentMethod}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, paymentMethod: event.target.value }))
-              }
-            >
-              <option value="cod">Thanh toán khi nhận hàng (COD)</option>
-              <option value="bank_transfer">Chuyển khoản ngân hàng</option>
-              <option value="card">Thẻ tín dụng / Thẻ ghi nợ</option>
-              <option value="ewallet">Ví điện tử</option>
-            </select>
+            PHƯƠNG THỨC THANH TOÁN
+            <div className="relative">
+              <select
+                className={`${inputClass} appearance-none`}
+                value={form.paymentMethod}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, paymentMethod: event.target.value }))
+                }
+              >
+                <option value="cod">Thanh toán khi nhận hàng (COD)</option>
+                <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                <option value="card">Thẻ tín dụng / Thẻ ghi nợ</option>
+                <option value="ewallet">Ví điện tử</option>
+              </select>
+              <svg className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
           </label>
         </div>
 
-        {error ? <p className="text-red-500 bg-red-50 px-6 py-4 rounded-xl border border-red-100 font-medium mb-8 text-center">{error}</p> : null}
+        {error ? <p className="text-red-500 bg-red-50 px-6 py-4 border border-red-100 font-bold mb-8 text-center text-sm">{error}</p> : null}
         
-        <div className="pt-6 border-t border-slate-100">
+        <div className="pt-8 border-t border-gray-200">
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full px-8 py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex justify-center items-center gap-2 cursor-pointer text-lg"
+            className="w-full px-8 py-4 bg-black text-white font-bold hover:bg-gray-800 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 cursor-pointer uppercase tracking-widest text-xs"
           >
             {loading ? (
               <>
@@ -124,9 +127,9 @@ export default function CheckoutPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Đang xử lý...
+                ĐANG XỬ LÝ...
               </>
-            ) : "Xác nhận đặt hàng"}
+            ) : "XÁC NHẬN ĐẶT HÀNG"}
           </button>
         </div>
       </form>

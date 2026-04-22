@@ -32,7 +32,7 @@ export default function AdminUsersPage() {
           ...changes
         }
       });
-      setMessage("User updated");
+      setMessage("Đã cập nhật người dùng");
       loadUsers();
     } catch (updateError) {
       setError(updateError.message);
@@ -41,36 +41,37 @@ export default function AdminUsersPage() {
 
   return (
     <section className="grid gap-6">
-      <AdminPageHeader title="Users" description="Manage roles and account activation." />
-      {message ? <p className="text-green-600 font-medium m-0">{message}</p> : null}
-      {error ? <p className="text-red-500 font-medium m-0">{error}</p> : null}
-      <section className="bg-white rounded-[24px] p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-black/5">
-        <div className="grid gap-3">
+      <AdminPageHeader title="NGƯỜI DÙNG" description="Quản lý phân quyền và kích hoạt tài khoản." />
+      {message ? <p className="text-black bg-gray-100 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-black m-0">{message}</p> : null}
+      {error ? <p className="text-red-600 bg-red-50 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-red-600 m-0">{error}</p> : null}
+      <section className="bg-white border border-gray-200 p-7">
+        <h3 className="text-black text-sm m-0 mb-6 pb-4 border-b border-gray-200 font-bold uppercase tracking-widest">DANH SÁCH NGƯỜI DÙNG</h3>
+        <div className="grid gap-0 divide-y divide-gray-100">
           {users.map((user) => (
-            <div key={user._id} className="flex justify-between gap-4 p-4 items-center bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+            <div key={user._id} className="flex justify-between gap-4 py-4 items-center hover:bg-gray-50 transition-colors px-2">
               <div>
-                <strong className="block text-slate-800 mb-1">{user.full_name || user.username}</strong>
-                <p className="m-0 text-sm text-slate-500">
-                  {user.email} · <span className="font-medium text-slate-700 capitalize">{user.role}</span> ·{" "}
-                  <span className={user.isActive ? "text-green-600 font-medium" : "text-red-500 font-medium"}>
-                    {user.isActive ? "active" : "inactive"}
+                <strong className="block text-black mb-1 text-sm">{user.full_name || user.username}</strong>
+                <p className="m-0 text-xs text-gray-500 uppercase tracking-widest">
+                  {user.email} · <span className="font-bold text-black">{user.role === 'admin' ? 'QUẢN TRỊ VIÊN' : 'NGƯỜI DÙNG'}</span> ·{" "}
+                  <span className={user.isActive ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                    {user.isActive ? "HOẠT ĐỘNG" : "BỊ KHÓA"}
                   </span>
                 </p>
               </div>
               <div className="flex gap-3 items-center shrink-0">
                 <select
-                  className="border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-900 transition-all text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                  className="border border-gray-300 px-3 py-2 bg-white text-black font-bold uppercase tracking-widest transition-colors text-xs focus:border-black focus:outline-none cursor-pointer"
                   value={user.role}
                   onChange={(event) => updateUser(user, { role: event.target.value })}
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
+                  <option value="user">NGƯỜI DÙNG</option>
+                  <option value="admin">QUẢN TRỊ VIÊN</option>
                 </select>
                 <button
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors cursor-pointer border ${user.isActive ? "text-red-600 bg-red-50 border-red-200 hover:bg-red-100" : "text-green-600 bg-green-50 border-green-200 hover:bg-green-100"}`}
+                  className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer border ${user.isActive ? "text-red-600 bg-white border-red-600 hover:bg-red-600 hover:text-white" : "text-green-600 bg-white border-green-600 hover:bg-green-600 hover:text-white"}`}
                   onClick={() => updateUser(user, { isActive: !user.isActive })}
                 >
-                  {user.isActive ? "Deactivate" : "Activate"}
+                  {user.isActive ? "KHÓA TÀI KHOẢN" : "KÍCH HOẠT"}
                 </button>
               </div>
             </div>

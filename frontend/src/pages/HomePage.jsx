@@ -7,19 +7,22 @@ import { attachVariantsToProducts } from "../lib/catalog.js";
 
 const editCards = [
   {
-    title: "Thời trang Nam",
+    title: "THỜI TRANG NAM",
     copy: "Phom dáng thoải mái, tông màu nhã nhặn và những món đồ cơ bản linh hoạt.",
-    tone: "bg-[#e7ddd1] text-slate-900"
+    tone: "bg-gray-100 text-black",
+    link: "/products?gender=male"
   },
   {
-    title: "Thời trang Nữ",
+    title: "THỜI TRANG NỮ",
     copy: "Đường nét mềm mại, layer thông minh và trang phục dạo phố thanh lịch.",
-    tone: "bg-[#ded4c9] text-slate-900"
+    tone: "bg-gray-200 text-black",
+    link: "/products?gender=female"
   },
   {
-    title: "Bộ sưu tập",
+    title: "BỘ SƯU TẬP",
     copy: "Khám phá các gợi ý phối đồ và lựa chọn cá nhân hóa từ dữ liệu của bạn.",
-    tone: "bg-slate-900 text-white"
+    tone: "bg-black text-white",
+    link: "/recommendations"
   }
 ];
 
@@ -27,6 +30,7 @@ export default function HomePage() {
   const { token } = useAuth();
   const [products, setProducts] = useState([]);
   const [variants, setVariants] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -48,6 +52,19 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!token) return;
+      try {
+        const response = await apiRequest("/recommendations/me", { token });
+        setRecommendations(response.data.slice(0, 4));
+      } catch (err) {
+        console.error("Lỗi khi tải gợi ý:", err);
+      }
+    };
+    loadRecommendations();
+  }, [token]);
+
   const productsWithVariants = useMemo(
     () => attachVariantsToProducts(products, variants),
     [products, variants]
@@ -66,16 +83,6 @@ export default function HomePage() {
       [...productsWithVariants]
         .sort((left, right) => (right.totalReviews || 0) - (left.totalReviews || 0))
         .slice(0, 4),
-    [productsWithVariants]
-  );
-
-  const menswear = useMemo(
-    () => productsWithVariants.filter((item) => item.gender === "male" || item.gender === "unisex").slice(0, 4),
-    [productsWithVariants]
-  );
-
-  const womenswear = useMemo(
-    () => productsWithVariants.filter((item) => item.gender === "female" || item.gender === "unisex").slice(0, 4),
     [productsWithVariants]
   );
 
@@ -117,60 +124,60 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-16 pb-16">
-      <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-900 text-white rounded-[2rem] mx-4 mt-4 shadow-2xl">
+      {/* Hero Banner (Full bleed) */}
+      <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-black text-white w-screen -ml-[50vw] left-1/2">
         <img 
           src="https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2071&auto=format&fit=crop" 
           alt="Hero background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay scale-105 hover:scale-100 transition-transform duration-[10s]"
+          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-105 hover:scale-100 transition-transform duration-[10s]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-        <div className="relative z-10 text-center max-w-3xl px-6 flex flex-col items-center">
-          <span className="uppercase tracking-[0.3em] text-xs font-bold text-brand-primary mb-6 block bg-white/10 px-4 py-2 rounded-full backdrop-blur-md border border-white/10">Xu hướng Xuân Hè 2026</span>
-          <h2 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
-            Nâng tầm phong cách cá nhân của bạn
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+        <div className="relative z-10 text-center max-w-4xl px-6 flex flex-col items-center mt-20">
+          <span className="uppercase tracking-[0.3em] text-xs font-bold mb-6 block border border-white px-4 py-2 bg-black/30 backdrop-blur-sm">SPRING SUMMER 2026</span>
+          <h2 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight tracking-tight uppercase">
+            SỰ TỐI GIẢN LÊN NGÔI
           </h2>
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl leading-relaxed font-light">
-            Khám phá trải nghiệm mua sắm thời trang hiện đại với bộ sưu tập độc quyền, hệ thống gợi ý thông minh và quy trình thanh toán mượt mà.
+          <p className="text-lg text-white/80 mb-10 max-w-2xl leading-relaxed">
+            Khám phá trải nghiệm mua sắm thời trang hiện đại với bộ sưu tập độc quyền, mang đậm dấu ấn cá nhân và sự tinh tế.
           </p>
           <div className="flex gap-4 flex-wrap justify-center">
-            <Link className="px-8 py-4 bg-white text-slate-900 rounded-full font-bold hover:bg-brand-primary hover:text-white transition-all hover:-translate-y-1 shadow-lg hover:shadow-brand-primary/30" to="/products">
-              Khám phá ngay
+            <Link className="px-10 py-4 bg-white text-black font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors" to="/products">
+              MUA NGAY
             </Link>
-            <Link className="px-8 py-4 bg-white/10 text-white rounded-full font-bold hover:bg-white/20 transition-all backdrop-blur-md border border-white/20" to="/recommendations">
-              Gợi ý cho bạn
+            <Link className="px-10 py-4 bg-transparent text-white border border-white font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-colors" to="/recommendations">
+              GỢI Ý CHO BẠN
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Featured Categories Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-1">
         {editCards.map((item) => (
-          <article key={item.title} className={`relative h-[400px] rounded-[2rem] p-8 flex flex-col justify-end overflow-hidden group transition-transform hover:-translate-y-2 shadow-sm hover:shadow-xl ${item.tone}`}>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <article key={item.title} className={`relative h-[500px] p-10 flex flex-col justify-end overflow-hidden group ${item.tone}`}>
             <div className="relative z-10">
-              <span className="uppercase tracking-[0.2em] text-xs font-bold opacity-70 mb-2 block">Bộ sưu tập</span>
-              <h3 className="text-3xl font-bold mb-3">{item.title}</h3>
-              <p className="opacity-80 mb-6 leading-relaxed max-w-[90%]">{item.copy}</p>
-              <Link to="/products" className="inline-block border-b-2 border-current pb-1 font-bold tracking-wide hover:opacity-70 transition-opacity">Khám phá</Link>
+              <h3 className="text-2xl font-bold mb-4 uppercase tracking-wider">{item.title}</h3>
+              <p className="opacity-80 mb-8 leading-relaxed max-w-[90%] text-sm">{item.copy}</p>
+              <Link to={item.link} className="inline-block border-b-2 border-current pb-1 font-bold tracking-widest uppercase text-xs hover:opacity-50 transition-opacity">KHÁM PHÁ</Link>
             </div>
           </article>
         ))}
       </section>
 
-      {message ? <p className="mx-4 md:mx-8 text-green-600 bg-green-50 px-6 py-4 rounded-xl border border-green-100 font-medium">{message}</p> : null}
-      {error ? <p className="mx-4 md:mx-8 text-red-500 bg-red-50 px-6 py-4 rounded-xl border border-red-100 font-medium">{error}</p> : null}
+      {message ? <p className="text-black bg-gray-100 px-6 py-4 border-l-4 border-black font-medium">{message}</p> : null}
+      {error ? <p className="text-red-600 bg-red-50 px-6 py-4 border-l-4 border-red-600 font-medium">{error}</p> : null}
 
-      <section className="px-4 md:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+      {/* New Arrivals */}
+      <section>
+        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4 border-b border-gray-200 pb-4">
           <div>
-            <span className="uppercase tracking-[0.2em] text-xs font-bold text-brand-primary mb-2 block">Hàng mới về</span>
-            <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Sản phẩm mới nhất</h2>
+            <h2 className="text-3xl font-extrabold tracking-widest text-black uppercase">SẢN PHẨM MỚI</h2>
           </div>
-          <Link className="font-bold text-brand-primary hover:text-slate-900 transition-colors border-b-2 border-transparent hover:border-slate-900 pb-1" to="/products">
-            Xem tất cả →
+          <Link className="font-bold text-black hover:text-gray-500 transition-colors border-b-2 border-transparent hover:border-black pb-1 text-xs uppercase tracking-widest" to="/products">
+            XEM TẤT CẢ
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
           {newArrivals.map((product) => (
             <ProductCard
               key={product._id}
@@ -182,38 +189,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <article className="p-12 rounded-[2rem] flex flex-col items-start justify-center min-h-[400px] bg-slate-900 text-white relative overflow-hidden group">
-          <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1974&auto=format&fit=crop" alt="Menswear" className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-700" />
+      {/* Large Featured Panels */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-1 w-screen -ml-[50vw] left-1/2 relative">
+        <article className="p-12 flex flex-col items-center justify-center min-h-[600px] bg-black text-white relative overflow-hidden group text-center">
+          <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1974&auto=format&fit=crop" alt="Menswear" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" />
           <div className="relative z-10 max-w-md">
-            <span className="uppercase tracking-[0.2em] text-xs font-bold text-white/70 mb-3 block">Dành cho nam</span>
-            <h3 className="text-4xl font-bold mb-4 leading-tight">Phong cách lịch lãm & Phóng khoáng</h3>
-            <p className="text-white/80 mb-8 text-lg">Trang phục thiết yếu hàng ngày mang đến sự cân bằng hoàn hảo giữa sự thoải mái và sang trọng.</p>
-            <Link to="/products?gender=male" className="px-8 py-4 bg-white text-slate-900 rounded-full font-bold hover:bg-brand-primary hover:text-white transition-all shadow-lg">Khám phá thời trang Nam</Link>
+            <span className="uppercase tracking-[0.3em] text-xs font-bold text-white/70 mb-4 block">BỘ SƯU TẬP</span>
+            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight uppercase tracking-wider">THỜI TRANG NAM</h3>
+            <p className="text-white/80 mb-10 text-sm leading-relaxed">Trang phục thiết yếu hàng ngày mang đến sự cân bằng hoàn hảo giữa sự thoải mái và sang trọng.</p>
+            <Link to="/products?gender=male" className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors inline-block">MUA NGAY</Link>
           </div>
         </article>
-        <article className="p-12 rounded-[2rem] flex flex-col items-start justify-center min-h-[400px] bg-[#f0e8df] text-slate-900 relative overflow-hidden group">
-          <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop" alt="Womenswear" className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700 mix-blend-multiply" />
+        <article className="p-12 flex flex-col items-center justify-center min-h-[600px] bg-gray-100 text-black relative overflow-hidden group text-center">
+          <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop" alt="Womenswear" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000 grayscale" />
           <div className="relative z-10 max-w-md">
-            <span className="uppercase tracking-[0.2em] text-xs font-bold text-slate-500 mb-3 block">Dành cho nữ</span>
-            <h3 className="text-4xl font-bold mb-4 leading-tight">Đường nét mềm mại, hiện đại</h3>
-            <p className="text-slate-600 mb-8 text-lg">Cập nhật tủ đồ của bạn từ trang phục công sở thanh lịch đến dạo phố sành điệu.</p>
-            <Link to="/products?gender=female" className="px-8 py-4 bg-slate-900 text-white rounded-full font-bold hover:bg-brand-primary transition-all shadow-lg">Khám phá thời trang Nữ</Link>
+            <span className="uppercase tracking-[0.3em] text-xs font-bold text-black/70 mb-4 block">BỘ SƯU TẬP</span>
+            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight uppercase tracking-wider">THỜI TRANG NỮ</h3>
+            <p className="text-black/80 mb-10 text-sm leading-relaxed">Cập nhật tủ đồ của bạn từ trang phục công sở thanh lịch đến dạo phố sành điệu.</p>
+            <Link to="/products?gender=female" className="px-10 py-4 bg-black text-white font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors inline-block">MUA NGAY</Link>
           </div>
         </article>
       </section>
 
-      <section className="px-4 md:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+      {/* Best Sellers */}
+      <section className="mt-8">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4 border-b border-gray-200 pb-4">
           <div>
-            <span className="uppercase tracking-[0.2em] text-xs font-bold text-brand-primary mb-2 block">Thịnh hành</span>
-            <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">Bán chạy nhất</h2>
+            <h2 className="text-3xl font-extrabold tracking-widest text-black uppercase">BÁN CHẠY NHẤT</h2>
           </div>
-          <Link className="font-bold text-brand-primary hover:text-slate-900 transition-colors border-b-2 border-transparent hover:border-slate-900 pb-1" to="/recommendations">
-            Gợi ý dành riêng cho bạn →
+          <Link className="font-bold text-black hover:text-gray-500 transition-colors border-b-2 border-transparent hover:border-black pb-1 text-xs uppercase tracking-widest" to="/products">
+            XEM TẤT CẢ
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
           {bestSellers.map((product) => (
             <ProductCard
               key={product._id}
@@ -225,29 +233,48 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-4 md:mx-8 bg-slate-50 rounded-[2rem] p-12 grid grid-cols-1 md:grid-cols-3 gap-12 text-center divide-y md:divide-y-0 md:divide-x divide-slate-200">
-        <div className="flex flex-col items-center pt-8 md:pt-0">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-slate-900">Theo dõi hành vi</h3>
-          <p className="text-slate-500 leading-relaxed">Mỗi lượt thích, thêm vào giỏ hàng và xem sản phẩm đều giúp hệ thống hiểu bạn hơn.</p>
+      {/* Features - Minimalist */}
+      <section className="border-t border-b border-gray-200 py-16 grid grid-cols-1 md:grid-cols-3 gap-12 text-center mt-8">
+        <div className="flex flex-col items-center">
+          <span className="text-2xl mb-4 block">01</span>
+          <h3 className="text-sm font-bold mb-3 uppercase tracking-widest">GIAO HÀNG TOÀN QUỐC</h3>
+          <p className="text-gray-500 text-sm leading-relaxed max-w-xs">Miễn phí giao hàng cho tất cả đơn hàng từ 500,000đ trở lên.</p>
         </div>
-        <div className="flex flex-col items-center pt-8 md:pt-0">
-          <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-slate-900">Gợi ý cá nhân hóa</h3>
-          <p className="text-slate-500 leading-relaxed">Người dùng nhận được những gợi ý sản phẩm dựa trên hồ sơ, tìm kiếm và lịch sử mua sắm.</p>
+        <div className="flex flex-col items-center">
+          <span className="text-2xl mb-4 block">02</span>
+          <h3 className="text-sm font-bold mb-3 uppercase tracking-widest">ĐỔI TRẢ DỄ DÀNG</h3>
+          <p className="text-gray-500 text-sm leading-relaxed max-w-xs">Hỗ trợ đổi trả trong vòng 30 ngày kể từ khi nhận hàng.</p>
         </div>
-        <div className="flex flex-col items-center pt-8 md:pt-0">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-slate-900">Thanh toán tức thì</h3>
-          <p className="text-slate-500 leading-relaxed">Từ lúc xem sản phẩm đến lúc tạo đơn hàng, giao diện luôn kết nối mượt mà với API của bạn.</p>
+        <div className="flex flex-col items-center">
+          <span className="text-2xl mb-4 block">03</span>
+          <h3 className="text-sm font-bold mb-3 uppercase tracking-widest">HỖ TRỢ 24/7</h3>
+          <p className="text-gray-500 text-sm leading-relaxed max-w-xs">Đội ngũ chăm sóc khách hàng luôn sẵn sàng hỗ trợ bạn.</p>
         </div>
       </section>
+
+      {/* Recommended for You */}
+      {token && recommendations.length > 0 ? (
+        <section className="mt-4">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4 border-b border-gray-200 pb-4">
+            <div>
+              <h2 className="text-3xl font-extrabold tracking-widest text-black uppercase">GỢI Ý CHO BẠN</h2>
+            </div>
+            <Link className="font-bold text-black hover:text-gray-500 transition-colors border-b-2 border-transparent hover:border-black pb-1 text-xs uppercase tracking-widest" to="/recommendations">
+              XEM TẤT CẢ
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+            {recommendations.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                onAddToWishlist={token ? (item) => handleWishlist(item, "home") : null}
+                onAddToCart={token ? handleAddToCart : null}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

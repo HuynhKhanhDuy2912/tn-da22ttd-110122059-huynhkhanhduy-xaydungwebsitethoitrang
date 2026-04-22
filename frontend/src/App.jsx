@@ -7,7 +7,6 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage.jsx";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage.jsx";
-import AdminOutfitsPage from "./pages/admin/AdminOutfitsPage.jsx";
 import AdminProductImagesPage from "./pages/admin/AdminProductImagesPage.jsx";
 import AdminProductsPage from "./pages/admin/AdminProductsPage.jsx";
 import AdminUsersPage from "./pages/admin/AdminUsersPage.jsx";
@@ -86,7 +85,6 @@ export default function App() {
             <Route path="products" element={<AdminProductsPage />} />
             <Route path="product-images" element={<AdminProductImagesPage />} />
             <Route path="variants" element={<AdminVariantsPage />} />
-            <Route path="outfits" element={<AdminOutfitsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
           </Route>

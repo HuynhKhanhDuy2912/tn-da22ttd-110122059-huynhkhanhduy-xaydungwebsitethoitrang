@@ -30,19 +30,17 @@ export default function RegisterPage() {
   };
 
   return (
-    <section className="min-h-[80vh] flex items-center justify-center py-12 px-4 relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-3xl max-h-[600px] bg-gradient-to-tr from-brand-primary/5 via-transparent to-blue-500/5 blur-3xl -z-10 rounded-full pointer-events-none"></div>
-
-      <form className="bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60 w-full max-w-md relative z-10" onSubmit={handleSubmit}>
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Đăng ký</h2>
-          <p className="text-slate-500 text-sm">Tạo tài khoản mới để trải nghiệm mua sắm.</p>
+    <section className="min-h-[70vh] flex items-center justify-center py-12 px-4 bg-white">
+      <form className="w-full max-w-md" onSubmit={handleSubmit}>
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-extrabold text-black mb-2 tracking-widest uppercase">ĐĂNG KÝ</h2>
+          <p className="text-gray-500 text-sm">Tạo tài khoản mới để trải nghiệm mua sắm.</p>
         </div>
         
-        <label className="flex flex-col gap-2 font-medium text-slate-700 text-[0.95rem] mb-4">
-          Tên đăng nhập
+        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-6">
+          TÊN ĐĂNG NHẬP
           <input
-            className="border border-slate-200 rounded-xl px-4 py-3.5 bg-slate-50/50 text-slate-900 transition-all focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 focus:outline-none w-full"
+            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
             value={form.username}
             onChange={(event) =>
               setForm((current) => ({ ...current, username: event.target.value }))
@@ -51,10 +49,10 @@ export default function RegisterPage() {
           />
         </label>
         
-        <label className="flex flex-col gap-2 font-medium text-slate-700 text-[0.95rem] mb-4">
-          Họ và tên
+        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-6">
+          HỌ VÀ TÊN
           <input
-            className="border border-slate-200 rounded-xl px-4 py-3.5 bg-slate-50/50 text-slate-900 transition-all focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 focus:outline-none w-full"
+            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
             value={form.full_name}
             onChange={(event) =>
               setForm((current) => ({ ...current, full_name: event.target.value }))
@@ -63,20 +61,20 @@ export default function RegisterPage() {
           />
         </label>
         
-        <label className="flex flex-col gap-2 font-medium text-slate-700 text-[0.95rem] mb-4">
-          Email
+        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-6">
+          EMAIL
           <input
-            className="border border-slate-200 rounded-xl px-4 py-3.5 bg-slate-50/50 text-slate-900 transition-all focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 focus:outline-none w-full"
+            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             placeholder="email@example.com"
           />
         </label>
         
-        <label className="flex flex-col gap-2 font-medium text-slate-700 text-[0.95rem] mb-6">
-          Mật khẩu
+        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-8">
+          MẬT KHẨU
           <input
-            className="border border-slate-200 rounded-xl px-4 py-3.5 bg-slate-50/50 text-slate-900 transition-all focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 focus:outline-none w-full"
+            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
             type="password"
             value={form.password}
             onChange={(event) =>
@@ -86,10 +84,10 @@ export default function RegisterPage() {
           />
         </label>
         
-        {error ? <p className="text-red-500 text-sm font-medium mb-5 text-center bg-red-50 py-2.5 rounded-xl border border-red-100">{error}</p> : null}
+        {error ? <p className="text-red-500 text-sm font-bold mb-6 text-center border border-red-500 py-3">{error}</p> : null}
         
         <button 
-          className="w-full px-6 py-4 rounded-xl font-bold text-white bg-slate-900 hover:bg-black border-none cursor-pointer transition-all shadow-[0_4px_14px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex justify-center items-center gap-2"
+          className="w-full px-6 py-4 font-bold text-white bg-black hover:bg-gray-800 border border-black cursor-pointer transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 uppercase tracking-widest text-sm"
           type="submit" 
           disabled={loading}
         >
@@ -99,14 +97,14 @@ export default function RegisterPage() {
                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
              </svg>
-             Đang tạo tài khoản...
+             ĐANG TẠO TÀI KHOẢN...
            </>
-          ) : "Tạo tài khoản"}
+          ) : "TẠO TÀI KHOẢN"}
         </button>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-slate-500">
-            Đã có tài khoản? <button type="button" onClick={() => navigate('/login')} className="text-brand-primary font-bold hover:underline bg-transparent border-none p-0 cursor-pointer">Đăng nhập ngay</button>
+        <div className="mt-8 text-center border-t border-gray-200 pt-6">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+            ĐÃ CÓ TÀI KHOẢN? <button type="button" onClick={() => navigate('/login')} className="text-black font-extrabold hover:underline bg-transparent border-none p-0 cursor-pointer uppercase ml-1">ĐĂNG NHẬP NGAY</button>
           </p>
         </div>
       </form>

@@ -1,62 +1,58 @@
 import { Link } from "react-router-dom";
+import { ShoppingCart } from "lucide-react";
 
 export default function ProductCard({
   product,
   onAddToWishlist,
   onAddToCart,
-  actionLabel = "Add to cart"
+  actionLabel = "MUA NGAY"
 }) {
   const firstVariant = product.availableVariants?.[0];
-  const previewImage =
-    firstVariant?.image || product.images?.[0] || "https://placehold.co/600x760/f3eadf/7d624c?text=Fashion";
+  const previewImage = product.images?.[0] || firstVariant?.image || "https://placehold.co/600x760/f3eadf/7d624c?text=Fashion";
+  const hoverImage = product.images?.[1] || previewImage;
 
   return (
-    <article className="bg-white rounded-3xl shadow-brand border border-brand-line overflow-hidden flex flex-col transition-shadow hover:shadow-lg">
-      <div className="relative aspect-[3/4] overflow-hidden bg-brand-surface-soft group">
-        <Link to={`/products/${product._id}`} className="block w-full h-full">
-          <img src={previewImage} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+    <article className="group flex flex-col relative bg-white">
+      <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
+        <Link to={`/products/${product._id}`} className="block w-full h-full relative">
+          <img src={previewImage} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" />
+          <img src={hoverImage} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" />
         </Link>
         {product.style && (
-          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-[0.68rem] font-bold uppercase tracking-widest text-brand-text shadow-sm border border-black/5">
+          <div className="absolute top-2 left-2 bg-black text-white px-2 py-1 text-[0.65rem] font-bold uppercase tracking-widest">
             {product.style}
           </div>
         )}
+        
+        {/* Quick actions on hover */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 flex gap-2">
+           {onAddToCart && firstVariant && (
+             <>
+               <Link to={`/products/${product._id}`} className="flex-1 bg-black text-white py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors cursor-pointer flex items-center justify-center text-center">{actionLabel}</Link>
+               <button className="w-10 h-10 bg-white text-black flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer shrink-0" onClick={() => onAddToCart(product, firstVariant)} aria-label="Thêm vào giỏ hàng">
+                 <ShoppingCart className="w-4 h-4" />
+               </button>
+             </>
+           )}
+        </div>
       </div>
-      <div className="p-6 flex-1 flex flex-col">
-        <div className="flex justify-between items-start gap-4 mb-3">
-          <h3 className="m-0 text-xl font-bold leading-tight">
-            <Link to={`/products/${product._id}`} className="hover:text-brand-primary transition-colors">{product.name}</Link>
-          </h3>
-          <p className="m-0 font-bold text-brand-primary whitespace-nowrap text-lg">{product.price?.toLocaleString("vi-VN")} đ</p>
-        </div>
-        <p className="text-[0.95rem] text-brand-muted m-0 line-clamp-2 mb-5 leading-relaxed">{product.description}</p>
-        
+      
+      <div className="pt-4 pb-2 flex-1 flex flex-col">
         {product.recommendationReasons?.length ? (
-          <ul className="list-none p-0 m-0 mb-5 grid gap-2">
-            {product.recommendationReasons.map((reason) => (
-              <li key={reason} className="text-xs text-brand-primary-deep bg-brand-primary/10 px-3 py-2 rounded-lg border border-brand-primary/20">
-                ✨ {reason}
-              </li>
-            ))}
-          </ul>
+          <span className="text-[0.65rem] font-bold text-gray-500 uppercase tracking-widest mb-1">
+            {product.recommendationReasons[0]}
+          </span>
         ) : null}
+        <h3 className="m-0 text-sm font-bold uppercase tracking-wide line-clamp-1 mb-1">
+          <Link to={`/products/${product._id}`} className="hover:text-gray-500 transition-colors">{product.name}</Link>
+        </h3>
+        <p className="m-0 font-bold text-black text-sm mb-2">{product.price?.toLocaleString("vi-VN")} ₫</p>
         
-        {firstVariant ? (
-          <p className="text-sm text-brand-muted m-0 mb-5 pb-5 border-b border-brand-line">
-            Variant: {firstVariant.color} / {firstVariant.size}
-          </p>
-        ) : <div className="mb-5 pb-5 border-b border-brand-line"></div>}
-        
-        <div className="mt-auto flex gap-3 flex-wrap">
-          {onAddToWishlist ? (
-            <button className="flex-1 py-3 px-5 rounded-full border border-brand-line bg-transparent text-brand-text hover:bg-brand-primary/10 hover:border-brand-primary/30 transition-all cursor-pointer text-[0.92rem] font-medium text-center" onClick={() => onAddToWishlist(product)}>
-              Wishlist
-            </button>
-          ) : null}
-          {onAddToCart && firstVariant ? (
-            <button className="flex-1 py-3 px-5 rounded-full bg-brand-primary text-white hover:bg-brand-primary/90 hover:-translate-y-0.5 transition-all cursor-pointer text-[0.92rem] font-medium border-none text-center shadow-[0_8px_16px_rgba(126,90,60,0.2)]" onClick={() => onAddToCart(product, firstVariant)}>{actionLabel}</button>
-          ) : null}
-        </div>
+        {firstVariant && (
+           <p className="text-xs text-gray-500 m-0 uppercase tracking-wider">
+             {firstVariant.color}
+           </p>
+        )}
       </div>
     </article>
   );

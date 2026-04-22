@@ -1,12 +1,11 @@
 export default function PageHeader({ title, description, aside }) {
   return (
-    <div className="flex justify-between gap-4 items-end mb-6 flex-wrap">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8 pb-4 border-b border-gray-200">
       <div>
-        <span className="inline-block mb-2 text-brand-muted text-[0.78rem] tracking-[0.12em] uppercase">FashionStore Collection</span>
-        <h2 className="m-0 text-3xl font-bold">{title}</h2>
-        {description ? <p className="mt-2 mb-0 text-brand-muted">{description}</p> : null}
+        <h2 className="text-2xl md:text-3xl font-extrabold text-black uppercase tracking-wider m-0">{title}</h2>
+        {description && <p className="text-gray-500 mt-2 mb-0 text-sm max-w-2xl leading-relaxed">{description}</p>}
       </div>
-      {aside && <div className="flex gap-2 items-center flex-wrap">{aside}</div>}
+      {aside && <div>{aside}</div>}
     </div>
   );
 }

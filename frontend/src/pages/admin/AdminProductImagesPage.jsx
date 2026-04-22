@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
+import ImageUpload from "../../components/ImageUpload.jsx";
 
 const initialForm = {
   productId: "",
@@ -39,6 +40,11 @@ export default function AdminProductImagesPage() {
     event.preventDefault();
     setError("");
 
+    if (!form.imageUrl) {
+      setError("Vui lòng tải ảnh lên");
+      return;
+    }
+
     try {
       if (editingId) {
         await apiRequest(`/product-images/${editingId}`, {
@@ -46,14 +52,14 @@ export default function AdminProductImagesPage() {
           token,
           body: form
         });
-        setMessage("Product image updated");
+        setMessage("Đã cập nhật ảnh sản phẩm");
       } else {
         await apiRequest("/product-images", {
           method: "POST",
           token,
           body: form
         });
-        setMessage("Product image created");
+        setMessage("Đã thêm ảnh sản phẩm");
       }
 
       setForm(initialForm);
@@ -79,27 +85,27 @@ export default function AdminProductImagesPage() {
         method: "DELETE",
         token
       });
-      setMessage("Product image deleted");
+      setMessage("Đã xóa ảnh sản phẩm");
       loadData();
     } catch (deleteError) {
       setError(deleteError.message);
     }
   };
 
-  const inputClass = "border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 text-slate-900 transition-all text-[0.95rem] focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none w-full";
-  const labelClass = "font-medium text-slate-700 text-[0.95rem] flex flex-col gap-2";
+  const inputClass = "border border-gray-300 px-4 py-3 bg-white text-black text-sm focus:border-black focus:outline-none w-full";
+  const labelClass = "text-xs font-bold uppercase tracking-widest text-black flex flex-col gap-2";
 
   return (
     <section className="grid gap-6">
       <AdminPageHeader
-        title="Product Images"
-        description="Manage supplemental image records for products."
+        title="ẢNH SẢN PHẨM"
+        description="Quản lý danh sách hình ảnh của sản phẩm."
       />
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
-        <form className="bg-white rounded-[24px] p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-black/5 grid gap-5 sticky top-6" onSubmit={handleSubmit}>
-          <h3 className="text-slate-900 text-xl m-0 mb-2 pb-4 border-b border-slate-100 font-bold">{editingId ? "Edit image" : "New image"}</h3>
+        <form className="bg-white border border-gray-200 p-7 grid gap-5 sticky top-6" onSubmit={handleSubmit}>
+          <h3 className="text-black text-sm m-0 mb-2 pb-4 border-b border-gray-200 font-bold uppercase tracking-widest">{editingId ? "SỬA ẢNH" : "THÊM ẢNH MỚI"}</h3>
           <label className={labelClass}>
-            Product
+            Sản phẩm
             <select
               className={inputClass}
               value={form.productId}
@@ -107,7 +113,7 @@ export default function AdminProductImagesPage() {
                 setForm((current) => ({ ...current, productId: event.target.value }))
               }
             >
-              <option value="">Select product</option>
+              <option value="">Chọn sản phẩm</option>
               {products.map((product) => (
                 <option key={product._id} value={product._id}>
                   {product.name}
@@ -115,66 +121,62 @@ export default function AdminProductImagesPage() {
               ))}
             </select>
           </label>
-          <label className={labelClass}>
-            Image URL
-            <input
-              className={inputClass}
-              value={form.imageUrl}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, imageUrl: event.target.value }))
-              }
-            />
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer py-2 text-slate-700 font-medium">
+          
+          <ImageUpload 
+            label="ẢNH SẢN PHẨM"
+            value={form.imageUrl}
+            onChange={(url) => setForm(current => ({ ...current, imageUrl: url }))}
+          />
+
+          <label className="flex items-center gap-3 cursor-pointer py-2 text-black font-bold uppercase tracking-widest text-xs">
             <input
               type="checkbox"
-              className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300"
+              className="w-5 h-5 text-black rounded-none focus:ring-black border-gray-300"
               checked={form.isMain}
               onChange={(event) =>
                 setForm((current) => ({ ...current, isMain: event.target.checked }))
               }
             />
-            <span>Mark as main image</span>
+            <span>ĐẶT LÀM ẢNH CHÍNH</span>
           </label>
-          {message ? <p className="text-green-600 font-medium m-0">{message}</p> : null}
-          {error ? <p className="text-red-500 font-medium m-0">{error}</p> : null}
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
-            <button className="px-6 py-3 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 border-none cursor-pointer transition-colors" type="submit">{editingId ? "Update" : "Create"}</button>
+          {message ? <p className="text-black bg-gray-100 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-black m-0">{message}</p> : null}
+          {error ? <p className="text-red-600 bg-red-50 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-red-600 m-0">{error}</p> : null}
+          <div className="flex gap-3 pt-4 border-t border-gray-200 mt-2">
+            <button className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none" type="submit">{editingId ? "CẬP NHẬT" : "THÊM MỚI"}</button>
             {editingId ? (
               <button
                 type="button"
-                className="px-6 py-3 rounded-xl font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors"
+                className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-black bg-white border border-black hover:bg-gray-100 transition-colors cursor-pointer"
                 onClick={() => {
                   setEditingId("");
                   setForm(initialForm);
                 }}
               >
-                Cancel
+                HỦY
               </button>
             ) : null}
           </div>
         </form>
 
-        <section className="bg-white rounded-[24px] p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-black/5">
-          <h3 className="text-slate-900 text-xl m-0 mb-6 pb-4 border-b border-slate-100 font-bold">Image list</h3>
-          <div className="grid gap-3">
+        <section className="bg-white border border-gray-200 p-7">
+          <h3 className="text-black text-sm m-0 mb-6 pb-4 border-b border-gray-200 font-bold uppercase tracking-widest">DANH SÁCH ẢNH</h3>
+          <div className="grid gap-0 divide-y divide-gray-100">
             {images.map((image) => (
-              <div key={image._id} className="flex justify-between gap-4 p-4 items-center bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+              <div key={image._id} className="flex justify-between gap-4 py-4 items-center hover:bg-gray-50 transition-colors px-2">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                  <div className="w-16 h-16 bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
                     {image.imageUrl ? <img src={image.imageUrl} className="w-full h-full object-cover" /> : null}
                   </div>
                   <div>
-                    <strong className="block text-slate-800 mb-1">{image.productId?.name}</strong>
-                    <p className="m-0 text-sm text-slate-500 max-w-[200px] truncate" title={image.imageUrl}>{image.imageUrl}</p>
-                    <p className="m-0 text-xs font-bold mt-1 text-blue-600">{image.isMain ? "★ Main image" : "Secondary image"}</p>
+                    <strong className="block text-black mb-1 text-sm">{image.productId?.name}</strong>
+                    <p className="m-0 text-xs font-bold mt-1 text-black uppercase tracking-widest">{image.isMain ? "★ ẢNH CHÍNH" : "ẢNH PHỤ"}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button className="px-4 py-2 rounded-lg font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors text-sm" onClick={() => handleEdit(image)}>
-                    Edit
+                  <button className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-black bg-white border border-black hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => handleEdit(image)}>
+                    SỬA
                   </button>
-                  <button className="px-4 py-2 rounded-lg font-medium text-white bg-red-500 hover:bg-red-600 border-none cursor-pointer transition-colors text-sm" onClick={() => handleDelete(image._id)}>Delete</button>
+                  <button className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 border border-red-600 cursor-pointer transition-colors" onClick={() => handleDelete(image._id)}>XÓA</button>
                 </div>
               </div>
             ))}

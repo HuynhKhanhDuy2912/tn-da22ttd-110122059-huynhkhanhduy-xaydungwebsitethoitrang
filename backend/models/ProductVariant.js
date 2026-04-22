@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { deleteImageFromCloudinary } from "../config/cloudinary.js";
 
 const variantSchema = new mongoose.Schema(
   {
@@ -56,5 +57,17 @@ const variantSchema = new mongoose.Schema(
 variantSchema.index({ sku: 1 }, { unique: true });
 variantSchema.index({ productId: 1, color: 1, size: 1 }, { unique: true });
 variantSchema.index({ productId: 1, isActive: 1 });
+
+variantSchema.pre('findOneAndDelete', async function(next) {
+  try {
+    const docToUpdate = await this.model.findOne(this.getQuery());
+    if (docToUpdate && docToUpdate.image) {
+      await deleteImageFromCloudinary(docToUpdate.image);
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default mongoose.model("ProductVariant", variantSchema);

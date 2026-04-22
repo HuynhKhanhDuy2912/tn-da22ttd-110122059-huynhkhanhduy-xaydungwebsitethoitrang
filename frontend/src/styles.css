@@ -4,11 +4,9 @@
 
 @layer base {
   body {
-    background:
-      radial-gradient(circle at top left, rgba(201, 173, 141, 0.18), transparent 24%),
-      linear-gradient(180deg, #f6f1ea 0%, #fbf8f4 48%, #f0ece7 100%);
-    color: #211c17;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #ffffff;
+    color: #111111;
+    font-family: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
   }
 }

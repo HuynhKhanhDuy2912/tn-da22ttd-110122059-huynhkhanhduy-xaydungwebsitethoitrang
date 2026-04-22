@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import { deleteImageFromCloudinary } from "../config/cloudinary.js";
+import ProductVariant from "./ProductVariant.js";
+import ProductImage from "./PrductImage.js";
 
 const productSchema = new mongoose.Schema(
   {
@@ -117,5 +120,34 @@ productSchema.index({ style: 1, brand: 1 });
 productSchema.index({ season: 1 });
 productSchema.index({ occasion: 1 });
 productSchema.index({ tags: 1 });
+
+productSchema.pre('findOneAndDelete', async function(next) {
+  try {
+    const docToUpdate = await this.model.findOne(this.getQuery());
+    if (docToUpdate) {
+      // 1. Delete main images
+      if (docToUpdate.images && docToUpdate.images.length > 0) {
+        for (const imgUrl of docToUpdate.images) {
+          await deleteImageFromCloudinary(imgUrl);
+        }
+      }
+
+      // 2. Cascade delete variants
+      const variants = await ProductVariant.find({ productId: docToUpdate._id });
+      for (const variant of variants) {
+        await ProductVariant.findByIdAndDelete(variant._id);
+      }
+
+      // 3. Cascade delete product images
+      const images = await ProductImage.find({ productId: docToUpdate._id });
+      for (const image of images) {
+        await ProductImage.findByIdAndDelete(image._id);
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default mongoose.model("Product", productSchema);
