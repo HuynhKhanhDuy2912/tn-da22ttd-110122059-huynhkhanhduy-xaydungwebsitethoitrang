@@ -4,54 +4,66 @@ import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
+import { ChevronLeft, ChevronRight, Star, ZoomIn } from "lucide-react";
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+
   const [product, setProduct] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [allVariants, setAllVariants] = useState([]);
   const [variants, setVariants] = useState([]);
+  const [productImages, setProductImages] = useState([]);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  const [activeImage, setActiveImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        const [productResponse, productsResponse, variantResponse] = await Promise.all([
+        const [productResponse, productsResponse, variantResponse, imgResponse] = await Promise.all([
           apiRequest(`/products/${productId}`),
           apiRequest("/products"),
-          apiRequest("/product-variants")
+          apiRequest("/product-variants"),
+          apiRequest(`/product-images?productId=${productId}&limit=50`)
         ]);
 
         const currentProduct = productResponse.data;
-        const allCatalogProducts = productsResponse.data;
         const currentVariants = variantResponse.data.filter(
-          (variant) => variant.productId?._id === currentProduct._id
+          v => v.productId?._id === currentProduct._id
         );
+        const pImages = imgResponse.data || [];
 
         setProduct(currentProduct);
-        setAllProducts(allCatalogProducts);
+        setAllProducts(productsResponse.data);
         setAllVariants(variantResponse.data);
         setVariants(currentVariants);
-        
+        setProductImages(pImages);
+
+        const defaultImage =
+          currentVariants[0]?.image ||
+          currentProduct.images?.[0] ||
+          pImages[0]?.imageUrl || "";
+        setActiveImage(defaultImage);
+
         if (currentVariants.length > 0) {
           const uniqueColors = [...new Set(currentVariants.map(v => v.color))];
           setSelectedColor(uniqueColors[0]);
-          const sizesForColor = currentVariants.filter(v => v.color === uniqueColors[0]).map(v => v.size);
-          setSelectedSize(sizesForColor[0]);
+          const firstColorSizes = currentVariants.filter(v => v.color === uniqueColors[0]).map(v => v.size);
+          setSelectedSize(firstColorSizes[0]);
         }
-      } catch (loadError) {
-        setError(loadError.message);
+      } catch (e) {
+        setError(e.message);
       }
     };
 
     loadProduct();
-    // Reset state on navigation
     setQuantity(1);
     setMessage("");
     setError("");
@@ -59,257 +71,380 @@ export default function ProductDetailPage() {
   }, [productId]);
 
   const selectedVariant = useMemo(
-    () => variants.find((v) => v.color === selectedColor && v.size === selectedSize) || variants[0],
+    () => variants.find(v => v.color === selectedColor && v.size === selectedSize) || variants[0],
     [selectedColor, selectedSize, variants]
   );
 
   const availableColors = useMemo(() => [...new Set(variants.map(v => v.color))], [variants]);
-  
-  const availableSizes = useMemo(() => {
-    return [...new Set(variants.filter(v => v.color === selectedColor).map(v => v.size))];
-  }, [variants, selectedColor]);
+  const availableSizes = useMemo(
+    () => [...new Set(variants.filter(v => v.color === selectedColor).map(v => v.size))],
+    [variants, selectedColor]
+  );
 
-  // When color changes, automatically select the first available size for that color
+  const galleryImages = useMemo(() => {
+    const all = [
+      ...(product?.images || []),
+      ...variants.map(v => v.image).filter(Boolean),
+      ...productImages.map(i => i.imageUrl).filter(Boolean)
+    ];
+    return [...new Set(all)].filter(Boolean);
+  }, [product, variants, productImages]);
+
   const handleColorChange = (color) => {
     setSelectedColor(color);
     const sizesForColor = variants.filter(v => v.color === color).map(v => v.size);
-    if (!sizesForColor.includes(selectedSize)) {
-      setSelectedSize(sizesForColor[0]);
-    }
+    if (!sizesForColor.includes(selectedSize)) setSelectedSize(sizesForColor[0]);
+    const variantImg = variants.find(v => v.color === color && v.image);
+    if (variantImg?.image) setActiveImage(variantImg.image);
   };
 
-  const currentImage = selectedVariant?.image || product?.images?.[0] || "https://placehold.co/720x900/f1e8db/6e5b49?text=Product+Detail";
+  const activeIndex = galleryImages.indexOf(activeImage);
+  const goPrev = () => setActiveImage(galleryImages[(activeIndex - 1 + galleryImages.length) % galleryImages.length]);
+  const goNext = () => setActiveImage(galleryImages[(activeIndex + 1) % galleryImages.length]);
 
-  const galleryImages = useMemo(() => {
-    const variantImages = variants.map((variant) => variant.image).filter(Boolean);
-    const productImages = product?.images || [];
-    return [...new Set([currentImage, ...variantImages, ...productImages])];
-  }, [currentImage, product?.images, variants]);
-
-  const relatedProducts = useMemo(() => {
-    const sameStyle = allProducts.filter(
-      (item) =>
-        item._id !== productId &&
-        product &&
-        (item.style === product.style ||
-          item.gender === product.gender ||
-          item.categoryId === product.categoryId)
-    );
-    return sameStyle.slice(0, 4);
-  }, [allProducts, product, productId]);
-
-  const relatedProductsWithVariants = useMemo(() => {
-    return attachVariantsToProducts(relatedProducts, allVariants);
-  }, [relatedProducts, allVariants]);
+  const relatedProducts = useMemo(() =>
+    allProducts.filter(i => i._id !== productId && product &&
+      (i.style === product.style || i.gender === product.gender)).slice(0, 4),
+    [allProducts, product, productId]
+  );
+  const relatedWithVariants = useMemo(() =>
+    attachVariantsToProducts(relatedProducts, allVariants),
+    [relatedProducts, allVariants]
+  );
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
-
     try {
       await apiRequest("/carts/me/items", {
-        method: "POST",
-        token,
-        body: {
-          productId: product._id,
-          variantId: selectedVariant._id,
-          quantity: quantity,
-          source: "product_page"
-        }
+        method: "POST", token,
+        body: { productId: product._id, variantId: selectedVariant._id, quantity, source: "product_page" }
       });
-      setMessage("Đã thêm vào giỏ hàng");
-    } catch (requestError) {
-      setError(requestError.message);
-    }
+      setMessage("Đã thêm vào giỏ hàng!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (e) { setError(e.message); }
   };
 
   const handleBuyNow = async () => {
     if (!selectedVariant) return;
-
     try {
       await apiRequest("/carts/me/items", {
-        method: "POST",
-        token,
-        body: {
-          productId: product._id,
-          variantId: selectedVariant._id,
-          quantity: quantity,
-          source: "buy_now"
-        }
+        method: "POST", token,
+        body: { productId: product._id, variantId: selectedVariant._id, quantity, source: "buy_now" }
       });
       navigate("/checkout");
-    } catch (requestError) {
-      setError(requestError.message);
-    }
+    } catch (e) { setError(e.message); }
   };
 
   if (!product) {
     return (
-      <section className="min-h-[50vh] flex items-center justify-center">
-        <p className="text-gray-500 font-medium">{error || "Đang tải dữ liệu sản phẩm..."}</p>
+      <section className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">{error || "Đang tải sản phẩm..."}</p>
+        </div>
       </section>
     );
   }
 
+  const discountedPrice = product.discount > 0
+    ? Math.round(product.price * (1 - product.discount / 100))
+    : null;
+
+  const finalPrice = discountedPrice || product.price;
+
   return (
-    <div className="px-4 md:px-0 py-8 max-w-[1400px] mx-auto">
-      <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-8 px-4 lg:px-8">
-        <Link to="/" className="hover:text-black transition-colors">TRANG CHỦ</Link>
+    <div className="max-w-[1400px] mx-auto">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 py-4 px-6">
+        <Link to="/" className="hover:text-black">TRANG CHỦ</Link>
         <span>/</span>
-        <Link to="/products" className="hover:text-black transition-colors">SẢN PHẨM</Link>
+        <Link to="/products" className="hover:text-black">SẢN PHẨM</Link>
         <span>/</span>
-        <span className="text-black line-clamp-1">{product.name}</span>
+        <span className="text-black truncate max-w-[200px]">{product.name}</span>
       </nav>
 
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 mb-20 relative items-start px-4 lg:px-8">
-        {/* Left: Images Grid */}
-        <div className="flex-1 w-full lg:w-3/5 grid grid-cols-2 gap-2 md:gap-4">
-          {galleryImages.slice(0, 6).map((image, index) => (
-            <div key={`${image}-${index}`} className="aspect-[3/4] bg-gray-100 overflow-hidden w-full group">
-              <img src={image} alt={`${product.name}-${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-            </div>
-          ))}
-        </div>
+      {/* ══ 3-COLUMN LAYOUT ══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_380px] gap-0 min-h-[80vh]">
 
-        {/* Right: Info (Sticky) */}
-        <div className="flex-1 w-full lg:w-2/5 flex flex-col lg:sticky lg:top-24">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-black mb-4 leading-tight tracking-wider uppercase">{product.name}</h2>
-          <p className="text-xl font-bold text-black mb-6">{product.price?.toLocaleString("vi-VN")} ₫</p>
-          
-          <div className="w-full h-[1px] bg-gray-200 mb-6"></div>
-          
-          <p className="text-gray-600 leading-relaxed mb-8 text-sm">{product.description}</p>
-
-          {/* Color Selection */}
-          <div className="mb-6">
-            <div className="flex justify-between items-end mb-3">
-              <h3 className="text-xs font-bold text-black uppercase tracking-widest">MÀU SẮC: <span className="text-gray-500 font-medium ml-1">{selectedColor}</span></h3>
+        {/* ── Cột 1: Sidebar trái ── */}
+        <aside className="hidden lg:block border-r border-gray-100 p-6 sticky top-20 self-start">
+          {/* Đánh giá */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+              <h3 className="text-xs font-bold uppercase tracking-widest">ĐÁNH GIÁ</h3>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {availableColors.map((color) => {
-                const variantForColor = variants.find(v => v.color === color);
-                const colorImage = variantForColor?.image;
-                return (
-                  <button
-                    key={color}
-                    className={`w-12 h-16 border overflow-hidden transition-all cursor-pointer ${
-                      color === selectedColor
-                        ? "border-black"
-                        : "border-gray-200 hover:border-gray-400 opacity-60 hover:opacity-100"
-                    }`}
-                    onClick={() => handleColorChange(color)}
-                    title={color}
-                  >
-                    {colorImage ? (
-                       <img src={colorImage} alt={color} className="w-full h-full object-cover" />
-                    ) : (
-                       <span className="text-[10px] w-full h-full flex items-center justify-center bg-gray-100">{color}</span>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-1 mb-2">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} size={12} className={i <= 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+              ))}
+              <span className="text-xs text-gray-500 ml-1">(1)</span>
             </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              <strong className="text-black">T*** Cao</strong> | Sản phẩm mặc mát, đúng màu như mô tả.
+            </p>
+            <button className="text-xs text-black underline mt-2 font-medium cursor-pointer bg-transparent border-none p-0">Đọc thêm</button>
           </div>
 
-          {/* Size Selection */}
-          <div className="mb-8">
-            <div className="flex justify-between items-end mb-3">
-              <h3 className="text-xs font-bold text-black uppercase tracking-widest">KÍCH THƯỚC: <span className="text-gray-500 font-medium ml-1">{selectedSize}</span></h3>
-              <button className="text-[10px] text-gray-500 underline uppercase tracking-widest hover:text-black cursor-pointer">Hướng dẫn chọn size</button>
+          {/* Thông tin sản phẩm accordion */}
+          <details className="mb-3 group" open>
+            <summary className="flex justify-between items-center py-3 text-xs font-bold uppercase tracking-widest cursor-pointer list-none border-b border-gray-200">
+              THÔNG TIN SẢN PHẨM
+              <span className="transition-transform group-open:rotate-45 text-lg font-light">+</span>
+            </summary>
+            <div className="py-3 text-xs text-gray-600 leading-relaxed space-y-2">
+              {product.material && <p><strong>Chất liệu:</strong> {product.material}</p>}
+              <p><strong>Kiểu dáng:</strong> <span className="capitalize">{product.style}</span></p>
+              <p><strong>Giới tính:</strong> <span className="capitalize">{product.gender}</span></p>
+              {product.brand && <p><strong>Thương hiệu:</strong> {product.brand}</p>}
+              <p><strong>Mã SP:</strong> SKU-{product._id.slice(-6).toUpperCase()}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {availableSizes.map((size) => (
+          </details>
+
+          <details className="mb-3 group">
+            <summary className="flex justify-between items-center py-3 text-xs font-bold uppercase tracking-widest cursor-pointer list-none border-b border-gray-200">
+              CÁC CÂU HỎI THƯỜNG GẶP
+              <span className="transition-transform group-open:rotate-45 text-lg font-light">+</span>
+            </summary>
+            <div className="py-3 text-xs text-gray-600 leading-relaxed space-y-2">
+              <p><strong>Giao hàng:</strong> Miễn phí từ 500k.</p>
+              <p><strong>Đổi trả:</strong> 30 ngày, còn nguyên tem.</p>
+            </div>
+          </details>
+
+          <details className="group">
+            <summary className="flex justify-between items-center py-3 text-xs font-bold uppercase tracking-widest cursor-pointer list-none border-b border-gray-200">
+              GIAO HÀNG & ĐỔI TRẢ
+              <span className="transition-transform group-open:rotate-45 text-lg font-light">+</span>
+            </summary>
+            <div className="py-3 text-xs text-gray-600 leading-relaxed space-y-2">
+              <p>Miễn phí giao hàng toàn quốc cho đơn từ 500.000đ.</p>
+              <p>Hỗ trợ đổi trả trong vòng 30 ngày.</p>
+            </div>
+          </details>
+        </aside>
+
+        {/* ── Cột 2: Ảnh sản phẩm ── */}
+        <div className="relative flex">
+          {/* Thumbnail strip dọc bên trái */}
+          {galleryImages.length > 1 && (
+            <div className="hidden lg:flex flex-col gap-2 p-3 w-[80px] shrink-0">
+              {galleryImages.map((img, idx) => (
                 <button
-                  key={size}
-                  className={`w-14 h-10 border text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
-                    size === selectedSize
-                      ? "border-black bg-black text-white font-bold"
-                      : "border-gray-300 bg-white text-black hover:border-black"
+                  key={idx}
+                  onClick={() => setActiveImage(img)}
+                  className={`w-full aspect-square border-2 overflow-hidden transition-all cursor-pointer p-0 bg-transparent ${
+                    activeImage === img ? "border-black" : "border-transparent opacity-40 hover:opacity-80"
                   }`}
-                  onClick={() => setSelectedSize(size)}
                 >
-                  {size}
+                  <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* Quantity */}
-          <div className="mb-8">
-            <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-3">SỐ LƯỢNG</h3>
-            <div className="inline-flex items-center border border-gray-300 h-12">
-              <button className="px-4 text-xl hover:bg-gray-100 h-full cursor-pointer" onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-              <span className="px-6 text-sm font-bold min-w-[3rem] text-center h-full flex items-center justify-center border-l border-r border-gray-300">{quantity}</span>
-              <button className="px-4 text-xl hover:bg-gray-100 h-full cursor-pointer" onClick={() => setQuantity(quantity + 1)}>+</button>
-            </div>
-          </div>
+          {/* Ảnh chính */}
+          <div className="flex-1 relative bg-gray-50 overflow-hidden group" style={{ minHeight: "600px" }}>
+            {activeImage ? (
+              <img
+                key={activeImage}
+                src={activeImage}
+                alt={product.name}
+                className={`w-full h-full object-contain transition-transform duration-300 ${isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"}`}
+                onClick={() => setIsZoomed(z => !z)}
+                style={{ maxHeight: "80vh" }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-300">Chưa có ảnh</div>
+            )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            {token ? (
+            {/* Zoom icon hint */}
+            <button
+              onClick={() => setIsZoomed(z => !z)}
+              className="absolute bottom-4 right-4 w-9 h-9 bg-white/80 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-gray-200 shadow-sm"
+            >
+              <ZoomIn size={16} />
+            </button>
+
+            {/* Arrows */}
+            {galleryImages.length > 1 && (
               <>
-                <button className="flex-1 py-4 bg-white text-black border border-black font-bold uppercase tracking-widest text-xs hover:bg-gray-100 transition-colors cursor-pointer" onClick={handleAddToCart}>
-                  THÊM VÀO GIỎ
+                <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none shadow-md">
+                  <ChevronLeft size={18} />
                 </button>
-                <button className="flex-1 py-4 bg-black text-white border border-black font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors cursor-pointer" onClick={handleBuyNow}>
-                  MUA NGAY
+                <button onClick={goNext} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none shadow-md">
+                  <ChevronRight size={18} />
                 </button>
               </>
-            ) : (
-              <Link className="w-full py-4 bg-black text-white text-center font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors" to="/login">
-                ĐĂNG NHẬP ĐỂ MUA HÀNG
-              </Link>
+            )}
+
+            {/* Dots mobile */}
+            {galleryImages.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 lg:hidden">
+                {galleryImages.map((img, idx) => (
+                  <button key={idx} onClick={() => setActiveImage(img)}
+                    className={`h-1.5 rounded-full border-none cursor-pointer transition-all ${activeImage === img ? "w-4 bg-black" : "w-1.5 bg-black/30"}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Cột 3: Thông tin + Mua ── */}
+        <div className="border-l border-gray-100 p-6 lg:p-8 flex flex-col gap-5 lg:sticky lg:top-20 self-start">
+
+          {/* Tên sản phẩm */}
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">
+              SKU-{product._id.slice(-6).toUpperCase()}
+            </p>
+            <h1 className="text-xl font-extrabold text-black leading-tight tracking-wide uppercase">
+              {product.name}
+            </h1>
+          </div>
+
+          {/* Giá */}
+          <div className="flex items-center gap-3 py-3 border-t border-b border-gray-100">
+            <span className="text-2xl font-extrabold text-black">
+              {finalPrice.toLocaleString("vi-VN")}₫
+            </span>
+            {discountedPrice && (
+              <>
+                <span className="text-sm text-gray-400 line-through">
+                  {product.price.toLocaleString("vi-VN")}₫
+                </span>
+                <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5">
+                  -{product.discount}%
+                </span>
+              </>
             )}
           </div>
 
-          {message ? <p className="text-black bg-gray-100 px-6 py-4 border-l-4 border-black font-medium mb-6 text-sm">{message}</p> : null}
-          {error ? <p className="text-red-600 bg-red-50 px-6 py-4 border-l-4 border-red-600 font-medium mb-6 text-sm">{error}</p> : null}
+          {/* Màu sắc */}
+          {availableColors.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-black">
+                {selectedColor}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableColors.map(color => {
+                  const v = variants.find(v => v.color === color);
+                  return (
+                    <button
+                      key={color}
+                      title={color}
+                      onClick={() => handleColorChange(color)}
+                      className={`w-14 h-[72px] border-2 overflow-hidden transition-all cursor-pointer p-0 bg-transparent ${
+                        color === selectedColor ? "border-black" : "border-gray-200 hover:border-gray-400"
+                      }`}
+                    >
+                      {v?.image
+                        ? <img src={v.image} alt={color} className="w-full h-full object-cover" />
+                        : <span className="text-[9px] uppercase tracking-wider flex items-center justify-center w-full h-full bg-gray-100 px-1 text-center leading-tight">{color}</span>
+                      }
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-          {/* Accordions */}
-          <div className="space-y-0 divide-y divide-gray-200 mt-auto border-t border-b border-gray-200">
-            <details className="group" open>
-              <summary className="py-5 font-bold text-xs uppercase tracking-widest cursor-pointer list-none flex justify-between items-center">
-                THÔNG TIN CHI TIẾT
-                <span className="transition group-open:rotate-180">
-                  <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                </span>
-              </summary>
-              <div className="pb-5 text-gray-600 text-sm leading-relaxed">
-                <ul className="list-disc pl-4 space-y-2 mt-2">
-                  <li>Kiểu dáng: <span className="capitalize">{product.style}</span></li>
-                  <li>Giới tính: <span className="capitalize">{product.gender}</span></li>
-                  <li>Chất liệu: Cotton & Spandex</li>
-                  <li>Mã sản phẩm: SKU-{product._id.slice(-6).toUpperCase()}</li>
-                </ul>
+          {/* Kích thước */}
+          {availableSizes.length > 0 && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-black">KÍCH THƯỚC</p>
+                <button className="text-[10px] text-gray-500 flex items-center gap-1 underline uppercase tracking-widest hover:text-black border-none bg-transparent cursor-pointer">
+                  Hướng dẫn chọn size
+                </button>
               </div>
-            </details>
-            <details className="group">
-              <summary className="py-5 font-bold text-xs uppercase tracking-widest cursor-pointer list-none flex justify-between items-center">
-                GIAO HÀNG & ĐỔI TRẢ
-                <span className="transition group-open:rotate-180">
-                  <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                </span>
-              </summary>
-              <div className="pb-5 text-gray-600 text-sm leading-relaxed mt-2">
-                <p className="mb-2"><strong>Giao hàng:</strong> Miễn phí giao hàng toàn quốc cho đơn từ 500.000đ.</p>
-                <p><strong>Đổi trả:</strong> Hỗ trợ đổi trả trong vòng 30 ngày kể từ ngày nhận hàng với sản phẩm còn nguyên tem mác.</p>
+              <div className="flex flex-wrap gap-2">
+                {availableSizes.map(size => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`h-10 min-w-[44px] px-3 border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      size === selectedSize
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-black hover:border-black"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
               </div>
-            </details>
+            </div>
+          )}
+
+          {/* Số lượng */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-black mb-3">SỐ LƯỢNG</p>
+            <div className="inline-flex items-center border border-gray-300 h-11">
+              <button className="px-4 text-lg hover:bg-gray-100 h-full cursor-pointer border-none bg-transparent" onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
+              <span className="px-5 text-sm font-bold min-w-[3rem] text-center border-l border-r border-gray-300 h-full flex items-center justify-center">{quantity}</span>
+              <button className="px-4 text-lg hover:bg-gray-100 h-full cursor-pointer border-none bg-transparent" onClick={() => setQuantity(quantity + 1)}>+</button>
+            </div>
           </div>
+
+          {/* Nút mua */}
+          {token ? (
+            <div className="flex flex-col gap-3 mt-2">
+              <button
+                onClick={handleAddToCart}
+                className="w-full py-4 bg-black text-white font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors cursor-pointer border-none text-center"
+              >
+                THÊM VÀO GIỎ HÀNG
+              </button>
+              <button
+                onClick={handleBuyNow}
+                className="w-full py-4 bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-100 transition-colors cursor-pointer border border-black text-center"
+              >
+                MUA NGAY
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="w-full py-4 bg-black text-white font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition-colors text-center block mt-2"
+            >
+              ĐĂNG NHẬP ĐỂ MUA HÀNG
+            </Link>
+          )}
+
+          {/* Thông báo */}
+          {message && (
+            <div className="py-3 px-4 bg-green-50 border border-green-200 text-green-700 text-xs font-bold uppercase tracking-widest">
+              ✓ {message}
+            </div>
+          )}
+          {error && (
+            <div className="py-3 px-4 bg-red-50 border border-red-200 text-red-600 text-xs font-bold uppercase tracking-widest">
+              {error}
+            </div>
+          )}
+
+          {/* Mô tả ngắn */}
+          {product.description && (
+            <p className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+              {product.description}
+            </p>
+          )}
         </div>
       </div>
 
-      <section className="border-t border-gray-200 pt-16 px-4 lg:px-8">
-        <div className="flex justify-between items-end mb-10">
-          <div>
-            <h2 className="text-2xl font-extrabold tracking-widest text-black uppercase">CÓ THỂ BẠN SẼ THÍCH</h2>
+      {/* Sản phẩm liên quan */}
+      {relatedWithVariants.length > 0 && (
+        <section className="border-t border-gray-200 py-16 px-6">
+          <h2 className="text-xl font-extrabold tracking-widest text-black uppercase mb-10">
+            SẢN PHẨM BAN CHẠY NHẤT
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 gap-y-10">
+            {relatedWithVariants.map(item => (
+              <ProductCard key={item._id} product={item} />
+            ))}
           </div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 gap-y-10">
-          {relatedProductsWithVariants.map((item) => (
-            <ProductCard key={item._id} product={item} />
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,11 +1,19 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { ChevronDown } from "lucide-react";
 
 const adminNavItems = [
   { to: "/admin", label: "TỔNG QUAN", end: true },
   { to: "/admin/categories", label: "DANH MỤC" },
-  { to: "/admin/products", label: "SẢN PHẨM" },
-  { to: "/admin/product-images", label: "ẢNH SẢN PHẨM" },
+  {
+    label: "SẢN PHẨM",
+    basePath: "/admin/products",
+    children: [
+      { to: "/admin/products/list", label: "Danh sách sản phẩm" },
+      { to: "/admin/products/add", label: "Thêm sản phẩm mới" }
+    ]
+  },
   { to: "/admin/variants", label: "BIẾN THỂ" },
   { to: "/admin/users", label: "NGƯỜI DÙNG" },
   { to: "/admin/orders", label: "ĐƠN HÀNG" }
@@ -13,6 +21,17 @@ const adminNavItems = [
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [openMenus, setOpenMenus] = useState(() => {
+    // Auto-open if currently on a products sub-route
+    return location.pathname.startsWith("/admin/products") ? ["SẢN PHẨM"] : [];
+  });
+
+  const toggleMenu = (label) => {
+    setOpenMenus(prev =>
+      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  };
 
   return (
     <section className="grid grid-cols-[240px_1fr] min-h-screen bg-gray-50 font-sans">
@@ -34,30 +53,86 @@ export default function AdminLayout() {
             </div>
           </div>
         </div>
+
         <nav className="flex flex-col">
-          {adminNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `px-6 py-4 text-xs font-bold uppercase tracking-widest transition-colors ${
-                  isActive
-                    ? "bg-black text-white"
-                    : "text-gray-500 hover:text-black hover:bg-gray-50"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {adminNavItems.map((item) => {
+            if (item.children) {
+              const isOpen = openMenus.includes(item.label);
+              const isActive = location.pathname.startsWith(item.basePath);
+
+              return (
+                <div key={item.label}>
+                  {/* Parent button */}
+                  <button
+                    onClick={() => toggleMenu(item.label)}
+                    className={`w-full flex items-center justify-between px-6 py-4 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer border-none ${
+                      isActive
+                        ? "bg-black text-white"
+                        : "bg-white text-gray-500 hover:text-black hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {/* Dropdown children */}
+                  {isOpen && (
+                    <div className="bg-gray-50 border-y border-gray-100">
+                      {item.children.map(child => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          className={({ isActive }) =>
+                            `block pl-10 pr-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
+                              isActive
+                                ? "text-black bg-gray-200 border-l-4 border-black"
+                                : "text-gray-500 hover:text-black hover:bg-gray-100 border-l-4 border-transparent"
+                            }`
+                          }
+                        >
+                          {child.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `px-6 py-4 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    isActive
+                      ? "bg-black text-white"
+                      : "text-gray-500 hover:text-black hover:bg-gray-50"
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            );
+          })}
         </nav>
+
         <div className="mt-auto p-6 border-t border-gray-200">
           <div className="flex flex-col gap-2">
-            <NavLink to="/" className="flex items-center px-4 py-3 text-xs font-bold uppercase tracking-widest text-black border border-black hover:bg-black hover:text-white transition-colors justify-center">
+            <NavLink
+              to="/"
+              className="flex items-center px-4 py-3 text-xs font-bold uppercase tracking-widest text-black border border-black hover:bg-black hover:text-white transition-colors justify-center"
+            >
               VỀ TRANG CHỦ
             </NavLink>
-            <button className="flex items-center px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors cursor-pointer justify-center w-full" onClick={logout}>
+            <button
+              className="flex items-center px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors cursor-pointer justify-center w-full"
+              onClick={logout}
+            >
               ĐĂNG XUẤT
             </button>
           </div>

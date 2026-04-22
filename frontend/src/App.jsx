@@ -9,6 +9,8 @@ import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage.jsx";
 import AdminProductImagesPage from "./pages/admin/AdminProductImagesPage.jsx";
 import AdminProductsPage from "./pages/admin/AdminProductsPage.jsx";
+import AdminProductAddPage from "./pages/admin/AdminProductAddPage.jsx";
+import AdminProductListPage from "./pages/admin/AdminProductListPage.jsx";
 import AdminUsersPage from "./pages/admin/AdminUsersPage.jsx";
 import AdminVariantsPage from "./pages/admin/AdminVariantsPage.jsx";
 import CartPage from "./pages/CartPage.jsx";
@@ -82,7 +84,9 @@ export default function App() {
           >
             <Route index element={<AdminDashboardPage />} />
             <Route path="categories" element={<AdminCategoriesPage />} />
-            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="products" element={<AdminProductListPage />} />
+            <Route path="products/list" element={<AdminProductListPage />} />
+            <Route path="products/add" element={<AdminProductAddPage />} />
             <Route path="product-images" element={<AdminProductImagesPage />} />
             <Route path="variants" element={<AdminVariantsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
