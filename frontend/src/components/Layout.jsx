@@ -29,40 +29,43 @@ export default function Layout() {
   );
 
   return (
-    <div className={isAdminView ? "app-shell admin-app-shell" : "app-shell"}>
+    <div className={isAdminView ? "min-h-screen bg-admin-bg font-sans" : "min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(201,173,141,0.18),transparent_24%),linear-gradient(180deg,#f6f1ea_0%,#fbf8f4_48%,#f0ece7_100%)] font-serif text-brand-text leading-relaxed"}>
       {!isAdminView ? (
         <>
-          <div className="announcement-bar">FashionStore personalized shopping experience</div>
+          <div className="text-center bg-[#241b15] text-[#f4ebe2] py-1.5 px-3 text-xs tracking-wider uppercase">FashionStore personalized shopping experience</div>
 
-          <header className="topbar">
-            <div className="brand-lockup">
-              <span className="brand-mark">FS</span>
+          <header className="grid grid-cols-[auto_minmax(180px,280px)_1fr_auto] gap-4 px-5 py-3 bg-[#fffcf8]/85 border-b border-brand-line backdrop-blur-md sticky top-0 z-10 items-center">
+            <div className="flex gap-2.5 items-center">
+              <span className="w-10 h-10 rounded-full grid place-items-center bg-gradient-to-br from-brand-primary to-brand-primary-deep text-white font-bold tracking-wider">FS</span>
               <div>
-                <h1>FashionStore</h1>
-                <p>Modern fashion storefront</p>
+                <h1 className="m-0 text-lg font-bold">FashionStore</h1>
+                <p className="m-0 text-xs text-brand-muted">Modern fashion storefront</p>
               </div>
             </div>
 
             <form
-              className="header-search"
+              className="flex"
               onSubmit={(event) => {
                 event.preventDefault();
                 window.location.href = searchHref;
               }}
             >
               <input
+                className="w-full rounded-full bg-white/95 px-4 py-2.5 text-[0.92rem] border border-[#d7ccbf] focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
                 placeholder="Search shirts, jackets, streetwear..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </form>
 
-            <nav className="nav">
+            <nav className="flex gap-2.5 items-center flex-wrap">
               {clientNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                  className={({ isActive }) => 
+                    `px-3 py-1.5 rounded-full text-[0.92rem] whitespace-nowrap transition-colors ${isActive ? "bg-brand-primary/10" : "hover:bg-brand-primary/10"}`
+                  }
                 >
                   {item.label}
                 </NavLink>
@@ -70,33 +73,37 @@ export default function Layout() {
               {isAdminUser ? (
                 <NavLink
                   to="/admin"
-                  className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                  className={({ isActive }) => 
+                    `px-3 py-1.5 rounded-full text-[0.92rem] whitespace-nowrap transition-colors ${isActive ? "bg-brand-primary/10" : "hover:bg-brand-primary/10"}`
+                  }
                 >
                   Admin
                 </NavLink>
               ) : null}
             </nav>
 
-            <div className="auth-box">
+            <div className="flex gap-2.5 items-center flex-wrap">
               {isAuthenticated ? (
                 <>
-                  <div className="account-pill">
-                    <span className="account-label">Signed in as</span>
-                    <strong>{user?.full_name || user?.username}</strong>
-                    <span className={isAdminUser ? "role-badge admin-role-badge" : "role-badge user-role-badge"}>
-                      {isAdminUser ? "Admin" : "User"}
-                    </span>
+                  <div className="grid gap-0.5 px-3 py-1.5 rounded-2xl bg-brand-primary/5 border border-brand-line">
+                    <span className="text-brand-muted text-xs">Signed in as</span>
+                    <div className="flex items-center gap-2">
+                      <strong className="text-sm">{user?.full_name || user?.username}</strong>
+                      <span className={`px-2 py-0.5 rounded-full text-[0.68rem] font-bold tracking-wider uppercase ${isAdminUser ? "bg-blue-500/20 text-blue-600" : "bg-brand-primary/15 text-brand-primary-deep"}`}>
+                        {isAdminUser ? "Admin" : "User"}
+                      </span>
+                    </div>
                   </div>
-                  <button className="ghost-button" onClick={logout}>
+                  <button className="px-4 py-2 rounded-full border border-brand-line bg-transparent text-brand-text cursor-pointer hover:bg-brand-primary/10 transition-colors" onClick={logout}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <NavLink to="/login" className="nav-link auth-link">
+                  <NavLink to="/login" className="px-4 py-2 rounded-full border border-brand-line hover:bg-brand-primary/10 transition-colors text-[0.92rem]">
                     Sign in
                   </NavLink>
-                  <NavLink to="/register" className="nav-link auth-link">
+                  <NavLink to="/register" className="px-4 py-2 rounded-full border border-brand-line hover:bg-brand-primary/10 transition-colors text-[0.92rem]">
                     Register
                   </NavLink>
                 </>
@@ -106,7 +113,7 @@ export default function Layout() {
         </>
       ) : null}
 
-      <main className={isAdminView ? "page-wrap admin-page-wrap" : "page-wrap"}>
+      <main className={isAdminView ? "" : "max-w-[1180px] mx-auto p-8"}>
         <Outlet />
       </main>
     </div>

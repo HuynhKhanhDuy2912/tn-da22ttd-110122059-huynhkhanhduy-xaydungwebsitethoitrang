@@ -71,14 +71,14 @@ export default function AdminProductsPage() {
           token,
           body: buildPayload()
         });
-        setMessage("Product updated");
+        setMessage("Đã cập nhật sản phẩm");
       } else {
         await apiRequest("/products", {
           method: "POST",
           token,
           body: buildPayload()
         });
-        setMessage("Product created");
+        setMessage("Đã thêm sản phẩm");
       }
 
       setForm(initialForm);
@@ -113,26 +113,30 @@ export default function AdminProductsPage() {
         method: "DELETE",
         token
       });
-      setMessage("Product deleted");
+      setMessage("Đã xóa sản phẩm");
       loadData();
     } catch (deleteError) {
       setError(deleteError.message);
     }
   };
 
+  const inputClass = "border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 text-slate-900 transition-all text-[0.95rem] focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none w-full";
+  const labelClass = "font-medium text-slate-700 text-[0.95rem] flex flex-col gap-2";
+
   return (
-    <section>
-      <AdminPageHeader title="Products" description="Manage core catalog items." />
-      <div className="admin-grid-two">
-        <form className="card admin-form" onSubmit={handleSubmit}>
-          <h3>{editingId ? "Edit product" : "New product"}</h3>
-          <label>
-            Name
-            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+    <section className="grid gap-6">
+      <AdminPageHeader title="Sản phẩm" description="Quản lý danh sách sản phẩm cốt lõi." />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
+        <form className="bg-white rounded-[24px] p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-black/5 grid gap-5 sticky top-6" onSubmit={handleSubmit}>
+          <h3 className="text-slate-900 text-xl m-0 mb-2 pb-4 border-b border-slate-100 font-bold">{editingId ? "Sửa sản phẩm" : "Thêm sản phẩm mới"}</h3>
+          <label className={labelClass}>
+            Tên sản phẩm
+            <input className={inputClass} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           </label>
-          <label>
-            Description
+          <label className={labelClass}>
+            Mô tả
             <textarea
+              className={inputClass}
               rows="3"
               value={form.description}
               onChange={(event) =>
@@ -140,15 +144,16 @@ export default function AdminProductsPage() {
               }
             />
           </label>
-          <label>
-            Category
+          <label className={labelClass}>
+            Danh mục
             <select
+              className={inputClass}
               value={form.categoryId}
               onChange={(event) =>
                 setForm((current) => ({ ...current, categoryId: event.target.value }))
               }
             >
-              <option value="">Select category</option>
+              <option value="">Chọn danh mục</option>
               {categories.map((category) => (
                 <option key={category._id} value={category._id}>
                   {category.name}
@@ -156,10 +161,11 @@ export default function AdminProductsPage() {
               ))}
             </select>
           </label>
-          <div className="admin-form-split">
-            <label>
-              Price
+          <div className="grid grid-cols-2 gap-4">
+            <label className={labelClass}>
+              Giá
               <input
+                className={inputClass}
                 type="number"
                 value={form.price}
                 onChange={(event) =>
@@ -167,9 +173,10 @@ export default function AdminProductsPage() {
                 }
               />
             </label>
-            <label>
-              Discount
+            <label className={labelClass}>
+              Giảm giá
               <input
+                className={inputClass}
                 type="number"
                 value={form.discount}
                 onChange={(event) =>
@@ -178,23 +185,25 @@ export default function AdminProductsPage() {
               />
             </label>
           </div>
-          <div className="admin-form-split">
-            <label>
-              Gender
+          <div className="grid grid-cols-2 gap-4">
+            <label className={labelClass}>
+              Giới tính
               <select
+                className={inputClass}
                 value={form.gender}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, gender: event.target.value }))
                 }
               >
                 <option value="unisex">Unisex</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
               </select>
             </label>
-            <label>
-              Style
+            <label className={labelClass}>
+              Kiểu dáng
               <select
+                className={inputClass}
                 value={form.style}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, style: event.target.value }))
@@ -210,19 +219,21 @@ export default function AdminProductsPage() {
               </select>
             </label>
           </div>
-          <div className="admin-form-split">
-            <label>
-              Season
+          <div className="grid grid-cols-2 gap-4">
+            <label className={labelClass}>
+              Mùa
               <input
+                className={inputClass}
                 value={form.season}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, season: event.target.value }))
                 }
               />
             </label>
-            <label>
-              Occasion
+            <label className={labelClass}>
+              Dịp
               <input
+                className={inputClass}
                 value={form.occasion}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, occasion: event.target.value }))
@@ -230,62 +241,65 @@ export default function AdminProductsPage() {
               />
             </label>
           </div>
-          <label>
-            Brand
+          <label className={labelClass}>
+            Thương hiệu
             <input
+              className={inputClass}
               value={form.brand}
               onChange={(event) => setForm((current) => ({ ...current, brand: event.target.value }))}
             />
           </label>
-          <label>
-            Material
+          <label className={labelClass}>
+            Chất liệu
             <input
+              className={inputClass}
               value={form.material}
               onChange={(event) =>
                 setForm((current) => ({ ...current, material: event.target.value }))
               }
             />
           </label>
-          <label>
-            Image URL
+          <label className={labelClass}>
+            Đường dẫn ảnh (Image URL)
             <input
+              className={inputClass}
               value={form.imageUrl}
               onChange={(event) =>
                 setForm((current) => ({ ...current, imageUrl: event.target.value }))
               }
             />
           </label>
-          {message ? <p className="success-text">{message}</p> : null}
-          {error ? <p className="error-text">{error}</p> : null}
-          <div className="actions">
-            <button type="submit">{editingId ? "Update" : "Create"}</button>
+          {message ? <p className="text-green-600 font-medium m-0">{message}</p> : null}
+          {error ? <p className="text-red-500 font-medium m-0">{error}</p> : null}
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <button className="px-6 py-3 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 border-none cursor-pointer transition-colors" type="submit">{editingId ? "Cập nhật" : "Thêm mới"}</button>
             {editingId ? (
-              <button type="button" className="secondary-button" onClick={() => {
+              <button type="button" className="px-6 py-3 rounded-xl font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => {
                 setEditingId("");
                 setForm(initialForm);
               }}>
-                Cancel
+                Hủy
               </button>
             ) : null}
           </div>
         </form>
 
-        <section className="card admin-panel">
-          <h3>Product list</h3>
-          <div className="stack compact">
+        <section className="bg-white rounded-[24px] p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-black/5">
+          <h3 className="text-slate-900 text-xl m-0 mb-6 pb-4 border-b border-slate-100 font-bold">Danh sách sản phẩm</h3>
+          <div className="grid gap-3">
             {products.map((product) => (
-              <div key={product._id} className="admin-list-row">
+              <div key={product._id} className="flex justify-between gap-4 p-4 items-center bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
                 <div>
-                  <strong>{product.name}</strong>
-                  <p className="muted">
+                  <strong className="block text-slate-800 mb-1">{product.name}</strong>
+                  <p className="m-0 text-sm text-slate-500">
                     {product.categoryId?.name} · {product.style}
                   </p>
                 </div>
-                <div className="inline-actions">
-                  <button className="secondary-button" onClick={() => handleEdit(product)}>
-                    Edit
+                <div className="flex gap-2 shrink-0">
+                  <button className="px-4 py-2 rounded-lg font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors text-sm" onClick={() => handleEdit(product)}>
+                    Sửa
                   </button>
-                  <button onClick={() => handleDelete(product._id)}>Delete</button>
+                  <button className="px-4 py-2 rounded-lg font-medium text-white bg-red-500 hover:bg-red-600 border-none cursor-pointer transition-colors text-sm" onClick={() => handleDelete(product._id)}>Xóa</button>
                 </div>
               </div>
             ))}
