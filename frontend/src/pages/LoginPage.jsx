@@ -1,26 +1,132 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
+const googleEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+
+const loginModes = [
+  { key: "email", label: "Email" },
+  { key: "google", label: "Google" },
+  { key: "phone", label: "Số điện thoại" }
+];
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle, requestPhoneOtp, verifyPhoneOtp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({
-    email: "demo@fashionstore.com",
-    password: "123456"
+  const [mode, setMode] = useState("email");
+  const [emailForm, setEmailForm] = useState({
+    email: "",
+    password: ""
   });
+  const [phoneForm, setPhoneForm] = useState({
+    phone_number: "",
+    otp: ""
+  });
+  const [phoneStep, setPhoneStep] = useState("request");
+  const [otpPreview, setOtpPreview] = useState(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const redirectTo = location.state?.from || "/products";
+
+  const resetMessages = () => {
     setError("");
+    setSuccess("");
+  };
+
+  const handleModeChange = (nextMode) => {
+    setMode(nextMode);
+    resetMessages();
+  };
+
+  useEffect(() => {
+    if (resendCountdown <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCountdown]);
+
+  const handleEmailLogin = async (event) => {
+    event.preventDefault();
+    resetMessages();
     setLoading(true);
 
     try {
-      await login(form);
-      navigate(location.state?.from || "/products", { replace: true });
+      await login(emailForm);
+      navigate(redirectTo, { replace: true });
+    } catch (submitError) {
+      setError(submitError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    resetMessages();
+
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error("Không nhận được token Google");
+      }
+
+      await loginWithGoogle(credentialResponse.credential);
+      navigate(redirectTo, { replace: true });
+    } catch (submitError) {
+      setError(submitError.message);
+    }
+  };
+
+  const handleRequestOtp = async (event) => {
+    event.preventDefault();
+    resetMessages();
+    setLoading(true);
+
+    try {
+      const response = await requestPhoneOtp({
+        phone_number: phoneForm.phone_number
+      });
+
+      setPhoneStep("verify");
+      setOtpPreview({
+        maskedPhoneNumber: response.maskedPhoneNumber,
+        demoOtp: response.demoOtp || "",
+        demoMessage: response.demoMessage || "",
+        expiresInSeconds: response.expiresInSeconds || 300,
+        deliveryChannel: response.deliveryChannel || "demo_inbox"
+      });
+      setResendCountdown(response.resendCooldownSeconds || 60);
+      setSuccess("Mã OTP đã được gửi tới khu vực mô phỏng. Nhập mã để tiếp tục đăng nhập.");
+    } catch (submitError) {
+      setError(submitError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (event) => {
+    event.preventDefault();
+    resetMessages();
+    setLoading(true);
+
+    try {
+      await verifyPhoneOtp(phoneForm);
+      navigate(redirectTo, { replace: true });
     } catch (submitError) {
       setError(submitError.message);
     } finally {
@@ -29,60 +135,248 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="min-h-[70vh] flex items-center justify-center py-12 px-4 bg-white">
-      <form className="w-full max-w-md" onSubmit={handleSubmit}>
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-extrabold text-black mb-2 tracking-widest uppercase">ĐĂNG NHẬP</h2>
-          <p className="text-gray-500 text-sm">Sử dụng tài khoản demo hoặc tài khoản bạn đã đăng ký.</p>
-        </div>
-        
-        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-6">
-          EMAIL
-          <input
-            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
-            value={form.email}
-            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            placeholder="Nhập email của bạn"
-          />
-        </label>
-        
-        <label className="flex flex-col gap-2 font-bold text-black text-xs uppercase tracking-widest mb-8">
-          MẬT KHẨU
-          <input
-            className="border-b border-gray-300 rounded-none px-0 py-2.5 bg-transparent text-black transition-colors focus:border-black focus:outline-none w-full"
-            type="password"
-            value={form.password}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, password: event.target.value }))
-            }
-            placeholder="Nhập mật khẩu"
-          />
-        </label>
-        
-        {error ? <p className="text-red-500 text-sm font-bold mb-6 text-center border border-red-500 py-3">{error}</p> : null}
-        
-        <button 
-          className="w-full px-6 py-4 font-bold text-white bg-black hover:bg-gray-800 border border-black cursor-pointer transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 uppercase tracking-widest text-sm"
-          type="submit" 
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              ĐANG ĐĂNG NHẬP...
-            </>
-          ) : "ĐĂNG NHẬP"}
-        </button>
-
-        <div className="mt-8 text-center border-t border-gray-200 pt-6">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-            CHƯA CÓ TÀI KHOẢN? <button type="button" onClick={() => navigate('/register')} className="text-black font-extrabold hover:underline bg-transparent border-none p-0 cursor-pointer uppercase ml-1">ĐĂNG KÝ NGAY</button>
+    <section className="min-h-[70vh] bg-white px-4 py-12">
+      <div className="mx-auto grid max-w-5xl overflow-hidden border border-gray-200 bg-white lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="border-b border-gray-200 bg-black px-8 py-10 text-white lg:border-b-0 lg:border-r">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.35em] text-white/70">
+            FashionStore
           </p>
+          <h1 className="text-3xl font-extrabold uppercase tracking-wider">
+            Chào mừng bạn quay lại
+          </h1>
+          <p className="mt-4 max-w-md text-sm leading-7 text-white/75">
+            Tiếp tục hành trình mua sắm với trải nghiệm thời trang cá nhân hóa dành riêng cho bạn.
+          </p>
+
+          <div className="mt-10 space-y-4 text-sm text-white/75">
+            <div className="border border-white/15 px-4 py-4">
+              <p className="font-bold uppercase tracking-widest text-white">Gợi ý phù hợp</p>
+              <p className="mt-2">Hệ thống ưu tiên các sản phẩm theo hành vi, sở thích và lịch sử mua sắm của bạn.</p>
+            </div>
+            <div className="border border-white/15 px-4 py-4">
+              <p className="font-bold uppercase tracking-widest text-white">Mua sắm liền mạch</p>
+              <p className="mt-2">Theo dõi đơn hàng, danh sách yêu thích và giỏ hàng của bạn trên cùng một tài khoản.</p>
+            </div>
+            <div className="border border-white/15 px-4 py-4">
+              <p className="font-bold uppercase tracking-widest text-white">Thời trang hiện đại</p>
+              <p className="mt-2">Khám phá bộ sưu tập được tuyển chọn theo phong cách tối giản và dễ ứng dụng hằng ngày.</p>
+            </div>
+          </div>
         </div>
-      </form>
+
+        <div className="px-8 py-10 md:px-10">
+          <div className="mb-8">
+            <h2 className="text-2xl font-extrabold uppercase tracking-widest text-black">
+              Đăng nhập
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Chọn phương thức đăng nhập để tiếp tục mua sắm.
+            </p>
+          </div>
+
+          <div className="mb-8 grid grid-cols-3 border border-gray-200 p-1">
+            {loginModes.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleModeChange(item.key)}
+                className={`px-3 py-3 text-xs font-bold uppercase tracking-widest transition ${
+                  mode === item.key
+                    ? "bg-black text-white"
+                    : "bg-white text-gray-500 hover:text-black"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {error ? (
+            <p className="mb-5 border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {error}
+            </p>
+          ) : null}
+
+          {success ? (
+            <p className="mb-5 border border-green-300 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+              {success}
+            </p>
+          ) : null}
+
+          {mode === "email" ? (
+            <form className="space-y-5" onSubmit={handleEmailLogin}>
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-black">
+                  Email
+                </label>
+                <input
+                  className="w-full border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
+                  value={emailForm.email}
+                  onChange={(event) =>
+                    setEmailForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-black">
+                  Mật khẩu
+                </label>
+                <input
+                  className="w-full border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
+                  type="password"
+                  value={emailForm.password}
+                  onChange={(event) =>
+                    setEmailForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  placeholder="Nhập mật khẩu"
+                />
+              </div>
+
+              <button
+                className="w-full border border-black bg-black px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-70"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? "Đang đăng nhập..." : "Đăng nhập bằng email"}
+              </button>
+            </form>
+          ) : null}
+
+          {mode === "google" ? (
+            <div className="space-y-5">
+              <div className="border border-gray-200 bg-gray-50 px-5 py-5 text-sm text-gray-600">
+                Đăng nhập nhanh bằng Google để hệ thống tự tạo hoặc liên kết tài khoản cho bạn.
+              </div>
+
+              {googleEnabled ? (
+                <div className="flex justify-center border border-gray-200 bg-white px-4 py-8">
+                  <GoogleLogin
+                    onSuccess={handleGoogleLogin}
+                    onError={() => setError("Đăng nhập Google thất bại")}
+                    theme="outline"
+                    text="signin_with"
+                    shape="rectangular"
+                    size="large"
+                  />
+                </div>
+              ) : (
+                <div className="border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+                  Chưa cấu hình `VITE_GOOGLE_CLIENT_ID`, nên chưa thể hiển thị nút đăng nhập Google.
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {mode === "phone" ? (
+            <form
+              className="space-y-5"
+              onSubmit={phoneStep === "request" ? handleRequestOtp : handleVerifyOtp}
+            >
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-black">
+                  Số điện thoại
+                </label>
+                <input
+                  className="w-full border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
+                  value={phoneForm.phone_number}
+                  onChange={(event) =>
+                    setPhoneForm((current) => ({ ...current, phone_number: event.target.value }))
+                  }
+                  placeholder="Ví dụ: 0987654321"
+                />
+              </div>
+
+              {phoneStep === "verify" ? (
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-black">
+                    Mã OTP
+                  </label>
+                  <input
+                    className="w-full border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
+                    value={phoneForm.otp}
+                    onChange={(event) =>
+                      setPhoneForm((current) => ({ ...current, otp: event.target.value }))
+                    }
+                    placeholder="Nhập mã 6 số"
+                  />
+                </div>
+              ) : null}
+
+              {otpPreview ? (
+                <div className="space-y-3 border border-dashed border-black bg-gray-50 px-4 py-4 text-sm text-black">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold uppercase tracking-widest">Tin nhắn mô phỏng</p>
+                    <span className="text-[11px] uppercase tracking-widest text-gray-500">
+                      {otpPreview.deliveryChannel === "demo_inbox" ? "Demo inbox" : "SMS"}
+                    </span>
+                  </div>
+                  <p className="text-gray-600">
+                    Mã xác thực đã được gửi tới số <strong>{otpPreview.maskedPhoneNumber}</strong>.
+                  </p>
+                  <div className="border border-gray-200 bg-white px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-500">Nội dung tin nhắn</p>
+                    <p className="mt-2 leading-6">{otpPreview.demoMessage || "OTP demo đã sẵn sàng để kiểm thử."}</p>
+                    {otpPreview.demoOtp ? (
+                      <p className="mt-3 text-lg font-extrabold tracking-[0.3em]">{otpPreview.demoOtp}</p>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Mã có hiệu lực trong {Math.ceil((otpPreview.expiresInSeconds || 300) / 60)} phút.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 border border-black bg-black px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="submit"
+                  disabled={loading || (phoneStep === "request" && resendCountdown > 0)}
+                >
+                  {phoneStep === "request"
+                    ? loading
+                      ? "Đang gửi OTP..."
+                      : resendCountdown > 0
+                        ? `Gửi lại sau ${resendCountdown}s`
+                        : "Gửi mã OTP"
+                    : loading
+                      ? "Đang xác thực..."
+                      : "Xác thực và đăng nhập"}
+                </button>
+
+                {phoneStep === "verify" ? (
+                  <button
+                    className="border border-gray-300 bg-white px-5 py-3 text-sm font-bold uppercase tracking-widest text-black transition hover:border-black"
+                    type="button"
+                    onClick={() => {
+                      setPhoneStep("request");
+                      setPhoneForm((current) => ({ ...current, otp: "" }));
+                      setOtpPreview(null);
+                      resetMessages();
+                    }}
+                  >
+                    Chỉnh số
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
+
+          <div className="mt-8 border-t border-gray-200 pt-6 text-center">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+              Chưa có tài khoản?
+              <button
+                type="button"
+                onClick={() => navigate("/register")}
+                className="ml-2 border-none bg-transparent p-0 font-extrabold text-black hover:underline"
+              >
+                Đăng ký ngay
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

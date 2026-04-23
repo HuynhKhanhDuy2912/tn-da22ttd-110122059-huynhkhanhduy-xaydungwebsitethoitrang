@@ -48,6 +48,35 @@ export function AuthProvider({ children }) {
     return response.data;
   };
 
+  const loginWithGoogle = async (credential) => {
+    const response = await apiRequest("/auth/google", {
+      method: "POST",
+      body: { credential }
+    });
+
+    setAuth(response.data);
+    return response.data;
+  };
+
+  const requestPhoneOtp = async (payload) => {
+    const response = await apiRequest("/auth/phone/request-otp", {
+      method: "POST",
+      body: payload
+    });
+
+    return response.data;
+  };
+
+  const verifyPhoneOtp = async (payload) => {
+    const response = await apiRequest("/auth/phone/verify-otp", {
+      method: "POST",
+      body: payload
+    });
+
+    setAuth(response.data);
+    return response.data;
+  };
+
   const register = async (payload) => {
     const response = await apiRequest("/auth/register", {
       method: "POST",
@@ -85,7 +114,10 @@ export function AuthProvider({ children }) {
       user: auth.user,
       isAuthenticated: Boolean(auth.token),
       login,
+      loginWithGoogle,
       register,
+      requestPhoneOtp,
+      verifyPhoneOtp,
       refreshMe,
       logout
     }),

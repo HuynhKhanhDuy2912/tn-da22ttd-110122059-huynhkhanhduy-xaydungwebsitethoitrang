@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
+import ImageUpload from "../../components/ImageUpload.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
 
 const initialRootForm = { name: "" };
-const initialChildForm = { name: "", parentId: "" };
+const initialChildForm = { name: "", parentId: "", imageUrl: "" };
+const initialEditForm = { name: "", parentId: "", imageUrl: "" };
 
 export default function AdminCategoriesPage() {
   const { token } = useAuth();
@@ -12,9 +14,11 @@ export default function AdminCategoriesPage() {
   const [rootForm, setRootForm] = useState(initialRootForm);
   const [childForm, setChildForm] = useState(initialChildForm);
   const [editingId, setEditingId] = useState("");
-  const [editForm, setEditForm] = useState({ name: "", parentId: "" });
+  const [editForm, setEditForm] = useState(initialEditForm);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const rootCategories = categories.filter((category) => !category.parentId);
 
   const loadCategories = async () => {
     try {
@@ -29,64 +33,59 @@ export default function AdminCategoriesPage() {
     loadCategories();
   }, [token]);
 
-  const showMessage = (msg) => {
-    setMessage(msg);
+  const showMessage = (value) => {
+    setMessage(value);
     setError("");
-    setTimeout(() => setMessage(""), 3000);
+    window.setTimeout(() => setMessage(""), 3000);
   };
 
-  // Thêm danh mục gốc
   const handleAddRoot = async (event) => {
     event.preventDefault();
-    if (!rootForm.name.trim()) return;
+    if (!rootForm.name.trim()) {
+      return;
+    }
+
     try {
       await apiRequest("/categories", {
         method: "POST",
         token,
-        body: { name: rootForm.name.trim(), parentId: null }
+        body: {
+          name: rootForm.name.trim(),
+          parentId: null,
+          imageUrl: ""
+        }
       });
       showMessage(`Đã thêm danh mục gốc "${rootForm.name}"`);
       setRootForm(initialRootForm);
       loadCategories();
-    } catch (err) {
-      setError(err.message);
+    } catch (submitError) {
+      setError(submitError.message);
     }
   };
 
-  // Thêm danh mục con
   const handleAddChild = async (event) => {
     event.preventDefault();
-    if (!childForm.name.trim() || !childForm.parentId) return;
+
+    if (!childForm.name.trim() || !childForm.parentId) {
+      return;
+    }
+
     try {
       await apiRequest("/categories", {
         method: "POST",
         token,
-        body: { name: childForm.name.trim(), parentId: childForm.parentId }
+        body: {
+          name: childForm.name.trim(),
+          parentId: childForm.parentId,
+          imageUrl: childForm.imageUrl
+        }
       });
-      const parent = categories.find(c => c._id === childForm.parentId);
-      showMessage(`Đã thêm danh mục con "${childForm.name}" vào "${parent?.name}"`);
-      setChildForm(prev => ({ ...prev, name: "" }));
+      const parent = categories.find((item) => item._id === childForm.parentId);
+      showMessage(`Đã thêm danh mục con "${childForm.name}" vào "${parent?.name || "danh mục gốc"}"`);
+      setChildForm(initialChildForm);
       loadCategories();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Cập nhật
-  const handleUpdate = async (event) => {
-    event.preventDefault();
-    try {
-      await apiRequest(`/categories/${editingId}`, {
-        method: "PUT",
-        token,
-        body: { name: editForm.name, parentId: editForm.parentId || null }
-      });
-      showMessage("Đã cập nhật danh mục");
-      setEditingId("");
-      setEditForm({ name: "", parentId: "" });
-      loadCategories();
-    } catch (err) {
-      setError(err.message);
+    } catch (submitError) {
+      setError(submitError.message);
     }
   };
 
@@ -94,110 +93,162 @@ export default function AdminCategoriesPage() {
     setEditingId(category._id);
     setEditForm({
       name: category.name || "",
-      parentId: category.parentId?._id || ""
+      parentId: category.parentId?._id || "",
+      imageUrl: category.imageUrl || ""
     });
+  };
+
+  const handleUpdate = async (event) => {
+    event.preventDefault();
+
+    try {
+      await apiRequest(`/categories/${editingId}`, {
+        method: "PUT",
+        token,
+        body: {
+          name: editForm.name.trim(),
+          parentId: editForm.parentId || null,
+          imageUrl: editForm.imageUrl || ""
+        }
+      });
+      showMessage("Đã cập nhật danh mục");
+      setEditingId("");
+      setEditForm(initialEditForm);
+      loadCategories();
+    } catch (submitError) {
+      setError(submitError.message);
+    }
   };
 
   const handleDelete = async (categoryId) => {
     try {
-      await apiRequest(`/categories/${categoryId}`, { method: "DELETE", token });
+      await apiRequest(`/categories/${categoryId}`, {
+        method: "DELETE",
+        token
+      });
       showMessage("Đã xóa danh mục");
       loadCategories();
-    } catch (err) {
-      setError(err.message);
+    } catch (submitError) {
+      setError(submitError.message);
     }
   };
 
-  const inputClass = "border border-gray-300 px-4 py-3 bg-white text-black text-sm focus:border-black focus:outline-none w-full";
-  const labelClass = "text-xs font-bold uppercase tracking-widest text-black flex flex-col gap-2";
-  const rootCategories = categories.filter(c => !c.parentId);
+  const childrenOf = (rootId) =>
+    categories.filter((category) => category.parentId?._id === rootId);
+
+  const inputClass =
+    "w-full border border-gray-300 bg-white px-4 py-3 text-sm text-black outline-none transition focus:border-black";
+  const labelClass =
+    "flex flex-col gap-2 text-xs font-bold uppercase tracking-widest text-black";
 
   return (
     <section className="grid gap-6">
       <AdminPageHeader
         title="DANH MỤC"
-        description="Tạo danh mục gốc (Nam, Nữ,...) trước, sau đó mới thêm danh mục con vào."
+        description="Thêm danh mục gốc trước, sau đó tạo danh mục con và gắn hình ảnh để hiển thị đẹp hơn ở menu client."
       />
 
-      {/* Thông báo */}
-      {message && (
-        <p className="text-black bg-gray-100 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-black m-0">
+      {message ? (
+        <p className="m-0 border-l-4 border-black bg-gray-100 px-4 py-3 text-xs font-bold uppercase tracking-widest text-black">
           {message}
         </p>
-      )}
-      {error && (
-        <p className="text-red-600 bg-red-50 px-4 py-3 font-bold text-xs uppercase tracking-widest border-l-4 border-red-600 m-0">
+      ) : null}
+
+      {error ? (
+        <p className="m-0 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-600">
           {error}
         </p>
-      )}
+      ) : null}
 
-      {/* Modal sửa */}
-      {editingId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      {editingId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <form
             onSubmit={handleUpdate}
-            className="bg-white border border-gray-300 p-8 w-full max-w-md grid gap-5"
+            className="grid w-full max-w-2xl gap-5 border border-gray-300 bg-white p-8"
           >
-            <h3 className="text-black text-sm font-bold uppercase tracking-widest pb-4 border-b border-gray-200">
+            <h3 className="border-b border-gray-200 pb-4 text-sm font-bold uppercase tracking-widest text-black">
               SỬA DANH MỤC
             </h3>
-            <label className={labelClass}>
-              Tên danh mục
-              <input
-                className={inputClass}
-                value={editForm.name}
-                onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                autoFocus
-              />
-            </label>
-            <label className={labelClass}>
-              Danh mục cha
-              <select
-                className={inputClass}
-                value={editForm.parentId}
-                onChange={e => setEditForm(p => ({ ...p, parentId: e.target.value }))}
-              >
-                <option value="">Không có (Danh mục gốc)</option>
-                {rootCategories
-                  .filter(c => c._id !== editingId)
-                  .map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
-                  ))}
-              </select>
-            </label>
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
+
+            <div className="grid gap-5 md:grid-cols-[1fr_1fr]">
+              <label className={labelClass}>
+                Tên danh mục
+                <input
+                  className={inputClass}
+                  value={editForm.name}
+                  onChange={(event) =>
+                    setEditForm((current) => ({ ...current, name: event.target.value }))
+                  }
+                />
+              </label>
+
+              <label className={labelClass}>
+                Danh mục cha
+                <select
+                  className={inputClass}
+                  value={editForm.parentId}
+                  onChange={(event) =>
+                    setEditForm((current) => ({ ...current, parentId: event.target.value }))
+                  }
+                >
+                  <option value="">Không có (Danh mục gốc)</option>
+                  {rootCategories
+                    .filter((item) => item._id !== editingId)
+                    .map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
+
+            <ImageUpload
+              label="HÌNH DANH MỤC"
+              value={editForm.imageUrl}
+              onChange={(url) =>
+                setEditForm((current) => ({
+                  ...current,
+                  imageUrl: url
+                }))
+              }
+            />
+
+            <div className="flex gap-3 border-t border-gray-200 pt-4">
               <button
                 type="submit"
-                className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none"
+                className="cursor-pointer border-none bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800"
               >
-                LƯU
+                Lưu
               </button>
               <button
                 type="button"
-                className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-black bg-white border border-black hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => { setEditingId(""); setEditForm({ name: "", parentId: "" }); }}
+                className="cursor-pointer border border-black bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-100"
+                onClick={() => {
+                  setEditingId("");
+                  setEditForm(initialEditForm);
+                }}
               >
-                HỦY
+                Hủy
               </button>
             </div>
           </form>
         </div>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 items-start">
-        {/* Cột form bên trái */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.55fr]">
         <div className="grid gap-6">
-          {/* Form 1: Thêm danh mục gốc */}
           <form
             onSubmit={handleAddRoot}
-            className="bg-white border border-gray-200 p-7 grid gap-5"
+            className="grid gap-5 border border-gray-200 bg-white p-7"
           >
             <div>
-              <h3 className="text-black text-sm font-bold uppercase tracking-widest mb-1">
-                BƯỚC 1 — DANH MỤC GỐC
+              <h3 className="mb-1 text-sm font-bold uppercase tracking-widest text-black">
+                BƯỚC 1 - DANH MỤC GỐC
               </h3>
-              <p className="text-xs text-gray-500 m-0">Ví dụ: Nam, Nữ, Unisex, Trẻ em</p>
+              <p className="m-0 text-xs text-gray-500">Ví dụ: Nam, Nữ, Unisex</p>
             </div>
+
             <div className="border-t border-gray-100 pt-4">
               <label className={labelClass}>
                 Tên danh mục gốc
@@ -205,36 +256,40 @@ export default function AdminCategoriesPage() {
                   <input
                     className={inputClass}
                     value={rootForm.name}
-                    placeholder="Vd: Nam, Nữ, Unisex..."
-                    onChange={e => setRootForm({ name: e.target.value })}
+                    placeholder="Ví dụ: Nam, Nữ..."
+                    onChange={(event) => setRootForm({ name: event.target.value })}
                   />
                   <button
                     type="submit"
                     disabled={!rootForm.name.trim()}
-                    className="px-5 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    className="shrink-0 cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    THÊM
+                    Thêm
                   </button>
                 </div>
               </label>
             </div>
           </form>
 
-          {/* Form 2: Thêm danh mục con */}
           <form
             onSubmit={handleAddChild}
-            className={`bg-white border p-7 grid gap-5 transition-colors ${rootCategories.length === 0 ? "border-gray-100 opacity-50" : "border-gray-200"}`}
+            className={`grid gap-5 border bg-white p-7 transition-colors ${
+              rootCategories.length === 0 ? "border-gray-100 opacity-50" : "border-gray-200"
+            }`}
           >
             <div>
-              <h3 className="text-black text-sm font-bold uppercase tracking-widest mb-1">
-                BƯỚC 2 — DANH MỤC CON
+              <h3 className="mb-1 text-sm font-bold uppercase tracking-widest text-black">
+                BƯỚC 2 - DANH MỤC CON
               </h3>
-              <p className="text-xs text-gray-500 m-0">Ví dụ: Áo thun, Quần jean, Áo polo</p>
+              <p className="m-0 text-xs text-gray-500">
+                Ví dụ: Áo thun, Quần jean, Áo polo và thêm hình để hiển thị ở mega menu.
+              </p>
             </div>
-            <div className="border-t border-gray-100 pt-4 grid gap-4">
+
+            <div className="grid gap-4 border-t border-gray-100 pt-4">
               {rootCategories.length === 0 ? (
-                <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">
-                  ↑ Hãy tạo ít nhất một danh mục gốc trước
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Hãy tạo ít nhất một danh mục gốc trước
                 </p>
               ) : (
                 <>
@@ -243,111 +298,152 @@ export default function AdminCategoriesPage() {
                     <select
                       className={inputClass}
                       value={childForm.parentId}
-                      onChange={e => setChildForm(p => ({ ...p, parentId: e.target.value }))}
+                      onChange={(event) =>
+                        setChildForm((current) => ({
+                          ...current,
+                          parentId: event.target.value
+                        }))
+                      }
                       required
                     >
                       <option value="">Chọn danh mục gốc...</option>
-                      {rootCategories.map(c => (
-                        <option key={c._id} value={c._id}>{c.name}</option>
+                      {rootCategories.map((item) => (
+                        <option key={item._id} value={item._id}>
+                          {item.name}
+                        </option>
                       ))}
                     </select>
                   </label>
+
                   <label className={labelClass}>
                     Tên danh mục con
-                    <div className="flex gap-2">
-                      <input
-                        className={inputClass}
-                        value={childForm.name}
-                        placeholder="Vd: Áo thun, Quần jean..."
-                        onChange={e => setChildForm(p => ({ ...p, name: e.target.value }))}
-                      />
-                      <button
-                        type="submit"
-                        disabled={!childForm.name.trim() || !childForm.parentId}
-                        className="px-5 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                      >
-                        THÊM
-                      </button>
-                    </div>
+                    <input
+                      className={inputClass}
+                      value={childForm.name}
+                      placeholder="Ví dụ: Áo thun, Quần jean..."
+                      onChange={(event) =>
+                        setChildForm((current) => ({
+                          ...current,
+                          name: event.target.value
+                        }))
+                      }
+                    />
                   </label>
+
+                  <ImageUpload
+                    label="HÌNH DANH MỤC CON"
+                    value={childForm.imageUrl}
+                    onChange={(url) =>
+                      setChildForm((current) => ({
+                        ...current,
+                        imageUrl: url
+                      }))
+                    }
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!childForm.name.trim() || !childForm.parentId}
+                    className="w-fit cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Thêm danh mục con
+                  </button>
                 </>
               )}
             </div>
           </form>
         </div>
 
-        {/* Cột danh sách bên phải */}
-        <section className="bg-white border border-gray-200 p-7">
-          <h3 className="text-black text-sm font-bold uppercase tracking-widest m-0 mb-6 pb-4 border-b border-gray-200">
+        <section className="border border-gray-200 bg-white p-7">
+          <h3 className="mb-6 border-b border-gray-200 pb-4 text-sm font-bold uppercase tracking-widest text-black">
             CẤU TRÚC DANH MỤC ({rootCategories.length} gốc)
           </h3>
 
           {categories.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              Chưa có danh mục nào. Hãy tạo danh mục gốc đầu tiên!
+            <p className="py-8 text-center text-sm text-gray-400">
+              Chưa có danh mục nào. Hãy tạo danh mục gốc đầu tiên.
             </p>
           ) : (
-            <div className="grid gap-0 divide-y divide-gray-200">
-              {rootCategories.map(root => {
-                const children = categories.filter(c => c.parentId?._id === root._id);
+            <div className="grid divide-y divide-gray-200">
+              {rootCategories.map((root) => {
+                const children = childrenOf(root._id);
+
                 return (
-                  <div key={root._id} className="py-4 px-1">
-                    {/* Danh mục gốc */}
-                    <div className="flex items-center justify-between gap-4 group">
+                  <div key={root._id} className="px-1 py-4">
+                    <div className="group flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-300 font-bold">▶</span>
+                        <span className="font-bold text-gray-300">▶</span>
                         <div>
-                          <strong className="text-black text-sm uppercase tracking-widest">
+                          <strong className="text-sm uppercase tracking-widest text-black">
                             {root.name}
                           </strong>
-                          <span className="ml-2 text-[10px] text-gray-400 uppercase tracking-widest">
+                          <span className="ml-2 text-[10px] uppercase tracking-widest text-gray-400">
                             {children.length} danh mục con
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex shrink-0 gap-2">
                         <button
-                          className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black bg-white border border-black hover:bg-gray-100 cursor-pointer transition-colors"
+                          className="cursor-pointer border border-black bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-100"
                           onClick={() => handleEdit(root)}
                         >
-                          SỬA
+                          Sửa
                         </button>
                         <button
-                          className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 border border-red-600 cursor-pointer transition-colors"
+                          className="cursor-pointer border border-red-600 bg-red-600 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-red-700"
                           onClick={() => handleDelete(root._id)}
                         >
-                          XÓA
+                          Xóa
                         </button>
                       </div>
                     </div>
 
-                    {/* Danh mục con */}
-                    {children.length > 0 && (
-                      <div className="mt-3 ml-6 pl-4 border-l-2 border-gray-200 grid gap-0 divide-y divide-gray-100">
-                        {children.map(child => (
+                    {children.length > 0 ? (
+                      <div className="mt-4 ml-6 grid gap-3 border-l-2 border-gray-200 pl-4">
+                        {children.map((child) => (
                           <div
                             key={child._id}
-                            className="flex items-center justify-between gap-4 py-3 px-2 hover:bg-gray-50 transition-colors"
+                            className="flex items-center justify-between gap-4 rounded-sm border border-gray-100 bg-gray-50 px-3 py-3 transition-colors hover:bg-white"
                           >
-                            <span className="text-black text-sm">{child.name}</span>
-                            <div className="flex gap-2 shrink-0">
+                            <div className="flex min-w-0 items-center gap-4">
+                              <div className="h-14 w-14 shrink-0 overflow-hidden border border-gray-200 bg-white">
+                                {child.imageUrl ? (
+                                  <img
+                                    src={child.imageUrl}
+                                    alt={child.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="grid h-full w-full place-items-center text-[10px] font-bold uppercase tracking-widest text-gray-300">
+                                    No image
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-black">{child.name}</p>
+                                <p className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">
+                                  {child.imageUrl ? "Có hình hiển thị" : "Chưa có hình"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 gap-2">
                               <button
-                                className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black bg-white border border-black hover:bg-gray-100 cursor-pointer transition-colors"
+                                className="cursor-pointer border border-black bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-gray-100"
                                 onClick={() => handleEdit(child)}
                               >
-                                SỬA
+                                Sửa
                               </button>
                               <button
-                                className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 border border-red-600 cursor-pointer transition-colors"
+                                className="cursor-pointer border border-red-600 bg-red-600 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-red-700"
                                 onClick={() => handleDelete(child._id)}
                               >
-                                XÓA
+                                Xóa
                               </button>
                             </div>
                           </div>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}

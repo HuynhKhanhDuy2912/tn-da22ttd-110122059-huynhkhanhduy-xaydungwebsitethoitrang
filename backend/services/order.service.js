@@ -1,292 +1,150 @@
+import Cart from "../models/Cart.js";
 import CartItem from "../models/CartItem.js";
 import Order from "../models/Order.js";
 import OrderItem from "../models/OrderItem.js";
 import Payment from "../models/Payment.js";
-import Product from "../models/Product.js";
 import ProductVariant from "../models/ProductVariant.js";
-import UserBehavior from "../models/UserBehavior.js";
-import { getOrCreateCart } from "./cart.service.js";
 
-const SHIPPING_FEE = 30000;
+const ORDER_POPULATE = [
+  { path: "userId", select: "username email full_name" }
+];
 
-export const createOrderFromCart = async (user, payload) => {
-  const cart = await getOrCreateCart(user._id);
+const populateOrder = (query) => query.populate(ORDER_POPULATE);
+
+export const createOrderFromCart = async (user, body) => {
+  const { shippingAddress, receiverName, receiverPhone, note, paymentMethod = "cod" } = body;
+
+  if (!shippingAddress) throw new Error("Shipping address is required");
+  if (!receiverName) throw new Error("Receiver name is required");
+  if (!receiverPhone) throw new Error("Receiver phone is required");
+
+  const cart = await Cart.findOne({ userId: user._id });
+  if (!cart) throw new Error("Cart not found");
+
   const cartItems = await CartItem.find({ cartId: cart._id })
-    .populate("productId")
-    .populate("variantId");
+    .populate("productId", "name price discount")
+    .populate("variantId", "size color sku stock priceAdjustment isActive");
 
-  if (!cartItems.length) {
-    throw new Error("Cart is empty");
+  if (cartItems.length === 0) throw new Error("Cart is empty");
+
+  // Validate stock
+  for (const item of cartItems) {
+    if (!item.variantId?.isActive) throw new Error(`Variant for ${item.productId?.name} is no longer available`);
+    if (item.variantId.stock < item.quantity) throw new Error(`Not enough stock for ${item.productId?.name}`);
   }
 
-  const invalidItem = cartItems.find(
-    (item) =>
-      !item.productId ||
-      !item.variantId ||
-      !item.productId.isActive ||
-      !item.variantId.isActive ||
-      item.variantId.stock < item.quantity
-  );
-
-  if (invalidItem) {
-    throw new Error("Some cart items are invalid or out of stock");
-  }
-
-  const normalizedItems = cartItems.map((item) => {
-    const productPrice = item.productId.price || 0;
-    const discountPercent = item.productId.discount || 0;
-    const discountedBasePrice = productPrice - (productPrice * discountPercent) / 100;
-    const unitPrice = Math.max(discountedBasePrice + (item.variantId.priceAdjustment || 0), 0);
+  // Calculate totals
+  let subTotal = 0;
+  const orderItemsData = cartItems.map((item) => {
+    const basePrice = item.productId?.price || 0;
+    const discount = item.productId?.discount || 0;
+    const discounted = basePrice - (basePrice * discount) / 100;
+    const adj = item.variantId?.priceAdjustment || 0;
+    const unitPrice = Math.round(Math.max(discounted + adj, 0));
+    subTotal += unitPrice * item.quantity;
 
     return {
-      cartItemId: item._id,
       productId: item.productId._id,
       variantId: item.variantId._id,
       quantity: item.quantity,
-      unitPrice,
-      lineTotal: unitPrice * item.quantity
+      price: unitPrice
     };
   });
 
-  const subTotal = normalizedItems.reduce((total, item) => total + item.lineTotal, 0);
-  const discount = 0;
-  const shippingFee = payload.shippingFee ?? SHIPPING_FEE;
-  const totalPrice = subTotal + shippingFee - discount;
+  const shippingFee = subTotal >= 500000 ? 0 : 30000;
+  const totalPrice = subTotal + shippingFee;
 
   const order = await Order.create({
     userId: user._id,
+    totalPrice,
     subTotal,
     shippingFee,
-    discount,
-    totalPrice,
+    discount: 0,
     status: "pending",
-    shippingAddress: payload.shippingAddress || user.address || "",
-    receiverName: payload.receiverName || user.full_name || user.username || "",
-    receiverPhone: payload.receiverPhone || user.phone_number || "",
-    note: payload.note || ""
+    shippingAddress,
+    receiverName,
+    receiverPhone,
+    note: note || ""
   });
 
-  await OrderItem.insertMany(
-    normalizedItems.map((item) => ({
-      orderId: order._id,
-      productId: item.productId,
-      variantId: item.variantId,
-      quantity: item.quantity,
-      price: item.unitPrice
-    }))
-  );
-
-  await Promise.all(
-    normalizedItems.map((item) =>
-      ProductVariant.findByIdAndUpdate(item.variantId, {
-        $inc: { stock: -item.quantity }
-      })
-    )
-  );
+  await OrderItem.insertMany(orderItemsData.map((d) => ({ ...d, orderId: order._id })));
 
   await Payment.create({
     orderId: order._id,
     userId: user._id,
     amount: totalPrice,
-    paymentMethod: payload.paymentMethod || "cod",
-    paymentStatus: payload.paymentMethod === "cod" ? "pending" : "paid",
-    transactionId: payload.transactionId || "",
-    paidAt: payload.paymentMethod && payload.paymentMethod !== "cod" ? new Date() : null
+    paymentMethod,
+    paymentStatus: "pending"
   });
 
-  await Promise.all(
-    normalizedItems.map(async (item) => {
-      const product = await Product.findById(item.productId);
-
-      return UserBehavior.create({
-        userId: user._id,
-        productId: item.productId,
-        actionType: "purchase",
-        source: "cart",
-        metadata: {
-          style: product?.style || "",
-          color: ""
-        },
-        sessionId: payload.sessionId || ""
-      });
-    })
-  );
-
-  await CartItem.deleteMany({ cartId: cart._id });
-
-  return getOrderDetail(user._id, order._id);
-};
-
-export const getOrderDetail = async (userId, orderId) => {
-  const order = await Order.findOne({ _id: orderId, userId }).populate(
-    "userId",
-    "username email full_name"
-  );
-
-  if (!order) {
-    throw new Error("Order not found");
+  // Deduct stock
+  for (const item of cartItems) {
+    await ProductVariant.findByIdAndUpdate(item.variantId._id, {
+      $inc: { stock: -item.quantity }
+    });
   }
 
-  const [items, payment] = await Promise.all([
-    OrderItem.find({ orderId })
-      .populate("productId", "name images style")
-      .populate("variantId", "size color sku image"),
-    Payment.findOne({ orderId })
-  ]);
+  // Clear cart
+  await CartItem.deleteMany({ cartId: cart._id });
 
-  return {
-    order,
-    items,
-    payment
-  };
+  return populateOrder(Order.findById(order._id));
 };
 
 export const getMyOrders = async (userId) => {
-  const orders = await Order.find({ userId })
-    .sort({ createdAt: -1 })
-    .populate("userId", "username email full_name");
+  return Order.find({ userId }).sort({ createdAt: -1 }).populate(ORDER_POPULATE);
+};
 
-  const orderIds = orders.map((order) => order._id);
-  const [items, payments] = await Promise.all([
-    OrderItem.find({ orderId: { $in: orderIds } })
-      .populate("productId", "name images")
-      .populate("variantId", "size color sku"),
-    Payment.find({ orderId: { $in: orderIds } })
-  ]);
+export const getOrderDetail = async (userId, orderId) => {
+  const order = await Order.findOne({ _id: orderId, userId }).populate(ORDER_POPULATE);
+  if (!order) throw new Error("Order not found");
 
-  return orders.map((order) => ({
-    ...order.toObject(),
-    items: items.filter((item) => item.orderId.toString() === order._id.toString()),
-    payment: payments.find((payment) => payment.orderId.toString() === order._id.toString()) || null
-  }));
+  const items = await OrderItem.find({ orderId })
+    .populate("productId", "name price images")
+    .populate("variantId", "size color image");
+
+  return { ...order.toObject(), items };
 };
 
 export const cancelOrder = async (userId, orderId) => {
   const order = await Order.findOne({ _id: orderId, userId });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
+  if (!order) throw new Error("Order not found");
   if (!["pending", "confirmed"].includes(order.status)) {
-    throw new Error("This order can no longer be cancelled");
+    throw new Error("Cannot cancel order at this stage");
   }
 
+  // Restore stock
   const items = await OrderItem.find({ orderId });
-
-  await Promise.all(
-    items.map((item) =>
-      ProductVariant.findByIdAndUpdate(item.variantId, {
-        $inc: { stock: item.quantity }
-      })
-    )
-  );
+  for (const item of items) {
+    await ProductVariant.findByIdAndUpdate(item.variantId, {
+      $inc: { stock: item.quantity }
+    });
+  }
 
   order.status = "cancelled";
   await order.save();
-
-  await Payment.findOneAndUpdate(
-    { orderId },
-    {
-      paymentStatus: "failed"
-    }
-  );
-
-  return getOrderDetail(userId, orderId);
+  return order;
 };
 
 export const getAdminOrders = async () => {
-  const orders = await Order.find({})
-    .sort({ createdAt: -1 })
-    .populate("userId", "username email full_name");
-
-  const orderIds = orders.map((order) => order._id);
-  const [items, payments] = await Promise.all([
-    OrderItem.find({ orderId: { $in: orderIds } })
-      .populate("productId", "name images")
-      .populate("variantId", "size color sku"),
-    Payment.find({ orderId: { $in: orderIds } })
-  ]);
-
-  return orders.map((order) => ({
-    ...order.toObject(),
-    items: items.filter((item) => item.orderId.toString() === order._id.toString()),
-    payment: payments.find((payment) => payment.orderId.toString() === order._id.toString()) || null
-  }));
-};
-
-export const updateAdminOrderStatus = async (orderId, status) => {
-  const allowedStatuses = ["pending", "confirmed", "shipping", "completed", "cancelled"];
-
-  if (!allowedStatuses.includes(status)) {
-    throw new Error("Invalid order status");
-  }
-
-  const order = await Order.findById(orderId);
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
-  if (order.status === status) {
-    return getAdminOrderDetail(orderId);
-  }
-
-  if (status === "cancelled" && order.status !== "cancelled") {
-    const items = await OrderItem.find({ orderId });
-
-    await Promise.all(
-      items.map((item) =>
-        ProductVariant.findByIdAndUpdate(item.variantId, {
-          $inc: { stock: item.quantity }
-        })
-      )
-    );
-
-    await Payment.findOneAndUpdate(
-      { orderId },
-      {
-        paymentStatus: "failed"
-      }
-    );
-  }
-
-  order.status = status;
-  await order.save();
-
-  if (status === "completed") {
-    await Payment.findOneAndUpdate(
-      { orderId },
-      {
-        paymentStatus: "paid",
-        paidAt: new Date()
-      }
-    );
-  }
-
-  return getAdminOrderDetail(orderId);
+  return Order.find({}).sort({ createdAt: -1 }).populate(ORDER_POPULATE);
 };
 
 export const getAdminOrderDetail = async (orderId) => {
-  const order = await Order.findById(orderId).populate(
-    "userId",
-    "username email full_name phone_number"
-  );
+  const order = await Order.findById(orderId).populate(ORDER_POPULATE);
+  if (!order) throw new Error("Order not found");
 
-  if (!order) {
-    throw new Error("Order not found");
-  }
+  const items = await OrderItem.find({ orderId })
+    .populate("productId", "name price images")
+    .populate("variantId", "size color image");
 
-  const [items, payment] = await Promise.all([
-    OrderItem.find({ orderId })
-      .populate("productId", "name images style")
-      .populate("variantId", "size color sku image"),
-    Payment.findOne({ orderId })
-  ]);
+  return { ...order.toObject(), items };
+};
 
-  return {
-    order,
-    items,
-    payment
-  };
+export const updateAdminOrderStatus = async (orderId, status) => {
+  const validStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+  if (!validStatuses.includes(status)) throw new Error("Invalid status");
+
+  const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+  if (!order) throw new Error("Order not found");
+  return order;
 };

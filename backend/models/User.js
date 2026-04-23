@@ -13,17 +13,50 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: true,
-      unique: true,
       trim: true,
-      lowercase: true
+      lowercase: true,
+      sparse: true
     },
 
     password: {
       type: String,
-      required: true,
       minlength: 6,
       select: false
+    },
+
+    googleId: {
+      type: String,
+      trim: true,
+      sparse: true
+    },
+
+    authProviders: {
+      type: [String],
+      enum: ["email", "google", "phone"],
+      default: ["email"]
+    },
+
+    isPhoneVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    phoneOtpCode: {
+      type: String,
+      select: false,
+      default: ""
+    },
+
+    phoneOtpExpiresAt: {
+      type: Date,
+      select: false,
+      default: null
+    },
+
+    phoneOtpLastSentAt: {
+      type: Date,
+      select: false,
+      default: null
     },
 
     avatar: {
@@ -42,8 +75,7 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       trim: true,
-      enum: ["male", "female", "other"],
-      default: ""
+      enum: ["male", "female", "other"]
     },
 
     bodyShape: {
@@ -110,7 +142,7 @@ const userSchema = new mongoose.Schema(
     phone_number: {
       type: String,
       trim: true,
-      default: ""
+      sparse: true
     },
 
     isActive: {
@@ -122,11 +154,14 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ username: 1 });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ phone_number: 1 }, { unique: true, sparse: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 userSchema.index({ favoriteStyles: 1 });
 userSchema.index({ favoriteColors: 1 });
 
 userSchema.pre("save", async function savePassword(next) {
-  if (!this.isModified("password")) {
+  if (!this.password || !this.isModified("password")) {
     return next();
   }
 

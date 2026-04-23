@@ -4,7 +4,7 @@ import { createCrudControllers } from "./base.controller.js";
 
 const baseCrud = createCrudControllers(Category, {
   modelName: "Category",
-  populate: [{ path: "parentId", select: "name" }]
+  populate: [{ path: "parentId", select: "name imageUrl" }]
 });
 
 const remove = async (req, res) => {
