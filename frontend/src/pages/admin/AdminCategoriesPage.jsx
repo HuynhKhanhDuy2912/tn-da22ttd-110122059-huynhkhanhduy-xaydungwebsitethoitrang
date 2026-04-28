@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import ImageUpload from "../../components/ImageUpload.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
 
 const initialRootForm = { name: "" };
-const initialChildForm = { name: "", parentId: "", imageUrl: "" };
+const initialLevel2Form = { name: "", parentId: "", imageUrl: "" };
+const initialLevel3Form = { name: "", parentId: "", imageUrl: "" };
 const initialEditForm = { name: "", parentId: "", imageUrl: "" };
-const MAX_ROWS_PER_PAGE = 16;
 
 function buildCategoryTree(categories) {
   const byParent = new Map();
@@ -19,7 +20,7 @@ function buildCategoryTree(categories) {
   });
 
   const sortByCreatedAt = (items) =>
-    [...items].sort((left, right) => new Date(left.createdAt || 0) - new Date(right.createdAt || 0));
+    [...items].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 
   const walk = (parentId = "root", depth = 0) => {
     const children = sortByCreatedAt(byParent.get(parentId) || []);
@@ -35,57 +36,50 @@ function buildCategoryTree(categories) {
 
 function flattenTree(nodes) {
   const result = [];
+
   const walk = (items, depth = 0) => {
     items.forEach((item) => {
       result.push({ ...item, depth });
       if (item.children?.length) walk(item.children, depth + 1);
     });
   };
+
   walk(nodes);
   return result;
 }
 
-function countRows(node) {
-  return 1 + (node.children || []).reduce((total, child) => total + countRows(child), 0);
-}
+function filterTree(nodes, query) {
+  if (!query.trim()) return nodes;
+  const normalized = query.trim().toLowerCase();
 
-function paginateTreeRoots(roots, maxRowsPerPage) {
-  if (!roots.length) return [[]];
+  const walk = (items) => {
+    const filtered = [];
 
-  const pages = [];
-  let currentPage = [];
-  let currentRows = 0;
+    items.forEach((item) => {
+      const children = walk(item.children || []);
+      const isMatch = (item.name || "").toLowerCase().includes(normalized);
+      if (isMatch || children.length > 0) filtered.push({ ...item, children });
+    });
 
-  roots.forEach((root) => {
-    const rootRows = countRows(root);
-    const exceedsCurrentPage = currentPage.length > 0 && currentRows + rootRows > maxRowsPerPage;
+    return filtered;
+  };
 
-    if (exceedsCurrentPage) {
-      pages.push(currentPage);
-      currentPage = [root];
-      currentRows = rootRows;
-      return;
-    }
-
-    currentPage.push(root);
-    currentRows += rootRows;
-  });
-
-  if (currentPage.length > 0) pages.push(currentPage);
-  return pages.length > 0 ? pages : [[]];
+  return walk(nodes);
 }
 
 export default function AdminCategoriesPage() {
   const { token } = useAuth();
+
   const [categories, setCategories] = useState([]);
   const [rootForm, setRootForm] = useState(initialRootForm);
-  const [childForm, setChildForm] = useState(initialChildForm);
+  const [level2Form, setLevel2Form] = useState(initialLevel2Form);
+  const [level3Form, setLevel3Form] = useState(initialLevel3Form);
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState(initialEditForm);
+  const [activeForm, setActiveForm] = useState("root");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [activePanel, setActivePanel] = useState("create");
 
   const inputClass =
     "w-full border border-gray-300 bg-white px-4 py-3 text-sm text-black outline-none transition focus:border-black";
@@ -99,7 +93,7 @@ export default function AdminCategoriesPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await apiRequest("/categories?limit=500", { token });
+      const response = await apiRequest("/categories?limit=1000", { token });
       setCategories(response.data || []);
     } catch (loadError) {
       setError(loadError.message);
@@ -110,22 +104,35 @@ export default function AdminCategoriesPage() {
     loadCategories();
   }, [token]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [categories.length]);
-
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const filteredTree = useMemo(() => filterTree(categoryTree, search), [categoryTree, search]);
   const categoryOptions = useMemo(() => flattenTree(categoryTree), [categoryTree]);
-  const treePages = useMemo(
-    () => paginateTreeRoots(categoryTree, MAX_ROWS_PER_PAGE),
-    [categoryTree]
-  );
-  const totalPages = treePages.length;
-  const pagedCategoryTree = useMemo(() => treePages[currentPage - 1] || [], [treePages, currentPage]);
 
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+  const depthById = useMemo(() => {
+    const map = new Map();
+    categoryOptions.forEach((item) => map.set(item._id, item.depth));
+    return map;
+  }, [categoryOptions]);
+
+  const level1Options = useMemo(
+    () => categoryOptions.filter((item) => item.depth === 0),
+    [categoryOptions]
+  );
+
+  const level2Options = useMemo(
+    () => categoryOptions.filter((item) => item.depth === 1),
+    [categoryOptions]
+  );
+
+  const rootCount = useMemo(
+    () => categories.filter((category) => !category.parentId?._id).length,
+    [categories]
+  );
+
+  const leafCount = useMemo(() => {
+    const parentIds = new Set(categories.map((category) => category.parentId?._id).filter(Boolean));
+    return categories.filter((category) => !parentIds.has(category._id)).length;
+  }, [categories]);
 
   const handleAddRoot = async (event) => {
     event.preventDefault();
@@ -141,7 +148,8 @@ export default function AdminCategoriesPage() {
           imageUrl: ""
         }
       });
-      showMessage(`Đã thêm danh mục gốc "${rootForm.name}"`);
+
+      showMessage(`Đã thêm danh mục cấp 1 "${rootForm.name}"`);
       setRootForm(initialRootForm);
       await loadCategories();
     } catch (submitError) {
@@ -149,23 +157,68 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const handleAddChild = async (event) => {
+  const handleAddLevel2 = async (event) => {
     event.preventDefault();
-    if (!childForm.name.trim() || !childForm.parentId) return;
+    if (!level2Form.name.trim() || !level2Form.parentId) return;
+
+    if (!level2Form.imageUrl.trim()) {
+      setError("Danh mục cấp 2 bắt buộc có ảnh.");
+      return;
+    }
+
+    const parentDepth = depthById.get(level2Form.parentId);
+    if (parentDepth !== 0) {
+      setError("Danh mục cấp 2 phải chọn cha là danh mục cấp 1.");
+      return;
+    }
 
     try {
       await apiRequest("/categories", {
         method: "POST",
         token,
         body: {
-          name: childForm.name.trim(),
-          parentId: childForm.parentId,
-          imageUrl: childForm.imageUrl || ""
+          name: level2Form.name.trim(),
+          parentId: level2Form.parentId,
+          imageUrl: level2Form.imageUrl.trim()
         }
       });
 
-      showMessage(`Đã thêm danh mục "${childForm.name}"`);
-      setChildForm(initialChildForm);
+      showMessage(`Đã thêm danh mục cấp 2 "${level2Form.name}"`);
+      setLevel2Form(initialLevel2Form);
+      await loadCategories();
+    } catch (submitError) {
+      setError(submitError.message);
+    }
+  };
+
+  const handleAddLevel3 = async (event) => {
+    event.preventDefault();
+    if (!level3Form.name.trim() || !level3Form.parentId) return;
+
+    if (!level3Form.imageUrl.trim()) {
+      setError("Danh mục cấp 3 bắt buộc có ảnh.");
+      return;
+    }
+
+    const parentDepth = depthById.get(level3Form.parentId);
+    if (parentDepth !== 1) {
+      setError("Danh mục cấp 3 phải chọn cha là danh mục cấp 2.");
+      return;
+    }
+
+    try {
+      await apiRequest("/categories", {
+        method: "POST",
+        token,
+        body: {
+          name: level3Form.name.trim(),
+          parentId: level3Form.parentId,
+          imageUrl: level3Form.imageUrl.trim()
+        }
+      });
+
+      showMessage(`Đã thêm danh mục cấp 3 "${level3Form.name}"`);
+      setLevel3Form(initialLevel3Form);
       await loadCategories();
     } catch (submitError) {
       setError(submitError.message);
@@ -183,6 +236,32 @@ export default function AdminCategoriesPage() {
 
   const handleUpdate = async (event) => {
     event.preventDefault();
+    if (!editingId) return;
+
+    const currentDepth = depthById.get(editingId) ?? 0;
+    const nextParentId = editForm.parentId || null;
+    const nextParentDepth = nextParentId ? depthById.get(nextParentId) : -1;
+    const nextDepth = nextParentDepth + 1;
+
+    if (nextDepth > 2) {
+      setError("Danh mục chỉ hỗ trợ tối đa 3 cấp.");
+      return;
+    }
+
+    if (nextDepth === 0 && editForm.imageUrl.trim()) {
+      setError("Danh mục cấp 1 không dùng ảnh.");
+      return;
+    }
+
+    if (nextDepth > 0 && !editForm.imageUrl.trim()) {
+      setError("Danh mục cấp 2/3 bắt buộc có ảnh.");
+      return;
+    }
+
+    if (currentDepth === 0 && nextDepth !== 0) {
+      setError("Danh mục cấp 1 chỉ được giữ ở cấp 1.");
+      return;
+    }
 
     try {
       await apiRequest(`/categories/${editingId}`, {
@@ -190,8 +269,8 @@ export default function AdminCategoriesPage() {
         token,
         body: {
           name: editForm.name.trim(),
-          parentId: editForm.parentId || null,
-          imageUrl: editForm.imageUrl || ""
+          parentId: nextParentId,
+          imageUrl: nextDepth === 0 ? "" : editForm.imageUrl.trim()
         }
       });
 
@@ -224,11 +303,12 @@ export default function AdminCategoriesPage() {
         <div className="flex items-center justify-between gap-3 rounded-sm border border-gray-100 bg-gray-50 px-3 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="text-xs font-bold uppercase tracking-widest text-gray-300">C{node.depth + 1}</span>
-            <div
-              className="h-10 w-10 shrink-0 overflow-hidden bg-white"
-              style={{ marginLeft: `${node.depth * 10}px` }}
-            >
-              {node.imageUrl ? (
+            <div className="h-10 w-10 shrink-0 overflow-hidden bg-white" style={{ marginLeft: `${node.depth * 10}px` }}>
+              {node.depth === 0 ? (
+                <div className="grid h-full w-full place-items-center text-[10px] uppercase tracking-widest text-gray-300">
+                  ROOT
+                </div>
+              ) : node.imageUrl ? (
                 <img src={node.imageUrl} alt={node.name} className="h-full w-full object-contain" />
               ) : (
                 <div className="grid h-full w-full place-items-center text-[10px] uppercase tracking-widest text-gray-300">
@@ -236,6 +316,7 @@ export default function AdminCategoriesPage() {
                 </div>
               )}
             </div>
+
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-black">{node.name}</p>
               <p className="text-[10px] uppercase tracking-widest text-gray-400">{node.children.length} mục con</p>
@@ -261,11 +342,19 @@ export default function AdminCategoriesPage() {
       </div>
     ));
 
+  const editingDepth = editingId ? depthById.get(editingId) ?? 0 : 0;
+  const editParentOptions = useMemo(() => {
+    if (!editingId) return [];
+    if (editingDepth === 0) return [];
+    if (editingDepth === 1) return categoryOptions.filter((item) => item.depth === 0 && item._id !== editingId);
+    return categoryOptions.filter((item) => item.depth === 1 && item._id !== editingId);
+  }, [editingId, editingDepth, categoryOptions]);
+
   return (
-    <section className="grid gap-6">
+    <section className="grid gap-6 p-6">
       <AdminPageHeader
         title="DANH MỤC"
-        description="Quản lý danh mục nhiều cấp. Ví dụ: Nam -> Tất cả áo nam -> Áo thun/Áo polo."
+        description="Quản lý 3 cấp: Cấp 1 (không ảnh), cấp 2 (có ảnh), cấp 3 (có ảnh)."
       />
 
       {message ? (
@@ -278,31 +367,6 @@ export default function AdminCategoriesPage() {
           {error}
         </p>
       ) : null}
-
-      <div className="flex items-center gap-2 border-b border-gray-200">
-        <button
-          type="button"
-          onClick={() => setActivePanel("create")}
-          className={`cursor-pointer border-b-2 px-4 py-3 text-xs font-bold uppercase tracking-widest transition ${
-            activePanel === "create"
-              ? "border-black text-black"
-              : "border-transparent text-gray-400 hover:text-black"
-          }`}
-        >
-          Thêm danh mục
-        </button>
-        <button
-          type="button"
-          onClick={() => setActivePanel("structure")}
-          className={`cursor-pointer border-b-2 px-4 py-3 text-xs font-bold uppercase tracking-widest transition ${
-            activePanel === "structure"
-              ? "border-black text-black"
-              : "border-transparent text-gray-400 hover:text-black"
-          }`}
-        >
-          Cấu trúc danh mục
-        </button>
-      </div>
 
       {editingId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -326,24 +390,29 @@ export default function AdminCategoriesPage() {
                   className={inputClass}
                   value={editForm.parentId}
                   onChange={(event) => setEditForm((current) => ({ ...current, parentId: event.target.value }))}
+                  disabled={editingDepth === 0}
                 >
-                  <option value="">Không có (Danh mục gốc)</option>
-                  {categoryOptions
-                    .filter((item) => item._id !== editingId)
-                    .map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {`${"— ".repeat(item.depth)}${item.name}`}
-                      </option>
-                    ))}
+                  <option value="">Không có (Danh mục cấp 1)</option>
+                  {editParentOptions.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {`${"— ".repeat(item.depth)}${item.name}`}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
 
-            <ImageUpload
-              label="Hình danh mục"
-              value={editForm.imageUrl}
-              onChange={(url) => setEditForm((current) => ({ ...current, imageUrl: url }))}
-            />
+            {editingDepth > 0 ? (
+              <ImageUpload
+                label="Hình danh mục"
+                value={editForm.imageUrl}
+                onChange={(url) => setEditForm((current) => ({ ...current, imageUrl: url }))}
+              />
+            ) : (
+              <div className="border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+                Danh mục cấp 1 không sử dụng hình ảnh.
+              </div>
+            )}
 
             <div className="flex gap-3 border-t border-gray-200 pt-4">
               <button
@@ -367,141 +436,192 @@ export default function AdminCategoriesPage() {
         </div>
       ) : null}
 
-      {activePanel === "create" ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <form onSubmit={handleAddRoot} className="grid gap-5 border border-gray-200 bg-white p-7">
-            <div>
-              <h3 className="mb-1 text-sm font-bold uppercase tracking-widest text-black">Phần 1 - Danh mục gốc</h3>
-              <p className="m-0 text-xs text-gray-500">Ví dụ: Nam, Nữ, Unisex</p>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.55fr] lg:items-stretch">
+        <aside className="grid content-start gap-6">
+          <section className="border border-gray-200 bg-white p-6 lg:h-[760px] lg:overflow-y-auto">
+            <div className="mb-5 grid grid-cols-3 gap-3">
+              <div className="border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tổng danh mục</p>
+                <p className="mt-2 text-xl font-bold text-black">{categories.length}</p>
+              </div>
+              <div className="border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục cấp 1</p>
+                <p className="mt-2 text-xl font-bold text-black">{rootCount}</p>
+              </div>
+              <div className="border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục lá</p>
+                <p className="mt-2 text-xl font-bold text-black">{leafCount}</p>
+              </div>
             </div>
 
-            <label className={labelClass}>
-              Tên danh mục gốc
-              <div className="flex gap-2">
-                <input
-                  className={inputClass}
-                  value={rootForm.name}
-                  placeholder="Ví dụ: Nam, Nữ..."
-                  onChange={(event) => setRootForm({ name: event.target.value })}
-                />
+            <div className="mb-5 flex items-center gap-2 border-b border-gray-200">
+              <button
+                type="button"
+                onClick={() => setActiveForm("root")}
+                className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
+                  activeForm === "root" ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"
+                }`}
+              >
+                Thêm cấp 1
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveForm("level2")}
+                className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
+                  activeForm === "level2" ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"
+                }`}
+              >
+                Thêm cấp 2
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveForm("level3")}
+                className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
+                  activeForm === "level3" ? "border-black text-black" : "border-transparent text-gray-400 hover:text-black"
+                }`}
+              >
+                Thêm cấp 3
+              </button>
+            </div>
+
+            {activeForm === "root" ? (
+              <form onSubmit={handleAddRoot} className="grid gap-4">
+                <label className={labelClass}>
+                  Tên danh mục cấp 1
+                  <input
+                    className={inputClass}
+                    value={rootForm.name}
+                    placeholder="Ví dụ: Nam, Nữ..."
+                    onChange={(event) => setRootForm({ name: event.target.value })}
+                  />
+                </label>
                 <button
                   type="submit"
                   disabled={!rootForm.name.trim()}
-                  className="shrink-0 cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="w-fit cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Thêm
+                  Thêm danh mục cấp 1
                 </button>
-              </div>
-            </label>
-          </form>
+              </form>
+            ) : null}
 
-          <form onSubmit={handleAddChild} className="grid gap-5 border border-gray-200 bg-white p-7">
-            <div>
-              <h3 className="mb-1 text-sm font-bold uppercase tracking-widest text-black">Phần 2 - Danh mục con</h3>
-              <p className="m-0 text-xs text-gray-500">Chọn danh mục cha bất kỳ để tạo cấp tiếp theo.</p>
-            </div>
+            {activeForm === "level2" ? (
+              <form onSubmit={handleAddLevel2} className="grid gap-4">
+                <label className={labelClass}>
+                  Chọn cha cấp 1
+                  <select
+                    className={inputClass}
+                    value={level2Form.parentId}
+                    onChange={(event) => setLevel2Form((current) => ({ ...current, parentId: event.target.value }))}
+                    required
+                  >
+                    <option value="">Chọn danh mục cấp 1...</option>
+                    {level1Options.map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <label className={labelClass}>
-              Thuộc danh mục cha
-              <select
-                className={inputClass}
-                value={childForm.parentId}
-                onChange={(event) => setChildForm((current) => ({ ...current, parentId: event.target.value }))}
-                required
-              >
-                <option value="">Chọn danh mục cha...</option>
-                {categoryOptions.map((item) => (
-                  <option key={item._id} value={item._id}>
-                    {`${"— ".repeat(item.depth)}${item.name}`}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <label className={labelClass}>
+                  Tên danh mục cấp 2
+                  <input
+                    className={inputClass}
+                    value={level2Form.name}
+                    placeholder="Ví dụ: Tất cả áo nam, Tất cả quần nam..."
+                    onChange={(event) => setLevel2Form((current) => ({ ...current, name: event.target.value }))}
+                  />
+                </label>
 
-            <label className={labelClass}>
-              Tên danh mục
-              <input
-                className={inputClass}
-                value={childForm.name}
-                placeholder="Ví dụ: Tất cả áo nam, Áo thun..."
-                onChange={(event) => setChildForm((current) => ({ ...current, name: event.target.value }))}
-              />
-            </label>
+                <ImageUpload
+                  label="Hình danh mục cấp 2"
+                  value={level2Form.imageUrl}
+                  onChange={(url) => setLevel2Form((current) => ({ ...current, imageUrl: url }))}
+                />
 
-            <ImageUpload
-              label="Hình danh mục con"
-              value={childForm.imageUrl}
-              onChange={(url) => setChildForm((current) => ({ ...current, imageUrl: url }))}
-            />
+                <button
+                  type="submit"
+                  disabled={!level2Form.name.trim() || !level2Form.parentId}
+                  className="w-fit cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Thêm danh mục cấp 2
+                </button>
+              </form>
+            ) : null}
 
-            <button
-              type="submit"
-              disabled={!childForm.name.trim() || !childForm.parentId}
-              className="w-fit cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Thêm danh mục
-            </button>
-          </form>
-        </div>
-      ) : (
-        <section className="flex h-full flex-col border border-gray-200 bg-white p-7">
+            {activeForm === "level3" ? (
+              <form onSubmit={handleAddLevel3} className="grid gap-4">
+                <label className={labelClass}>
+                  Chọn cha cấp 2
+                  <select
+                    className={inputClass}
+                    value={level3Form.parentId}
+                    onChange={(event) => setLevel3Form((current) => ({ ...current, parentId: event.target.value }))}
+                    required
+                  >
+                    <option value="">Chọn danh mục cấp 2...</option>
+                    {level2Options.map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={labelClass}>
+                  Tên danh mục cấp 3
+                  <input
+                    className={inputClass}
+                    value={level3Form.name}
+                    placeholder="Ví dụ: Áo thun, Áo polo, Quần jean..."
+                    onChange={(event) => setLevel3Form((current) => ({ ...current, name: event.target.value }))}
+                  />
+                </label>
+
+                <ImageUpload
+                  label="Hình danh mục cấp 3"
+                  value={level3Form.imageUrl}
+                  onChange={(url) => setLevel3Form((current) => ({ ...current, imageUrl: url }))}
+                />
+
+                <button
+                  type="submit"
+                  disabled={!level3Form.name.trim() || !level3Form.parentId}
+                  className="w-fit cursor-pointer border-none bg-black px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Thêm danh mục cấp 3
+                </button>
+              </form>
+            ) : null}
+          </section>
+        </aside>
+
+        <section className="flex flex-col border border-gray-200 bg-white p-7 lg:h-[760px]">
           <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-4">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-black">Cấu trúc danh mục ({categories.length})</h3>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
-              Trang {currentPage}/{totalPages}
-            </p>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-black">Cấu trúc danh mục</h3>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{filteredTree.length} nhóm</p>
           </div>
 
-          {categories.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-400">Chưa có danh mục nào.</p>
+          <div className="mb-4 flex items-center gap-3 border border-gray-200 px-3 py-2">
+            <Search size={16} className="text-gray-400" />
+            <input
+              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+              placeholder="Tìm danh mục..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+
+          {filteredTree.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-400">Không có danh mục phù hợp.</p>
           ) : (
-            <>
-              <div className="flex-1 pr-1">
-                <div className="grid gap-2">{renderTreeRows(pagedCategoryTree)}</div>
-              </div>
-
-              {totalPages > 1 ? (
-                <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-                  <button
-                    type="button"
-                    className="cursor-pointer border border-black bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-                  >
-                    Trang trước
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                      <button
-                        key={page}
-                        type="button"
-                        onClick={() => setCurrentPage(page)}
-                        className={`h-8 min-w-8 cursor-pointer border px-2 text-[10px] font-bold uppercase tracking-widest transition ${
-                          currentPage === page
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 bg-white text-black hover:border-black"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className="cursor-pointer border border-black bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
-                  >
-                    Trang sau
-                  </button>
-                </div>
-              ) : null}
-            </>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="grid gap-2">{renderTreeRows(filteredTree)}</div>
+            </div>
           )}
         </section>
-      )}
+      </div>
     </section>
   );
 }

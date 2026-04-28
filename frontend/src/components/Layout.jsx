@@ -1,28 +1,72 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Home, History, IdCard, LogOut, Search, User, X } from "lucide-react";
+import {
+  Home,
+  History,
+  IdCard,
+  Image as ImageIcon,
+  LogOut,
+  Search,
+  Shirt,
+  Store,
+  User,
+  X
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 
-const ROWS_PER_COLUMN = 5;
-
 function getParentId(category) {
-  if (!category?.parentId) {
-    return null;
-  }
+  if (!category?.parentId) return null;
   return typeof category.parentId === "string" ? category.parentId : category.parentId._id || null;
 }
 
 function sortByCreatedAt(items) {
-  return [...items].sort((left, right) => new Date(left.createdAt || 0) - new Date(right.createdAt || 0));
+  return [...items].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 }
 
-function chunkArray(items, chunkSize) {
-  const chunks = [];
-  for (let index = 0; index < items.length; index += chunkSize) {
-    chunks.push(items.slice(index, index + chunkSize));
+function chunkArray(items, columns = 4) {
+  if (!items.length) return [[], [], [], []];
+  const size = Math.ceil(items.length / columns);
+  return Array.from({ length: columns }, (_, i) => items.slice(i * size, i * size + size));
+}
+
+const highlightItems = [
+  { key: "new", label: "Hàng Mới", type: "new" },
+  { key: "easy-buy", label: "Easy Buy", type: "star" },
+  { key: "sale", label: "Ưu đãi", type: "sale" },
+  { key: "stores", label: "Danh sách cửa hàng", type: "store" }
+];
+
+function HighlightIcon({ type }) {
+  if (type === "new") {
+    return (
+      <div className="grid h-10 w-10 place-items-center bg-green-700 text-[11px] font-bold uppercase text-white">
+        NEW
+      </div>
+    );
   }
-  return chunks;
+
+  if (type === "sale") {
+    return (
+      <div className="grid h-10 w-10 place-items-center bg-red-600 text-[11px] font-bold uppercase text-white">
+        SALE
+      </div>
+    );
+  }
+
+  if (type === "star") {
+    return (
+      <div className="grid h-10 w-10 place-items-center text-3xl leading-none text-amber-500">
+        ★
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid h-10 w-10 place-items-center text-blue-600">
+      <Store size={26} strokeWidth={1.8} />
+    </div>
+  );
 }
 
 export default function Layout() {
@@ -30,6 +74,10 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const accountRef = useRef(null);
+  const megaPanelRef = useRef(null);
+  const megaTriggerRef = useRef(null);
+  const closeTimeoutRef = useRef(null);
+
   const [search, setSearch] = useState("");
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -48,7 +96,7 @@ export default function Layout() {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    apiRequest("/categories?limit=500")
+    apiRequest("/categories?limit=1000")
       .then((response) => setCategories(response.data || []))
       .catch(() => {});
   }, []);
@@ -58,11 +106,26 @@ export default function Layout() {
       if (accountRef.current && !accountRef.current.contains(event.target)) {
         setIsAccountOpen(false);
       }
+
+      if (!activeMegaMenu) return;
+      const isInsidePanel = megaPanelRef.current?.contains(event.target);
+      const isInsideTrigger = megaTriggerRef.current?.contains(event.target);
+      if (!isInsidePanel && !isInsideTrigger) {
+        setActiveMegaMenu(null);
+      }
+    };
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") setActiveMegaMenu(null);
     };
 
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [activeMegaMenu]);
 
   const rootCategories = useMemo(
     () => sortByCreatedAt(categories.filter((category) => !getParentId(category))),
@@ -73,31 +136,55 @@ export default function Layout() {
     sortByCreatedAt(categories.filter((category) => getParentId(category) === parentId));
 
   const activeMegaRoot = rootCategories.find((root) => root._id === activeMegaMenu) || null;
-  const level2Categories = activeMegaRoot ? childrenOf(activeMegaRoot._id) : [];
 
-  const menuColumns = useMemo(() => {
-    if (!activeMegaRoot) {
-      return [];
+  const megaColumns = useMemo(() => {
+    if (!activeMegaRoot) return [[], [], [], []];
+
+    const level2 = childrenOf(activeMegaRoot._id);
+    const flattened = [];
+
+    const hasLevel3 = level2.some((group) => childrenOf(group._id).length > 0);
+
+    if (!hasLevel3) {
+      level2.forEach((item) => {
+        flattened.push({
+          _id: item._id,
+          name: item.name,
+          imageUrl: item.imageUrl || "",
+          isGroupTitle: false
+        });
+      });
+    } else {
+      level2.forEach((group) => {
+        flattened.push({
+          _id: group._id,
+          name: `Tất cả ${group.name}`,
+          imageUrl: group.imageUrl || "",
+          isGroupTitle: true
+        });
+
+        childrenOf(group._id).forEach((item) => {
+          flattened.push({
+            _id: item._id,
+            name: item.name,
+            imageUrl: item.imageUrl || "",
+            isGroupTitle: false
+          });
+        });
+      });
     }
 
-    const groupedByLevel3 = level2Categories.some((group) => childrenOf(group._id).length > 0);
+    return chunkArray(flattened, 4);
+  }, [activeMegaRoot, categories]);
 
-    if (!groupedByLevel3) {
-      return chunkArray(level2Categories, ROWS_PER_COLUMN).slice(0, 3).map((rows, colIndex) => ({
-        key: `flat-col-${colIndex}`,
-        rows: rows.map((row) => ({ ...row, isGroupAll: false }))
-      }));
-    }
+  const startCloseTimer = () => {
+    window.clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = window.setTimeout(() => setActiveMegaMenu(null), 120);
+  };
 
-    return level2Categories.slice(0, 3).map((group) => {
-      const level3 = childrenOf(group._id);
-      const rows = [{ ...group, isGroupAll: true }, ...level3].slice(0, ROWS_PER_COLUMN);
-      return {
-        key: group._id,
-        rows
-      };
-    });
-  }, [activeMegaRoot, level2Categories]);
+  const clearCloseTimer = () => {
+    window.clearTimeout(closeTimeoutRef.current);
+  };
 
   const handleCategoryClick = (categoryId) => {
     setActiveMegaMenu(null);
@@ -106,103 +193,83 @@ export default function Layout() {
 
   const toggleMegaMenu = (rootId) => {
     const children = childrenOf(rootId);
-
     if (children.length === 0) {
       handleCategoryClick(rootId);
       return;
     }
-
     setActiveMegaMenu((current) => (current === rootId ? null : rootId));
+  };
+
+  const openMegaMenu = (rootId) => {
+    const children = childrenOf(rootId);
+    if (children.length === 0) return;
+    setActiveMegaMenu(rootId);
   };
 
   return (
     <div className="min-h-screen bg-white font-sans text-black">
       {!isAdminView ? (
         <>
-          <div className="bg-black px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.25em] text-white">
-            Miễn phí vận chuyển toàn quốc cho đơn từ 500K
-          </div>
-
           <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
-            <div className="flex items-center justify-between gap-6 px-4 py-4 lg:px-8">
-              <div className="flex items-center gap-8">
-                <NavLink
-                  to="/"
-                  className="text-2xl font-extrabold uppercase tracking-[0.15em] text-black transition-opacity hover:opacity-70"
-                >
-                  FashionStore
+            <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 lg:px-8">
+              <nav
+                ref={megaTriggerRef}
+                className="hidden items-center gap-5 lg:flex"
+                onMouseLeave={startCloseTimer}
+                onMouseEnter={clearCloseTimer}
+              >
+                <NavLink to="/" className="text-[15px] font-normal text-black hover:text-red-600">
+                  Trang chủ
                 </NavLink>
 
-                <nav className="hidden items-center gap-1 lg:flex">
-                  <NavLink
-                    to="/"
-                    end
-                    className={({ isActive }) =>
-                      `px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
-                        isActive ? "border-b-2 border-black text-black" : "text-gray-500 hover:text-black"
-                      }`
-                    }
-                  >
-                    Trang chủ
-                  </NavLink>
+                {rootCategories.map((root) => {
+                  const isActive = activeMegaMenu === root._id;
+                  return (
+                    <button
+                      key={root._id}
+                      type="button"
+                      onMouseEnter={() => {
+                        clearCloseTimer();
+                        openMegaMenu(root._id);
+                      }}
+                      onClick={() => toggleMegaMenu(root._id)}
+                      className={`border-none bg-transparent p-0 text-[15px] transition ${
+                        isActive ? "font-medium text-black" : "font-normal text-black hover:text-red-600"
+                      }`}
+                    >
+                      <span className="tracking-wide">{root.name}</span>
+                    </button>
+                  );
+                })}
+                <NavLink to="/products" className="text-[15px] text-black hover:text-red-600">
+                  Về Routine
+                </NavLink>
+                <NavLink to="/products" className="text-[15px] text-black hover:text-red-600">
+                  Bộ sưu tập
+                </NavLink>
+                <NavLink to="/products?tag=uu-dai" className="text-[15px] text-red-600 hover:opacity-80">
+                  Ưu đãi
+                </NavLink>
+              </nav>
 
-                  {rootCategories.map((root) => {
-                    const isActive = activeMegaMenu === root._id;
-                    return (
-                      <button
-                        key={root._id}
-                        type="button"
-                        onClick={() => toggleMegaMenu(root._id)}
-                        className={`border-none bg-transparent px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
-                          isActive ? "border-b-2 border-black text-black" : "text-gray-500 hover:text-black"
-                        }`}
-                      >
-                        {root.name}
-                      </button>
-                    );
-                  })}
+              <NavLink to="/" className="text-4xl font-light tracking-tight">
+                R
+              </NavLink>
 
-                  {isAuthenticated ? (
-                    <>
-                      <NavLink
-                        to="/recommendations"
-                        className={({ isActive }) =>
-                          `px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
-                            isActive ? "border-b-2 border-black text-black" : "text-gray-500 hover:text-black"
-                          }`
-                        }
-                      >
-                        Gợi ý
-                      </NavLink>
-                      <NavLink
-                        to="/wishlist"
-                        className={({ isActive }) =>
-                          `px-3 py-2 text-xs font-bold uppercase tracking-widest transition ${
-                            isActive ? "border-b-2 border-black text-black" : "text-gray-500 hover:text-black"
-                          }`
-                        }
-                      >
-                        Yêu thích
-                      </NavLink>
-                    </>
-                  ) : null}
-                </nav>
-              </div>
-
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <form
-                  className="hidden items-center gap-2 border-b border-gray-300 px-1 pb-1 lg:flex"
+                  className="hidden w-[320px] items-center border border-gray-200 px-3 py-2 lg:flex"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    window.location.href = searchHref;
+                    navigate(searchHref);
                   }}
                 >
-                  <Search size={16} className="text-gray-400" />
+                  <Search size={18} strokeWidth={1.75} className="shrink-0 text-gray-500" />
                   <input
-                    className="w-[170px] bg-transparent text-sm outline-none placeholder:text-gray-400"
-                    placeholder="Tìm kiếm..."
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm kiếm sản phẩm"
+                    className="ml-2 w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
                   />
                 </form>
 
@@ -210,13 +277,13 @@ export default function Layout() {
                   <div className="relative" ref={accountRef}>
                     <button
                       type="button"
-                      className="flex items-center gap-2 border-none bg-transparent text-xs font-bold uppercase tracking-widest text-black transition hover:text-gray-500"
+                      className="flex items-center gap-2 border-none bg-transparent text-sm text-black transition hover:text-red-600"
                       onClick={() => setIsAccountOpen((current) => !current)}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-400">
-                        <User className="h-4 w-4" />
+                      <User className="h-5 w-5" />
+                      <span className="hidden max-w-[140px] truncate lg:inline">
+                        {user?.full_name || user?.username || "Người dùng"}
                       </span>
-                      {user?.full_name || user?.username}
                     </button>
 
                     {isAccountOpen ? (
@@ -265,25 +332,14 @@ export default function Layout() {
                     ) : null}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4">
-                    <NavLink
-                      to="/login"
-                      className="text-sm font-bold uppercase tracking-widest transition hover:text-gray-500"
-                    >
-                      Đăng nhập
-                    </NavLink>
-                    <span className="text-gray-300">|</span>
-                    <NavLink
-                      to="/register"
-                      className="text-sm font-bold uppercase tracking-widest transition hover:text-gray-500"
-                    >
-                      Đăng ký
-                    </NavLink>
-                  </div>
+                  <NavLink to="/login" className="flex items-center gap-2 text-sm text-black hover:text-red-600">
+                    <User className="h-5 w-5" />
+                    <span className="hidden lg:inline">Đăng nhập</span>
+                  </NavLink>
                 )}
 
                 {isAuthenticated ? (
-                  <NavLink to="/cart" className="text-black transition hover:text-gray-500" aria-label="Giỏ hàng">
+                  <NavLink to="/cart" className="text-black transition hover:text-red-600" aria-label="Giỏ hàng">
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -294,96 +350,108 @@ export default function Layout() {
                     </svg>
                   </NavLink>
                 ) : null}
+
               </div>
             </div>
           </header>
 
-          {activeMegaMenu && activeMegaRoot ? (
-            <>
-              <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setActiveMegaMenu(null)} />
+          <div
+            className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${
+              activeMegaMenu ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          />
 
-              <div className="fixed left-0 right-0 top-[89px] z-50 max-h-[82vh] overflow-y-auto border-t border-gray-200 bg-white shadow-xl">
-                <div className="mx-auto max-w-[1280px] px-6 py-8 lg:px-10">
-                  <div className="mb-8 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-extrabold uppercase tracking-[0.18em] text-black">
-                        {activeMegaRoot.name}
-                      </h2>
+          <section
+            ref={megaPanelRef}
+            onMouseEnter={clearCloseTimer}
+            onMouseLeave={startCloseTimer}
+            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${
+              activeMegaMenu ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="mx-auto max-w-[1400px] px-6 pb-20 pt-8">
+              <div className="mb-4 grid grid-cols-4 gap-12 border-b border-gray-100 pb-6">
+                {highlightItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="flex items-center gap-4 text-left"
+                    onClick={() => {
+                      if (item.key === "stores") navigate("/products");
+                      if (item.key === "sale") navigate("/products?tag=uu-dai");
+                      if (item.key === "new") navigate("/products?sort=newest");
+                      if (item.key === "easy-buy") navigate("/products?tag=easy-buy");
+                      setActiveMegaMenu(null);
+                    }}
+                  >
+                    <HighlightIcon type={item.type} />
+                    <span className="text-[15px] font-normal text-black">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-4 gap-12">
+                {megaColumns.map((col, colIndex) => (
+                  <div key={`col-${colIndex}`} className="grid content-start gap-2">
+                    {col.map((item) => (
                       <button
+                        key={item._id}
                         type="button"
-                        onClick={() => handleCategoryClick(activeMegaRoot._id)}
-                        className="border-none bg-transparent text-xs font-bold uppercase tracking-widest text-gray-400 underline transition hover:text-black"
+                        onClick={() => handleCategoryClick(item._id)}
+                        className="group flex items-center gap-4 py-1 text-left"
                       >
-                        Xem tất cả
+                        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden bg-white">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain" />
+                          ) : (
+                            <Shirt size={24} strokeWidth={1.4} className="text-zinc-700" />
+                          )}
+                        </div>
+                        <span
+                          className={`truncate text-[15px] text-black transition group-hover:text-red-600 ${
+                            item.isGroupTitle ? "font-medium" : "font-normal"
+                          }`}
+                        >
+                          {item.name}
+                        </span>
                       </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveMegaMenu(null)}
-                      className="flex items-center gap-2 border-none bg-transparent text-xs font-bold uppercase tracking-widest text-gray-500 transition hover:text-black"
-                    >
-                      <X size={16} />
-                      Đóng
-                    </button>
-                  </div>
-
-                  <div className="grid gap-x-10 gap-y-6 lg:grid-cols-3">
-                    {menuColumns.map((column) => (
-                      <div key={column.key} className="grid content-start gap-1">
-                        {column.rows.map((item) => (
-                          <button
-                            key={item._id}
-                            type="button"
-                            onClick={() => handleCategoryClick(item._id)}
-                            className="group flex items-center gap-4 bg-white py-1 text-left transition"
-                          >
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-white">
-                              {item.imageUrl ? (
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
-                                />
-                              ) : (
-                                <div className="grid h-full w-full place-items-center text-[10px] font-bold uppercase tracking-[0.2em] text-gray-200">
-                                  IMG
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium uppercase tracking-[0.12em] text-gray-700 transition group-hover:text-black">
-                                {item.isGroupAll ? `Tất cả ${item.name}` : item.name}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
                     ))}
                   </div>
-
-                  <div className="mt-8 border-t border-gray-100 pt-6">
-                    <form
-                      className="mx-auto flex w-full max-w-xl items-center gap-3 border border-gray-300 px-4 py-3"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        setActiveMegaMenu(null);
-                        window.location.href = searchHref;
-                      }}
-                    >
-                      <Search className="h-4 w-4 shrink-0 text-gray-400" />
-                      <input
-                        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-                        placeholder="Tìm kiếm sản phẩm..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                      />
-                    </form>
-                  </div>
-                </div>
+                ))}
               </div>
-            </>
-          ) : null}
+
+              <div className="mt-8 border-t border-gray-100 pt-6">
+                <form
+                  className="mx-auto flex w-full items-center border border-gray-200 px-4 py-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    setActiveMegaMenu(null);
+                    navigate(searchHref);
+                  }}
+                >
+                  <Search className="h-5 w-5 shrink-0 text-gray-500" />
+                  <input
+                    className="mx-3 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                    placeholder="Tìm kiếm"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                  <button type="button" className="text-gray-500">
+                    <ImageIcon className="h-5 w-5" />
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-black text-white"
+              onClick={() => setActiveMegaMenu(null)}
+              aria-label="Đóng menu"
+            >
+              <X size={20} />
+            </button>
+          </section>
         </>
       ) : null}
 
@@ -403,17 +471,29 @@ export default function Layout() {
             <div>
               <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">Về chúng tôi</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-black">Câu chuyện thương hiệu</a></li>
-                <li><a href="#" className="hover:text-black">Tuyển dụng</a></li>
-                <li><a href="#" className="hover:text-black">Liên hệ</a></li>
+                <li>
+                  <a href="#" className="hover:text-black">Câu chuyện thương hiệu</a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-black">Tuyển dụng</a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-black">Liên hệ</a>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">Chính sách</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-black">Chính sách đổi trả</a></li>
-                <li><a href="#" className="hover:text-black">Chính sách bảo mật</a></li>
-                <li><a href="#" className="hover:text-black">Hướng dẫn mua hàng</a></li>
+                <li>
+                  <a href="#" className="hover:text-black">Chính sách đổi trả</a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-black">Chính sách bảo mật</a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-black">Hướng dẫn mua hàng</a>
+                </li>
               </ul>
             </div>
             <div>
@@ -425,7 +505,7 @@ export default function Layout() {
             </div>
           </div>
           <div className="mx-auto mt-12 flex max-w-[1400px] flex-col items-center justify-between border-t border-gray-100 px-4 pt-8 text-xs text-gray-400 md:flex-row lg:px-8">
-            <p>© 2024 FashionStore. All rights reserved.</p>
+            <p>© 2026 FashionStore. All rights reserved.</p>
             <div className="mt-4 flex gap-4 md:mt-0">
               <a href="#" className="hover:text-black">Facebook</a>
               <a href="#" className="hover:text-black">Instagram</a>
