@@ -25,16 +25,20 @@ function sortByCreatedAt(items) {
 }
 
 function chunkArray(items, columns = 4) {
-  if (!items.length) return [[], [], [], []];
-  const size = Math.ceil(items.length / columns);
-  return Array.from({ length: columns }, (_, i) => items.slice(i * size, i * size + size));
+  const result = Array.from({ length: columns }, () => []);
+  const maxPerColumn = 5;
+  items.forEach((item, index) => {
+    const colIndex = Math.min(Math.floor(index / maxPerColumn), columns - 1);
+    result[colIndex].push(item);
+  });
+  return result;
 }
 
 const highlightItems = [
   { key: "new", label: "Hàng Mới", type: "new" },
   { key: "easy-buy", label: "Easy Buy", type: "star" },
   { key: "sale", label: "Ưu đãi", type: "sale" },
-  { key: "stores", label: "Danh sách cửa hàng", type: "store" }
+  { key: "best-seller", label: "Bán Chạy", type: "hot" }
 ];
 
 function HighlightIcon({ type }) {
@@ -58,6 +62,14 @@ function HighlightIcon({ type }) {
     return (
       <div className="grid h-10 w-10 place-items-center text-3xl leading-none text-amber-500">
         ★
+      </div>
+    );
+  }
+
+  if (type === "hot") {
+    return (
+      <div className="grid h-10 w-10 place-items-center bg-orange-500 text-[11px] font-bold uppercase text-white">
+        HOT
       </div>
     );
   }
@@ -158,7 +170,7 @@ export default function Layout() {
       level2.forEach((group) => {
         flattened.push({
           _id: group._id,
-          name: `Tất cả ${group.name}`,
+          name: `${group.name}`,
           imageUrl: group.imageUrl || "",
           isGroupTitle: true
         });
@@ -242,7 +254,7 @@ export default function Layout() {
                   );
                 })}
                 <NavLink to="/products" className="text-[15px] text-black hover:text-red-600">
-                  Về Routine
+                  Về FashionStore
                 </NavLink>
                 <NavLink to="/products" className="text-[15px] text-black hover:text-red-600">
                   Bộ sưu tập
@@ -252,8 +264,8 @@ export default function Layout() {
                 </NavLink>
               </nav>
 
-              <NavLink to="/" className="text-4xl font-light tracking-tight">
-                R
+              <NavLink to="/" className="text-4xl font-bold tracking-tight">
+                FS
               </NavLink>
 
               <div className="flex items-center gap-4">
@@ -287,21 +299,21 @@ export default function Layout() {
                     </button>
 
                     {isAccountOpen ? (
-                      <div className="absolute right-0 mt-3 w-64 border border-gray-200 bg-white shadow-lg">
+                      <div className="absolute right-[-75px] mt-3 w-64 border border-gray-200 bg-white shadow-lg">
                         {isAdminUser ? (
                           <NavLink
                             to="/admin"
-                            className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
+                            className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-normal uppercase tracking-widest text-black transition hover:bg-gray-50"
                             onClick={() => setIsAccountOpen(false)}
                           >
                             <Home className="h-4 w-4" />
-                            Quản trị admin
+                            Trang quản trị
                           </NavLink>
                         ) : null}
 
                         <NavLink
                           to="/profile"
-                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
+                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-normal uppercase tracking-widest text-black transition hover:bg-gray-50"
                           onClick={() => setIsAccountOpen(false)}
                         >
                           <IdCard className="h-4 w-4" />
@@ -310,7 +322,7 @@ export default function Layout() {
 
                         <NavLink
                           to="/orders"
-                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
+                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-xs font-normal uppercase tracking-widest text-black transition hover:bg-gray-50"
                           onClick={() => setIsAccountOpen(false)}
                         >
                           <History className="h-4 w-4" />
@@ -319,7 +331,7 @@ export default function Layout() {
 
                         <button
                           type="button"
-                          className="flex w-full items-center gap-3 border-none bg-white px-4 py-4 text-xs font-bold uppercase tracking-widest text-red-500 transition hover:bg-gray-50"
+                          className="flex w-full items-center gap-3 border-none bg-white px-4 py-4 text-xs font-normal uppercase tracking-widest text-red-500 transition hover:bg-gray-50"
                           onClick={() => {
                             setIsAccountOpen(false);
                             logout();
@@ -369,7 +381,7 @@ export default function Layout() {
               activeMegaMenu ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
             }`}
           >
-            <div className="mx-auto max-w-[1400px] px-6 pb-20 pt-8">
+            <div className="mx-auto max-w-[1200px] px-6 pb-20 pt-8">
               <div className="mb-4 grid grid-cols-4 gap-12 border-b border-gray-100 pb-6">
                 {highlightItems.map((item) => (
                   <button
@@ -381,6 +393,7 @@ export default function Layout() {
                       if (item.key === "sale") navigate("/products?tag=uu-dai");
                       if (item.key === "new") navigate("/products?sort=newest");
                       if (item.key === "easy-buy") navigate("/products?tag=easy-buy");
+                      if (item.key === "best-seller") navigate("/products?tag=ban-chay");
                       setActiveMegaMenu(null);
                     }}
                   >
@@ -408,7 +421,7 @@ export default function Layout() {
                           )}
                         </div>
                         <span
-                          className={`truncate text-[15px] text-black transition group-hover:text-red-600 ${
+                          className={`line-clamp-2 text-[15px] text-black transition group-hover:text-red-600 ${
                             item.isGroupTitle ? "font-medium" : "font-normal"
                           }`}
                         >

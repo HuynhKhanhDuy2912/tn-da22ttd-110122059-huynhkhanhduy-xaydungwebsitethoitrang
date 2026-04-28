@@ -76,13 +76,6 @@ const create = async (req, res) => {
       }
     }
 
-    if (nextDepth === 0 && imageUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Level 1 category cannot have image"
-      });
-    }
-
     if (nextDepth > 0 && !imageUrl) {
       return res.status(400).json({
         success: false,
@@ -93,7 +86,7 @@ const create = async (req, res) => {
     const payload = {
       name,
       parentId: parentId || null,
-      imageUrl: nextDepth === 0 ? "" : imageUrl
+      imageUrl: imageUrl
     };
 
     req.body = payload;
@@ -167,13 +160,6 @@ const update = async (req, res) => {
         ? normalizeImageUrl(req.body?.imageUrl)
         : normalizeImageUrl(current.imageUrl);
 
-    if (nextDepth === 0 && nextImageUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Level 1 category cannot have image"
-      });
-    }
-
     if (nextDepth > 0 && !nextImageUrl) {
       return res.status(400).json({
         success: false,
@@ -184,7 +170,7 @@ const update = async (req, res) => {
     req.body = {
       name: nextName,
       parentId: finalParentId || null,
-      imageUrl: nextDepth === 0 ? "" : nextImageUrl
+      imageUrl: nextImageUrl
     };
 
     return baseCrud.update(req, res);

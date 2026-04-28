@@ -5,7 +5,7 @@ import ImageUpload from "../../components/ImageUpload.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
 
-const initialRootForm = { name: "" };
+const initialRootForm = { name: "", imageUrl: "" };
 const initialLevel2Form = { name: "", parentId: "", imageUrl: "" };
 const initialLevel3Form = { name: "", parentId: "", imageUrl: "" };
 const initialEditForm = { name: "", parentId: "", imageUrl: "" };
@@ -124,15 +124,20 @@ export default function AdminCategoriesPage() {
     [categoryOptions]
   );
 
-  const rootCount = useMemo(
-    () => categories.filter((category) => !category.parentId?._id).length,
-    [categories]
+  const level1Count = useMemo(
+    () => categoryOptions.filter((item) => item.depth === 0).length,
+    [categoryOptions]
   );
 
-  const leafCount = useMemo(() => {
-    const parentIds = new Set(categories.map((category) => category.parentId?._id).filter(Boolean));
-    return categories.filter((category) => !parentIds.has(category._id)).length;
-  }, [categories]);
+  const level2Count = useMemo(
+    () => categoryOptions.filter((item) => item.depth === 1).length,
+    [categoryOptions]
+  );
+
+  const level3Count = useMemo(
+    () => categoryOptions.filter((item) => item.depth === 2).length,
+    [categoryOptions]
+  );
 
   const handleAddRoot = async (event) => {
     event.preventDefault();
@@ -145,7 +150,7 @@ export default function AdminCategoriesPage() {
         body: {
           name: rootForm.name.trim(),
           parentId: null,
-          imageUrl: ""
+          imageUrl: rootForm.imageUrl ? rootForm.imageUrl.trim() : ""
         }
       });
 
@@ -248,18 +253,8 @@ export default function AdminCategoriesPage() {
       return;
     }
 
-    if (nextDepth === 0 && editForm.imageUrl.trim()) {
-      setError("Danh mục cấp 1 không dùng ảnh.");
-      return;
-    }
-
     if (nextDepth > 0 && !editForm.imageUrl.trim()) {
       setError("Danh mục cấp 2/3 bắt buộc có ảnh.");
-      return;
-    }
-
-    if (currentDepth === 0 && nextDepth !== 0) {
-      setError("Danh mục cấp 1 chỉ được giữ ở cấp 1.");
       return;
     }
 
@@ -270,7 +265,7 @@ export default function AdminCategoriesPage() {
         body: {
           name: editForm.name.trim(),
           parentId: nextParentId,
-          imageUrl: nextDepth === 0 ? "" : editForm.imageUrl.trim()
+          imageUrl: editForm.imageUrl.trim()
         }
       });
 
@@ -302,17 +297,13 @@ export default function AdminCategoriesPage() {
       <div key={node._id} className="grid gap-2">
         <div className="flex items-center justify-between gap-3 rounded-sm border border-gray-100 bg-gray-50 px-3 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-300">C{node.depth + 1}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-300">CẤP {node.depth + 1}</span>
             <div className="h-10 w-10 shrink-0 overflow-hidden bg-white" style={{ marginLeft: `${node.depth * 10}px` }}>
-              {node.depth === 0 ? (
-                <div className="grid h-full w-full place-items-center text-[10px] uppercase tracking-widest text-gray-300">
-                  ROOT
-                </div>
-              ) : node.imageUrl ? (
+              {node.imageUrl ? (
                 <img src={node.imageUrl} alt={node.name} className="h-full w-full object-contain" />
               ) : (
-                <div className="grid h-full w-full place-items-center text-[10px] uppercase tracking-widest text-gray-300">
-                  IMG
+                <div className="grid h-full w-full place-items-center text-[10px] uppercase tracking-widest text-gray-300 text-center leading-[1]">
+                  NO IMG
                 </div>
               )}
             </div>
@@ -345,16 +336,38 @@ export default function AdminCategoriesPage() {
   const editingDepth = editingId ? depthById.get(editingId) ?? 0 : 0;
   const editParentOptions = useMemo(() => {
     if (!editingId) return [];
-    if (editingDepth === 0) return [];
-    if (editingDepth === 1) return categoryOptions.filter((item) => item.depth === 0 && item._id !== editingId);
-    return categoryOptions.filter((item) => item.depth === 1 && item._id !== editingId);
-  }, [editingId, editingDepth, categoryOptions]);
+    const editingNode = categoryOptions.find((item) => item._id === editingId);
+    if (!editingNode) return [];
+
+    const getMaxDepthOffset = (node) => {
+      if (!node || !node.children || node.children.length === 0) return 0;
+      return 1 + Math.max(...node.children.map(getMaxDepthOffset));
+    };
+    const maxOffset = getMaxDepthOffset(editingNode);
+
+    const descendantIds = new Set();
+    const collectDescendants = (node) => {
+      if (!node || !node.children) return;
+      node.children.forEach((child) => {
+        descendantIds.add(child._id);
+        collectDescendants(child);
+      });
+    };
+    collectDescendants(editingNode);
+
+    return categoryOptions.filter((item) => {
+      if (item._id === editingId) return false;
+      if (descendantIds.has(item._id)) return false;
+      if (item.depth + 1 + maxOffset > 2) return false;
+      return true;
+    });
+  }, [editingId, categoryOptions]);
 
   return (
     <section className="grid gap-6 p-6">
       <AdminPageHeader
         title="DANH MỤC"
-        description="Quản lý 3 cấp: Cấp 1 (không ảnh), cấp 2 (có ảnh), cấp 3 (có ảnh)."
+        description="Quản lý 3 cấp: Cấp 1 (có/không ảnh), cấp 2 (có ảnh), cấp 3 (có ảnh)."
       />
 
       {message ? (
@@ -390,7 +403,6 @@ export default function AdminCategoriesPage() {
                   className={inputClass}
                   value={editForm.parentId}
                   onChange={(event) => setEditForm((current) => ({ ...current, parentId: event.target.value }))}
-                  disabled={editingDepth === 0}
                 >
                   <option value="">Không có (Danh mục cấp 1)</option>
                   {editParentOptions.map((item) => (
@@ -402,17 +414,11 @@ export default function AdminCategoriesPage() {
               </label>
             </div>
 
-            {editingDepth > 0 ? (
-              <ImageUpload
-                label="Hình danh mục"
-                value={editForm.imageUrl}
-                onChange={(url) => setEditForm((current) => ({ ...current, imageUrl: url }))}
-              />
-            ) : (
-              <div className="border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-                Danh mục cấp 1 không sử dụng hình ảnh.
-              </div>
-            )}
+            <ImageUpload
+              label="Hình danh mục"
+              value={editForm.imageUrl}
+              onChange={(url) => setEditForm((current) => ({ ...current, imageUrl: url }))}
+            />
 
             <div className="flex gap-3 border-t border-gray-200 pt-4">
               <button
@@ -439,18 +445,22 @@ export default function AdminCategoriesPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_1.55fr] lg:items-stretch">
         <aside className="grid content-start gap-6">
           <section className="border border-gray-200 bg-white p-6 lg:h-[760px] lg:overflow-y-auto">
-            <div className="mb-5 grid grid-cols-3 gap-3">
+            <div className="mb-5 grid grid-cols-4 gap-3">
               <div className="border border-gray-200 bg-gray-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tổng danh mục</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tổng cộng</p>
                 <p className="mt-2 text-xl font-bold text-black">{categories.length}</p>
               </div>
               <div className="border border-gray-200 bg-gray-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục cấp 1</p>
-                <p className="mt-2 text-xl font-bold text-black">{rootCount}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Cấp 1</p>
+                <p className="mt-2 text-xl font-bold text-black">{level1Count}</p>
               </div>
               <div className="border border-gray-200 bg-gray-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục lá</p>
-                <p className="mt-2 text-xl font-bold text-black">{leafCount}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Cấp 2</p>
+                <p className="mt-2 text-xl font-bold text-black">{level2Count}</p>
+              </div>
+              <div className="border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Cấp 3</p>
+                <p className="mt-2 text-xl font-bold text-black">{level3Count}</p>
               </div>
             </div>
 
@@ -492,9 +502,14 @@ export default function AdminCategoriesPage() {
                     className={inputClass}
                     value={rootForm.name}
                     placeholder="Ví dụ: Nam, Nữ..."
-                    onChange={(event) => setRootForm({ name: event.target.value })}
+                    onChange={(event) => setRootForm((current) => ({ ...current, name: event.target.value }))}
                   />
                 </label>
+                <ImageUpload
+                  label="Hình danh mục cấp 1 (Tùy chọn)"
+                  value={rootForm.imageUrl}
+                  onChange={(url) => setRootForm((current) => ({ ...current, imageUrl: url }))}
+                />
                 <button
                   type="submit"
                   disabled={!rootForm.name.trim()}
@@ -508,7 +523,7 @@ export default function AdminCategoriesPage() {
             {activeForm === "level2" ? (
               <form onSubmit={handleAddLevel2} className="grid gap-4">
                 <label className={labelClass}>
-                  Chọn cha cấp 1
+                  Chọn danh mục cấp 1
                   <select
                     className={inputClass}
                     value={level2Form.parentId}
@@ -553,7 +568,7 @@ export default function AdminCategoriesPage() {
             {activeForm === "level3" ? (
               <form onSubmit={handleAddLevel3} className="grid gap-4">
                 <label className={labelClass}>
-                  Chọn cha cấp 2
+                  Chọn danh mục cấp 2
                   <select
                     className={inputClass}
                     value={level3Form.parentId}
