@@ -176,11 +176,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  const discountedPrice = product.discount > 0
-    ? Math.round(product.price * (1 - product.discount / 100))
-    : null;
 
-  const finalPrice = discountedPrice || product.price;
 
   return (
     <div className="max-w-[1400px] mx-auto">
@@ -333,21 +329,33 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Giá */}
-          <div className="flex items-center gap-3 py-3 border-t border-b border-gray-100">
-            <span className="text-2xl font-extrabold text-black">
-              {finalPrice.toLocaleString("vi-VN")}₫
-            </span>
-            {discountedPrice && (
-              <>
-                <span className="text-sm text-gray-400 line-through">
-                  {product.price.toLocaleString("vi-VN")}₫
+          {(() => {
+            const basePrice = product.price;
+            const adjustment = selectedVariant?.priceAdjustment || 0;
+            const variantPrice = basePrice + adjustment;
+            const discounted = product.discount > 0
+              ? Math.round(variantPrice * (1 - product.discount / 100))
+              : null;
+            const displayPrice = discounted || variantPrice;
+
+            return (
+              <div className="flex items-center gap-3 py-3 border-t border-b border-gray-100">
+                <span className="text-2xl font-extrabold text-black">
+                  {displayPrice.toLocaleString("vi-VN")}₫
                 </span>
-                <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5">
-                  -{product.discount}%
-                </span>
-              </>
-            )}
-          </div>
+                {discounted && (
+                  <>
+                    <span className="text-sm text-gray-400 line-through">
+                      {variantPrice.toLocaleString("vi-VN")}₫
+                    </span>
+                    <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5">
+                      -{product.discount}%
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Màu sắc */}
           {availableColors.length > 0 && (

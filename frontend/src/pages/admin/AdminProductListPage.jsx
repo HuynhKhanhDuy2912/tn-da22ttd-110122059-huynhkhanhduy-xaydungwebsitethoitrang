@@ -13,8 +13,16 @@ export default function AdminProductListPage() {
 
   const loadProducts = async () => {
     try {
-      const res = await apiRequest("/products?limit=100", { token });
-      setProducts(res.data);
+      const [prodRes, varRes] = await Promise.all([
+        apiRequest("/products?limit=100", { token }),
+        apiRequest("/product-variants?limit=500", { token }),
+      ]);
+      const allVariants = varRes.data || [];
+      const productsWithVariants = (prodRes.data || []).map(p => ({
+        ...p,
+        variants: allVariants.filter(v => v.productId === p._id || v.productId?._id === p._id),
+      }));
+      setProducts(productsWithVariants);
     } catch (e) {
       toast.error(e.message);
     }
@@ -68,9 +76,10 @@ export default function AdminProductListPage() {
       {/* Bảng sản phẩm */}
       <div className="bg-white border border-gray-200">
         {/* Header */}
-        <div className="grid grid-cols-[64px_1fr_140px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Ảnh</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sản phẩm</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Biến thể</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Giá</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Giảm</span>
@@ -87,7 +96,7 @@ export default function AdminProductListPage() {
             filtered.map(product => (
               <div
                 key={product._id}
-                className="grid grid-cols-[64px_1fr_140px_100px_80px_120px] gap-4 px-5 py-4 items-center hover:bg-gray-50 transition-colors"
+                className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-4 items-center hover:bg-gray-50 transition-colors"
               >
                 {/* Ảnh */}
                 <div className="w-14 h-14 bg-gray-100 border border-gray-200 overflow-hidden shrink-0">
@@ -104,6 +113,39 @@ export default function AdminProductListPage() {
                   <p className="m-0 text-[10px] text-gray-400 uppercase tracking-widest">
                     {product.style}
                   </p>
+                </div>
+
+                {/* Biến thể */}
+                <div className="flex flex-col gap-1 text-[11px]">
+                  <span className="font-semibold text-black">
+                    {product.variants?.length || 0} biến thể
+                  </span>
+
+                  <span className="text-gray-500">
+                    {new Set(product.variants?.map(v => v.color)).size} màu •{" "}
+                    {new Set(product.variants?.map(v => v.size)).size} size
+                  </span>
+
+                  <div className="flex flex-col gap-1 mt-1">
+                    {Object.entries(
+                      (product.variants || []).reduce((acc, variant) => {
+                        if (!acc[variant.color]) {
+                          acc[variant.color] = [];
+                        }
+
+                        acc[variant.color].push(
+                          `${variant.size} (${variant.stock})`
+                        );
+
+                        return acc;
+                      }, {})
+                    ).map(([color, sizes]) => (
+                      <div key={color} className="text-[10px] text-gray-600">
+                        <span className="font-semibold">{color}:</span>{" "}
+                        {sizes.join(" • ")}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Danh mục */}

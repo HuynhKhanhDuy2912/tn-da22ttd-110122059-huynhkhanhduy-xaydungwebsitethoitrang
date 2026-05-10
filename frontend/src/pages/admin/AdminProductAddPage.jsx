@@ -36,7 +36,7 @@ const initialVariantForm = {
   size: "",
   color: "",
   stock: 0,
-  priceAdjustment: 0,
+  price: "",
   images: [],
 };
 
@@ -299,10 +299,13 @@ export default function AdminProductAddPage() {
       return;
     }
     try {
+      const variantPrice = variantForm.price === "" ? Number(form.price) : Number(variantForm.price);
+      const calculatedAdjustment = variantPrice - Number(form.price);
+      
       const baseBody = {
         color: variantForm.color.trim(),
         stock: Number(variantForm.stock),
-        priceAdjustment: Number(variantForm.priceAdjustment),
+        priceAdjustment: calculatedAdjustment,
         image: variantForm.images[0] || "",
         productId: editId,
       };
@@ -377,7 +380,7 @@ export default function AdminProductAddPage() {
       size: v.size,
       color: v.color,
       stock: v.stock || 0,
-      priceAdjustment: v.priceAdjustment || 0,
+      price: Number(form.price) + (v.priceAdjustment || 0),
       images: v.image ? [v.image] : [],
     });
   };
@@ -396,7 +399,7 @@ export default function AdminProductAddPage() {
       size: "",
       color: v.color,
       stock: v.stock || 0,
-      priceAdjustment: v.priceAdjustment || 0,
+      price: Number(form.price) + (v.priceAdjustment || 0),
       images: v.image ? [v.image] : [],
     });
   };
@@ -716,7 +719,7 @@ export default function AdminProductAddPage() {
                   <select className={inputCls} {...field("season")}>
                     <option value="all_season">Tất cả mùa</option>
                     <option value="spring">Mùa Xuân</option>
-                    <option value="summer">Mùa Hè</option>
+                    <option value="summer">Mùa Hạ</option>
                     <option value="autumn">Mùa Thu</option>
                     <option value="winter">Mùa Đông</option>
                   </select>
@@ -968,7 +971,8 @@ export default function AdminProductAddPage() {
                       <input
                         className={inputCls}
                         type="number"
-                        {...vField("priceAdjustment")}
+                        {...vField("price")}
+                        placeholder={form.price ? `${form.price}` : "0"}
                       />
                     </label>
                   </div>
@@ -1082,12 +1086,8 @@ export default function AdminProductAddPage() {
                           >
                             {v.stock}
                           </td>
-                          <td className="py-3 px-3 text-right text-xs text-gray-500">
-                            {v.priceAdjustment > 0
-                              ? `+${v.priceAdjustment.toLocaleString("vi-VN")}`
-                              : v.priceAdjustment < 0
-                                ? v.priceAdjustment.toLocaleString("vi-VN")
-                                : "—"}
+                          <td className="py-3 px-3 text-right text-xs font-bold text-black">
+                            {(Number(form.price) + (v.priceAdjustment || 0)).toLocaleString("vi-VN")}₫
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex gap-1 justify-end">

@@ -677,7 +677,7 @@ export default function ProductsPage() {
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
-                        <p className="text-[18px] font-semibold text-black">{formatPrice(product.price)}</p>
+                        <p className="text-[18px] font-semibold text-black">{formatPrice(product.price + (selectedVariant?.priceAdjustment || 0))}</p>
                         <button
                           type="button"
                           onClick={() => handleWishlist(product)}
