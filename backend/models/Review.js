@@ -3,17 +3,34 @@ import mongoose from "mongoose";
 const reviewSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true,
+    index: true
   },
 
   productId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Product"
+    ref: "Product",
+    required: true,
+    index: true
   },
 
-  rating: Number,
-  comment: String
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  },
+
+  comment: {
+    type: String,
+    trim: true,
+    maxlength: 1000,
+    default: ""
+  }
 
 }, { timestamps: true });
+
+reviewSchema.index({ userId: 1, productId: 1 });
 
 export default mongoose.model("Review", reviewSchema);

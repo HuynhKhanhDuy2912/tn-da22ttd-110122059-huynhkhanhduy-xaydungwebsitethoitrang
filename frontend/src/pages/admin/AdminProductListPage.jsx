@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
+import { Plus, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminProductListPage() {
@@ -58,32 +59,36 @@ export default function AdminProductListPage() {
 
       {/* Toolbar */}
       <div className="flex gap-4 items-center justify-between">
-        <input
-          type="text"
-          placeholder="Tìm kiếm theo tên, danh mục,..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border border-gray-300 px-4 py-3 bg-white text-black text-sm focus:border-black focus:outline-none flex-1 max-w-md"
-        />
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, danh mục,..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full border border-gray-300 pl-10 pr-4 py-3 bg-white text-black text-sm focus:border-black focus:outline-none"
+          />
+        </div>
         <button
           onClick={() => navigate("/admin/products/add")}
-          className="px-6 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none shrink-0"
+          className="px-3 py-3 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none shrink-0 flex items-center gap-2"
         >
-          + THÊM SẢN PHẨM
+          <Plus className="w-4 h-4" /> THÊM SẢN PHẨM
         </button>
       </div>
 
       {/* Bảng sản phẩm */}
       <div className="bg-white border border-gray-200">
         {/* Header */}
-        <div className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
+        <div className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50 text-center">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Ảnh</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sản phẩm</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Biến thể</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Danh mục</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Giá</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Giảm</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Thao tác</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Thao tác</span>
         </div>
 
         {/* Rows */}
@@ -96,7 +101,7 @@ export default function AdminProductListPage() {
             filtered.map(product => (
               <div
                 key={product._id}
-                className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-4 items-center hover:bg-gray-50 transition-colors"
+                className="grid grid-cols-[64px_1fr_220px_140px_100px_80px_120px] gap-4 px-5 py-4 items-center hover:bg-gray-50 transition-colors text-center"
               >
                 {/* Ảnh */}
                 <div className="w-14 h-14 bg-gray-100 border border-gray-200 overflow-hidden shrink-0">

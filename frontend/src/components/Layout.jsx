@@ -110,7 +110,7 @@ export default function Layout() {
   useEffect(() => {
     apiRequest("/categories?limit=1000")
       .then((response) => setCategories(response.data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -139,8 +139,12 @@ export default function Layout() {
     };
   }, [activeMegaMenu]);
 
+  // const rootCategories = useMemo(
+  //   () => sortByCreatedAt(categories.filter((category) => !getParentId(category))),
+  //   [categories]
+  // );
   const rootCategories = useMemo(
-    () => sortByCreatedAt(categories.filter((category) => !getParentId(category))),
+    () => categories.filter((category) => !getParentId(category)),
     [categories]
   );
 
@@ -245,17 +249,13 @@ export default function Layout() {
                         openMegaMenu(root._id);
                       }}
                       onClick={() => toggleMegaMenu(root._id)}
-                      className={`border-none bg-transparent p-0 text-[15px] transition ${
-                        isActive ? "font-medium text-black" : "font-normal text-black hover:text-red-600"
-                      }`}
+                      className={`border-none bg-transparent p-0 text-[15px] transition ${isActive ? "font-medium text-black" : "font-normal text-black hover:text-red-600"
+                        }`}
                     >
                       <span className="tracking-wide">{root.name}</span>
                     </button>
                   );
                 })}
-                <NavLink to="/products" className="text-[15px] text-black hover:text-red-600">
-                  Về FashionStore
-                </NavLink>
                 <NavLink to="/collections" className="text-[15px] text-black hover:text-red-600">
                   Bộ sưu tập
                 </NavLink>
@@ -368,18 +368,16 @@ export default function Layout() {
           </header>
 
           <div
-            className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${
-              activeMegaMenu ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-            }`}
+            className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${activeMegaMenu ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+              }`}
           />
 
           <section
             ref={megaPanelRef}
             onMouseEnter={clearCloseTimer}
             onMouseLeave={startCloseTimer}
-            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${
-              activeMegaMenu ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
-            }`}
+            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${activeMegaMenu ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
+              }`}
           >
             <div className="mx-auto max-w-[1200px] px-6 pb-20 pt-8">
               <div className="mb-4 grid grid-cols-4 gap-12 border-b border-gray-100 pb-6">
@@ -421,9 +419,8 @@ export default function Layout() {
                           )}
                         </div>
                         <span
-                          className={`line-clamp-2 text-[15px] text-black transition group-hover:text-red-600 ${
-                            item.isGroupTitle ? "font-medium" : "font-normal"
-                          }`}
+                          className={`line-clamp-2 text-[15px] text-black transition group-hover:text-red-600 ${item.isGroupTitle ? "font-medium" : "font-normal"
+                            }`}
                         >
                           {item.name}
                         </span>

@@ -141,7 +141,7 @@ export const getAdminOrderDetail = async (orderId) => {
 };
 
 export const updateAdminOrderStatus = async (orderId, status) => {
-  const validStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+  const validStatuses = ["pending", "confirmed", "shipping", "completed", "cancelled"];
   if (!validStatuses.includes(status)) throw new Error("Invalid status");
 
   const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });

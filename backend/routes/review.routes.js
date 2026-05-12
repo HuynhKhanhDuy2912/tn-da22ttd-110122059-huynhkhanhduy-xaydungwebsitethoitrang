@@ -1,4 +1,4 @@
-import { createCrudRouter } from "./base.route.js";
+import express from "express";
 import reviewController from "../controllers/review.controller.js";
 import Review from "../models/Review.js";
 import { protect } from "../middlewares/auth.middleware.js";
@@ -8,10 +8,13 @@ import {
   scopeToOwner
 } from "../middlewares/ownership.middleware.js";
 
-export default createCrudRouter(reviewController, {
-  listMiddlewares: [protect, scopeToOwner("userId")],
-  getMiddlewares: [protect, checkOwnership(Review, "userId")],
-  createMiddlewares: [protect, attachOwner("userId")],
-  updateMiddlewares: [protect, checkOwnership(Review, "userId"), attachOwner("userId")],
-  deleteMiddlewares: [protect, checkOwnership(Review, "userId")]
-});
+const router = express.Router();
+
+router.get("/eligibility/:productId", protect, reviewController.checkReviewEligibility);
+router.get("/", protect, scopeToOwner("userId"), reviewController.list);
+router.get("/:id", protect, checkOwnership(Review, "userId"), reviewController.getById);
+router.post("/", protect, attachOwner("userId"), reviewController.create);
+router.put("/:id", protect, checkOwnership(Review, "userId"), attachOwner("userId"), reviewController.update);
+router.delete("/:id", protect, checkOwnership(Review, "userId"), reviewController.remove);
+
+export default router;

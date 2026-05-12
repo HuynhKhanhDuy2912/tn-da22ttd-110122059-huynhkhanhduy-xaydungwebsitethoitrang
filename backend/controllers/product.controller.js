@@ -1,7 +1,155 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
+import OrderItem from "../models/OrderItem.js";
 import { createCrudControllers } from "./base.controller.js";
 
-export default createCrudControllers(Product, {
+const productPopulate = [{ path: "categoryId", select: "name" }];
+
+const baseProductController = createCrudControllers(Product, {
   modelName: "Product",
-  populate: [{ path: "categoryId", select: "name" }]
+  populate: productPopulate
 });
+
+const createSlug = (value = "") =>
+  String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const extractObjectId = (value = "") => {
+  const directValue = String(value);
+  if (/^[a-f\d]{24}$/i.test(directValue) && mongoose.Types.ObjectId.isValid(directValue)) return directValue;
+  const match = String(value).match(/[a-f\d]{24}$/i);
+  return match && mongoose.Types.ObjectId.isValid(match[0]) ? match[0] : null;
+};
+
+const applyPopulate = (query) => {
+  productPopulate.forEach((item) => query.populate(item));
+  return query;
+};
+
+const buildFilters = (query = {}) => {
+  const excludedKeys = ["page", "limit", "sort", "select"];
+  const filters = {};
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (!excludedKeys.includes(key) && value !== undefined && value !== "") {
+      filters[key] = value;
+    }
+  });
+
+  return filters;
+};
+
+const addComputedFields = async (products) => {
+  const items = Array.isArray(products) ? products : [products];
+  const ids = items.map((item) => item?._id).filter(Boolean);
+
+  if (!ids.length) return Array.isArray(products) ? [] : products;
+
+  const soldRows = await OrderItem.aggregate([
+    { $match: { productId: { $in: ids } } },
+    {
+      $lookup: {
+        from: "orders",
+        localField: "orderId",
+        foreignField: "_id",
+        as: "order"
+      }
+    },
+    { $unwind: "$order" },
+    { $match: { "order.status": { $ne: "cancelled" } } },
+    { $group: { _id: "$productId", soldCount: { $sum: "$quantity" } } }
+  ]);
+
+  const soldByProduct = new Map(soldRows.map((row) => [String(row._id), row.soldCount]));
+  const decorated = items.map((item) => {
+    const plain = item.toObject ? item.toObject() : item;
+    return {
+      ...plain,
+      slug: plain.slug || createSlug(plain.name),
+      soldCount: soldByProduct.get(String(plain._id)) || 0
+    };
+  });
+
+  return Array.isArray(products) ? decorated : decorated[0];
+};
+
+const list = async (req, res) => {
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+    const sort = req.query.sort || { createdAt: -1 };
+    const filters = buildFilters(req.query);
+
+    const query = Product.find(filters)
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    applyPopulate(query);
+
+    const [items, total] = await Promise.all([
+      query,
+      Product.countDocuments(filters)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product list fetched successfully",
+      data: await addComputedFields(items),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+const getById = async (req, res) => {
+  try {
+    const identifier = req.params.id;
+    const objectId = extractObjectId(identifier);
+    const query = objectId
+      ? Product.findById(objectId)
+      : Product.findOne({ slug: createSlug(identifier) });
+
+    applyPopulate(query);
+    const item = await query;
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Product fetched successfully",
+      data: await addComputedFields(item)
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export default {
+  ...baseProductController,
+  list,
+  getById
+};

@@ -4,12 +4,14 @@ import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
+import { getProductPath } from "../lib/slug.js";
 import { ChevronLeft, ChevronRight, Star, ZoomIn } from "lucide-react";
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const selectedColorParam = searchParams.get("color") || "";
   const { token } = useAuth();
 
   const [product, setProduct] = useState(null);
@@ -24,18 +26,33 @@ export default function ProductDetailPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        const [productResponse, productsResponse, variantResponse, imgResponse] = await Promise.all([
+        const [productResponse, productsResponse] = await Promise.all([
           apiRequest(`/products/${productId}`),
-          apiRequest("/products?limit=100"),
-          apiRequest(`/product-variants?productId=${productId}&limit=100`),
-          apiRequest(`/product-images?productId=${productId}&limit=50`)
+          apiRequest("/products?limit=100")
         ]);
 
         const currentProduct = productResponse.data;
+        const canonicalPath = getProductPath(currentProduct, {
+          color: selectedColorParam || undefined
+        });
+
+        if (window.location.pathname !== canonicalPath.split("?")[0]) {
+          navigate(canonicalPath, { replace: true });
+        }
+
+        const [variantResponse, imgResponse] = await Promise.all([
+          apiRequest(`/product-variants?productId=${currentProduct._id}&limit=100`),
+          apiRequest(`/product-images?productId=${currentProduct._id}&limit=50`)
+        ]);
+
         const currentVariants = variantResponse.data || [];
         const pImages = imgResponse.data || [];
 
@@ -47,7 +64,7 @@ export default function ProductDetailPage() {
 
         if (currentVariants.length > 0) {
           const uniqueColors = [...new Set(currentVariants.map(v => v.color))];
-          const initialColor = searchParams.get("color");
+          const initialColor = selectedColorParam;
           const colorToSet = initialColor && uniqueColors.includes(initialColor) ? initialColor : uniqueColors[0];
           
           setSelectedColor(colorToSet);
@@ -77,7 +94,7 @@ export default function ProductDetailPage() {
     setMessage("");
     setError("");
     window.scrollTo(0, 0);
-  }, [productId]);
+  }, [navigate, productId, selectedColorParam]);
 
   const selectedVariant = useMemo(
     () => variants.find(v => v.color === selectedColor && v.size === selectedSize) || variants[0],
@@ -133,9 +150,9 @@ export default function ProductDetailPage() {
   const goNext = () => setActiveImage(galleryImages[(activeIndex + 1) % galleryImages.length]);
 
   const relatedProducts = useMemo(() =>
-    allProducts.filter(i => i._id !== productId && product &&
+    allProducts.filter(i => i._id !== product?._id && product &&
       (i.style === product.style || i.gender === product.gender)).slice(0, 4),
-    [allProducts, product, productId]
+    [allProducts, product]
   );
   const relatedWithVariants = useMemo(() =>
     attachVariantsToProducts(relatedProducts, allVariants),
@@ -165,6 +182,60 @@ export default function ProductDetailPage() {
     } catch (e) { setError(e.message); }
   };
 
+  const handleOpenReviewForm = async () => {
+    setMessage("");
+    setError("");
+
+    if (!token) {
+      setError("Vui lòng đăng nhập để đánh giá sản phẩm.");
+      return;
+    }
+
+    try {
+      const response = await apiRequest(`/reviews/eligibility/${product._id}`, { token });
+
+      if (!response.data?.eligible) {
+        setError(response.message || "Bạn cần mua sản phẩm này trước khi đánh giá.");
+        return;
+      }
+
+      setShowReviewForm(true);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleSubmitReview = async (event) => {
+    event.preventDefault();
+    setReviewSubmitting(true);
+    setMessage("");
+    setError("");
+
+    try {
+      await apiRequest("/reviews", {
+        method: "POST",
+        token,
+        body: {
+          productId: product._id,
+          rating: reviewRating,
+          comment: reviewComment
+        }
+      });
+
+      const refreshedProduct = await apiRequest(`/products/${product._id}`);
+      setProduct(refreshedProduct.data);
+      setShowReviewForm(false);
+      setReviewRating(5);
+      setReviewComment("");
+      setMessage("Cảm ơn bạn đã đánh giá sản phẩm!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   if (!product) {
     return (
       <section className="min-h-[60vh] flex items-center justify-center">
@@ -176,6 +247,10 @@ export default function ProductDetailPage() {
     );
   }
 
+  const averageRating = Number(product.averageRating || 0);
+  const totalReviews = Number(product.totalReviews || 0);
+  const roundedRating = Math.round(averageRating);
+  const soldCount = Number(product.soldCount || 0);
 
 
   return (
@@ -201,14 +276,24 @@ export default function ProductDetailPage() {
             </div>
             <div className="flex items-center gap-1 mb-2">
               {[1,2,3,4,5].map(i => (
-                <Star key={i} size={12} className={i <= 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+                <Star key={i} size={12} className={i <= roundedRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
               ))}
-              <span className="text-xs text-gray-500 ml-1">(1)</span>
+              <span className="text-xs text-gray-500 ml-1">({totalReviews})</span>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              <strong className="text-black">T*** Cao</strong> | Sản phẩm mặc mát, đúng màu như mô tả.
-            </p>
-            <button className="text-xs text-black underline mt-2 font-medium cursor-pointer bg-transparent border-none p-0">Đọc thêm</button>
+            {totalReviews > 0 ? (
+              <p className="text-xs text-gray-500 leading-relaxed">
+                <strong className="text-black">{averageRating.toFixed(1)}/5</strong> từ {totalReviews} lượt đánh giá.
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 leading-relaxed">Chưa có đánh giá nào.</p>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenReviewForm}
+              className="text-xs text-black underline mt-2 font-medium cursor-pointer bg-transparent border-none p-0"
+            >
+              Viết đánh giá sản phẩm
+            </button>
           </div>
 
           {/* Thông tin sản phẩm accordion */}
@@ -339,23 +424,44 @@ export default function ProductDetailPage() {
             const displayPrice = discounted || variantPrice;
 
             return (
-              <div className="flex items-center gap-3 py-3 border-t border-b border-gray-100">
-                <span className="text-2xl font-extrabold text-black">
-                  {displayPrice.toLocaleString("vi-VN")}₫
-                </span>
-                {discounted && (
-                  <>
-                    <span className="text-sm text-gray-400 line-through">
-                      {variantPrice.toLocaleString("vi-VN")}₫
-                    </span>
-                    <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5">
-                      -{product.discount}%
-                    </span>
-                  </>
-                )}
+              <div className="py-3 border-t border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-extrabold text-black">
+                    {displayPrice.toLocaleString("vi-VN")}₫
+                  </span>
+                  {discounted && (
+                    <>
+                      <span className="text-sm text-gray-400 line-through">
+                        {variantPrice.toLocaleString("vi-VN")}₫
+                      </span>
+                      <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5">
+                        -{product.discount}%
+                      </span>
+                    </>
+                  )}
+                </div>
+                <p className="mt-1 text-sm font-medium text-gray-500">
+                  {soldCount.toLocaleString("vi-VN")} sản phẩm đã bán
+                </p>
               </div>
             );
           })()}
+
+          <div className="lg:hidden border-b border-gray-100 pb-4">
+            <div className="mb-2 flex items-center gap-1">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} size={14} className={i <= roundedRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+              ))}
+              <span className="ml-1 text-xs text-gray-500">({totalReviews})</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenReviewForm}
+              className="border-none bg-transparent p-0 text-xs font-medium text-black underline"
+            >
+              Viết đánh giá sản phẩm
+            </button>
+          </div>
 
           {/* Màu sắc */}
           {availableColors.length > 0 && (
@@ -503,6 +609,67 @@ export default function ProductDetailPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {showReviewForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <form onSubmit={handleSubmitReview} className="w-full max-w-md bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4 border-b border-gray-200 pb-4">
+              <div>
+                <h2 className="text-sm font-extrabold uppercase tracking-widest text-black">Đánh giá sản phẩm</h2>
+                <p className="mt-1 text-sm text-gray-500 line-clamp-1">{product.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviewForm(false)}
+                className="text-2xl leading-none text-gray-500 hover:text-black"
+                aria-label="Đóng form đánh giá"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-black">Số sao</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className="border-none bg-transparent p-0 text-yellow-400"
+                    aria-label={`${star} sao`}
+                  >
+                    <Star
+                      size={28}
+                      className={star <= reviewRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="mb-5 block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-black">Nhận xét</span>
+              <textarea
+                value={reviewComment}
+                onChange={(event) => setReviewComment(event.target.value)}
+                maxLength={1000}
+                rows={4}
+                className="w-full resize-none border border-gray-300 px-3 py-3 text-sm outline-none focus:border-black"
+                placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={reviewSubmitting}
+              className="w-full bg-black py-4 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+            </button>
+          </form>
+        </div>
       )}
     </div>
   );

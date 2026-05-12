@@ -351,10 +351,10 @@ export default function AdminCollectionsPage() {
         <div className="grid grid-cols-[80px_1fr_100px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Ảnh bìa</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tên</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sản phẩm</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Thứ tự</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Trạng thái</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Sản phẩm</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Thứ tự</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Trạng thái</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">
             Thao tác
           </span>
         </div>
@@ -392,27 +392,26 @@ export default function AdminCollectionsPage() {
               </div>
 
               {/* Product count */}
-              <span className="text-xs text-gray-600 font-medium">
+              <span className="text-xs text-gray-600 font-medium text-center">
                 {col.products?.length || 0} sản phẩm
               </span>
 
               {/* Order */}
-              <span className="text-xs text-gray-500 font-mono">{col.order}</span>
+              <span className="text-xs text-gray-500 font-mono text-center">{col.order}</span>
 
               {/* Status */}
               <button
                 type="button"
                 onClick={() => handleToggleActive(col)}
-                className={`text-xs font-bold uppercase tracking-widest cursor-pointer bg-transparent border-none p-0 ${
-                  col.isActive ? "text-green-600" : "text-gray-400"
-                }`}
+                className={`flex items-center justify-center text-xs font-bold uppercase tracking-widest cursor-pointer bg-transparent border-none p-0 ${col.isActive ? "text-green-600" : "text-gray-400"
+                  }`}
                 title={col.isActive ? "Bấm để ẩn" : "Bấm để hiện"}
               >
                 {col.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
 
               {/* Actions */}
-              <div className="flex gap-1 justify-end">
+              <div className="flex gap-1 justify-center">
                 <button
                   type="button"
                   onClick={() => handleEdit(col)}

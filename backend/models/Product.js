@@ -12,6 +12,13 @@ const productSchema = new mongoose.Schema(
       maxlength: 150
     },
 
+    slug: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: ""
+    },
+
     description: {
       type: String,
       trim: true,
@@ -120,6 +127,41 @@ productSchema.index({ style: 1, brand: 1 });
 productSchema.index({ season: 1 });
 productSchema.index({ occasion: 1 });
 productSchema.index({ tags: 1 });
+productSchema.index({ slug: 1 });
+
+const createSlug = (value = "") =>
+  String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+productSchema.pre("validate", function(next) {
+  if (this.name && (!this.slug || this.isModified("name"))) {
+    this.slug = createSlug(this.name);
+  }
+  next();
+});
+
+productSchema.pre("findOneAndUpdate", function(next) {
+  const update = this.getUpdate() || {};
+  const name = update.name || update.$set?.name;
+
+  if (name && !update.slug && !update.$set?.slug) {
+    this.setUpdate({
+      ...update,
+      $set: {
+        ...(update.$set || {}),
+        slug: createSlug(name)
+      }
+    });
+  }
+
+  next();
+});
 
 productSchema.pre('findOneAndDelete', async function(next) {
   try {

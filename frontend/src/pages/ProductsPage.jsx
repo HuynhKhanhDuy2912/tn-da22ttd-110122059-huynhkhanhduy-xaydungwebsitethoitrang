@@ -4,6 +4,7 @@ import { ArrowRight, LayoutGrid, List, Plus, SlidersHorizontal, SortAsc, X } fro
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts, buildCatalogFilters, filterProducts } from "../lib/catalog.js";
+import { getProductPath } from "../lib/slug.js";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
@@ -134,6 +135,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [variants, setVariants] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -150,18 +152,33 @@ export default function ProductsPage() {
 
   const selectedCategoryId = searchParams.get("categoryId") || "";
 
+  // Map productId -> collection name
+  const productCollectionMap = useMemo(() => {
+    const map = new Map();
+    collections.forEach((col) => {
+      if (!col.isActive) return;
+      (col.products || []).forEach((p) => {
+        const pid = p._id || p;
+        if (!map.has(pid)) map.set(pid, col.name);
+      });
+    });
+    return map;
+  }, [collections]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [productResponse, variantResponse, categoryResponse] = await Promise.all([
+        const [productResponse, variantResponse, categoryResponse, collectionResponse] = await Promise.all([
           apiRequest("/products?limit=500"),
           apiRequest("/product-variants?limit=1200"),
-          apiRequest("/categories?limit=1000")
+          apiRequest("/categories?limit=1000"),
+          apiRequest("/collections?limit=100&isActive=true")
         ]);
 
         setProducts(productResponse.data || []);
         setVariants(variantResponse.data || []);
         setCategories(categoryResponse.data || []);
+        setCollections(collectionResponse.data || []);
       } catch (loadError) {
         setError(loadError.message);
       }
@@ -571,7 +588,7 @@ export default function ProductsPage() {
                     className={`group bg-white ${viewMode === "list" ? "grid grid-cols-[220px_1fr] gap-4 border border-gray-200 p-3" : ""}`}
                   >
                     <div className="relative overflow-hidden bg-gray-100">
-                      <Link to={`/products/${product._id}?color=${encodeURIComponent(activeColorName)}`} className="absolute inset-0 block">
+                      <Link to={getProductPath(product, { color: activeColorName })} className="absolute inset-0 block">
                         <img
                           src={primaryImage}
                           alt={product.name}
@@ -596,11 +613,11 @@ export default function ProductsPage() {
                         <div className="flex h-full items-center justify-between gap-3">
                           <p className="text-[32px] md:text-[31px] lg:text-[30px]">{""}</p>
                           <p className="max-w-[70%] text-[31px]">{""}</p>
-                          <p className="text-[11px] font-semibold leading-4 text-red-600">
-                            {product.tags?.[0] || "Simplicity"}
-                            <br />
-                            &amp; Comfort
-                          </p>
+                          {productCollectionMap.get(product._id) && (
+                            <p className="text-[11px] font-semibold leading-4 text-red-600 text-right">
+                              {productCollectionMap.get(product._id)}
+                            </p>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleQuickAddToggle(product._id, sizes[0])}
@@ -644,7 +661,7 @@ export default function ProductsPage() {
 
                     <div className={`${viewMode === "list" ? "pt-2" : "px-3 py-3"} bg-white`}>
                       <h3 className="line-clamp-1 text-sm text-black">
-                        <Link to={`/products/${product._id}?color=${encodeURIComponent(activeColorName)}`} className="hover:text-red-600">
+                        <Link to={getProductPath(product, { color: activeColorName })} className="hover:text-red-600">
                           {product.name}
                         </Link>
                       </h3>
