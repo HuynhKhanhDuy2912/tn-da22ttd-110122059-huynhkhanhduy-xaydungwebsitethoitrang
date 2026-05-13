@@ -13,19 +13,37 @@ const populateOrder = (query) => query.populate(ORDER_POPULATE);
 
 export const createOrderFromCart = async (user, body) => {
   const { shippingAddress, receiverName, receiverPhone, note, paymentMethod = "cod" } = body;
+  const requestedItemIds = Array.isArray(body.cartItemIds)
+    ? body.cartItemIds
+    : Array.isArray(body.selectedItemIds)
+      ? body.selectedItemIds
+      : [];
+  const selectedItemIds = requestedItemIds.length
+    ? [...new Set(requestedItemIds.filter(Boolean).map(String))]
+    : [];
 
   if (!shippingAddress) throw new Error("Shipping address is required");
   if (!receiverName) throw new Error("Receiver name is required");
   if (!receiverPhone) throw new Error("Receiver phone is required");
+  if (requestedItemIds.length > 0 && selectedItemIds.length === 0) {
+    throw new Error("Please select at least one cart item");
+  }
 
   const cart = await Cart.findOne({ userId: user._id });
   if (!cart) throw new Error("Cart not found");
 
-  const cartItems = await CartItem.find({ cartId: cart._id })
+  const cartItemQuery = selectedItemIds.length
+    ? { cartId: cart._id, _id: { $in: selectedItemIds } }
+    : { cartId: cart._id };
+
+  const cartItems = await CartItem.find(cartItemQuery)
     .populate("productId", "name price discount")
     .populate("variantId", "size color sku stock priceAdjustment isActive");
 
   if (cartItems.length === 0) throw new Error("Cart is empty");
+  if (selectedItemIds.length && cartItems.length !== selectedItemIds.length) {
+    throw new Error("Some selected cart items were not found");
+  }
 
   // Validate stock
   for (const item of cartItems) {
@@ -84,8 +102,12 @@ export const createOrderFromCart = async (user, body) => {
     });
   }
 
-  // Clear cart
-  await CartItem.deleteMany({ cartId: cart._id });
+  // Remove only purchased items from the cart.
+  await CartItem.deleteMany(
+    selectedItemIds.length
+      ? { cartId: cart._id, _id: { $in: selectedItemIds } }
+      : { cartId: cart._id }
+  );
 
   return populateOrder(Order.findById(order._id));
 };

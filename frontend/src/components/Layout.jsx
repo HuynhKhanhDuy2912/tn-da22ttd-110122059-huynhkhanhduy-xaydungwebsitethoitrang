@@ -7,12 +7,14 @@ import {
   Image as ImageIcon,
   LogOut,
   Search,
+  ShoppingCart,
   Shirt,
   Store,
   User,
   X
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
 
 function getParentId(category) {
@@ -83,6 +85,7 @@ function HighlightIcon({ type }) {
 
 export default function Layout() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { cartCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const accountRef = useRef(null);
@@ -351,15 +354,17 @@ export default function Layout() {
                 )}
 
                 {isAuthenticated ? (
-                  <NavLink to="/cart" className="text-black transition hover:text-red-600" aria-label="Giỏ hàng">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.5"
-                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                      />
-                    </svg>
+                  <NavLink
+                    to="/cart"
+                    className="relative grid h-10 w-10 place-items-center text-black transition hover:text-red-600"
+                    aria-label={`Gio hang co ${cartCount} san pham`}
+                  >
+                    <ShoppingCart className="h-6 w-6" strokeWidth={1.6} />
+                    {cartCount > 0 ? (
+                      <span className="absolute -right-[3px] -top-[3px] grid min-h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-[12px] font-bold leading-none text-white shadow-sm">
+                        {cartCount > 99 ? "99+" : cartCount}
+                      </span>
+                    ) : null}
                   </NavLink>
                 ) : null}
 

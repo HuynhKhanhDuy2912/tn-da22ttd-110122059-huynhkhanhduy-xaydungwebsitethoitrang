@@ -17,5 +17,15 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     throw new Error(data.message || "Request failed");
   }
 
+  const normalizedMethod = method.toUpperCase();
+  const changesCart =
+    (path.startsWith("/carts/me/items") && ["POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod)) ||
+    (path === "/carts/me" && ["DELETE"].includes(normalizedMethod)) ||
+    (path === "/orders/checkout" && normalizedMethod === "POST");
+
+  if (changesCart && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cart:changed"));
+  }
+
   return data;
 }

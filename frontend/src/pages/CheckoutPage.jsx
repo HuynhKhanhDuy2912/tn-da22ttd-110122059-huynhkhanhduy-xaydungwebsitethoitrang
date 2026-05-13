@@ -1,12 +1,34 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
+
+const SELECTED_CART_ITEMS_KEY = "fashionstore:selectedCartItems";
+const CHECKOUT_SELECTION_KEY = "fashionstore_checkout_cart_item_ids";
 
 export default function CheckoutPage() {
   const { token, user } = useAuth();
+  const { refreshCartCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedItemIds = (() => {
+    const stateIds = location.state?.selectedItemIds || location.state?.cartItemIds;
+    if (Array.isArray(stateIds)) return stateIds;
+
+    try {
+      const saved =
+        sessionStorage.getItem(CHECKOUT_SELECTION_KEY) ||
+        localStorage.getItem(CHECKOUT_SELECTION_KEY) ||
+        sessionStorage.getItem(SELECTED_CART_ITEMS_KEY) ||
+        "[]";
+      const parsedIds = JSON.parse(saved);
+      return Array.isArray(parsedIds) ? parsedIds : [];
+    } catch (_error) {
+      return [];
+    }
+  })();
   const [form, setForm] = useState({
     receiverName: user?.full_name || user?.username || "",
     receiverPhone: user?.phone_number || "",
@@ -26,8 +48,15 @@ export default function CheckoutPage() {
       await apiRequest("/orders/checkout", {
         method: "POST",
         token,
-        body: form
+        body: {
+          ...form,
+          ...(selectedItemIds.length ? { selectedItemIds } : {})
+        }
       });
+      localStorage.removeItem(CHECKOUT_SELECTION_KEY);
+      sessionStorage.removeItem(CHECKOUT_SELECTION_KEY);
+      sessionStorage.removeItem(SELECTED_CART_ITEMS_KEY);
+      await refreshCartCount();
       navigate("/orders");
     } catch (submitError) {
       setError(submitError.message);

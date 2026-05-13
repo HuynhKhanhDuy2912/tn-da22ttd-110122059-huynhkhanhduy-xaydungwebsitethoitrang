@@ -4,6 +4,7 @@ import AdminRoute from "./components/AdminRoute.jsx";
 import Layout from "./components/Layout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { CartProvider } from "./context/CartContext.jsx";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage.jsx";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage.jsx";
@@ -31,9 +32,10 @@ import CollectionDetailPage from "./pages/CollectionDetailPage.jsx";
 export default function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route element={<Layout />}>
+      <CartProvider>
+        <Toaster position="top-right" />
+        <Routes>
+          <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -99,8 +101,9 @@ export default function App() {
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
           </Route>
-        </Route>
-      </Routes>
+          </Route>
+        </Routes>
+      </CartProvider>
     </AuthProvider>
   );
 }

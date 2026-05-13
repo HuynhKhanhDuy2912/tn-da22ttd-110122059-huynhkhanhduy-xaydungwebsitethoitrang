@@ -52,7 +52,7 @@ export const updateMyCartItem = async (req, res) => {
     const item = await updateCartItemQuantity(
       req.user._id,
       req.params.cartItemId,
-      req.body.quantity
+      req.body
     );
 
     return res.status(200).json({

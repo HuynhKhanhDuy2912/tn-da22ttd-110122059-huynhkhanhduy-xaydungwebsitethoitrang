@@ -486,7 +486,7 @@ export default function ProductDetailPage() {
                 key={activeImage}
                 src={activeImage}
                 alt={product.name}
-                className={`max-w-full max-h-[70vh] object-contain transition-transform duration-300 ${isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"
+                className={`max-w-full max-h-[78vh] object-contain transition-transform duration-300 ${isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"
                   }`}
                 onClick={() => setIsZoomed(z => !z)}
               />
@@ -533,9 +533,9 @@ export default function ProductDetailPage() {
           {/* Tên sản phẩm */}
           <div>
             <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">
-              SKU-{product._id.slice(-6).toUpperCase()}
+              SKU: {product._id.slice(-6).toUpperCase()}
             </p>
-            <h1 className="text-xl font-extrabold text-black leading-tight tracking-wide uppercase">
+            <h1 className="text-2xl font-extrabold text-black leading-tight tracking-wide uppercase">
               {product.name}
             </h1>
           </div>
@@ -553,7 +553,7 @@ export default function ProductDetailPage() {
             return (
               <div className="py-3 border-t border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl font-extrabold text-black">
+                  <span className="text-xl font-extrabold text-black">
                     {displayPrice.toLocaleString("vi-VN")}₫
                   </span>
                   {discounted && (
