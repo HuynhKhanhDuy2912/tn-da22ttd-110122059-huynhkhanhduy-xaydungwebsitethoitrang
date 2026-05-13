@@ -6,7 +6,7 @@ import {
   Minus,
   Plus,
   ShieldCheck,
-  ShoppingBag,
+  ShoppingCart,
   Trash2,
   Truck
 } from "lucide-react";
@@ -199,7 +199,7 @@ export default function CartPage() {
       {!hasItems && !loading ? (
         <div className="border border-gray-200 bg-gray-50 px-6 py-24 text-center">
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-white text-black shadow-sm">
-            <ShoppingBag className="h-8 w-8" strokeWidth={1.6} />
+            <ShoppingCart className="h-8 w-8" strokeWidth={1.6} />
           </div>
           <h3 className="mb-3 text-xl font-bold uppercase tracking-widest text-black">Giỏ hàng trống</h3>
           <p className="mx-auto mb-8 max-w-md text-sm leading-6 text-gray-500">

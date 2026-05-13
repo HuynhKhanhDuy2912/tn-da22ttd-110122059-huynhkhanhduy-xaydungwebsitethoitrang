@@ -22,9 +22,15 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     (path.startsWith("/carts/me/items") && ["POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod)) ||
     (path === "/carts/me" && ["DELETE"].includes(normalizedMethod)) ||
     (path === "/orders/checkout" && normalizedMethod === "POST");
+  const changesCategories =
+    path.startsWith("/categories") && ["POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod);
 
   if (changesCart && typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("cart:changed"));
+  }
+
+  if (changesCategories && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("categories:changed"));
   }
 
   return data;

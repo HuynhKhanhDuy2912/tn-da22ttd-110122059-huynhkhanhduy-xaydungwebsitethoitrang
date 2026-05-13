@@ -10,6 +10,7 @@ const initialForm = {
   name: "",
   description: "",
   coverImage: "",
+  bannerImage: "",
   isActive: true,
   order: 0,
   products: [],
@@ -62,6 +63,7 @@ export default function AdminCollectionsPage() {
         name: form.name.trim(),
         description: form.description.trim(),
         coverImage: form.coverImage,
+        bannerImage: form.bannerImage,
         isActive: form.isActive,
         order: Number(form.order) || 0,
         products: form.products.map((p) => (typeof p === "string" ? p : p._id)),
@@ -98,6 +100,7 @@ export default function AdminCollectionsPage() {
       name: collection.name,
       description: collection.description || "",
       coverImage: collection.coverImage || "",
+      bannerImage: collection.bannerImage || "",
       isActive: collection.isActive,
       order: collection.order || 0,
       products: collection.products || [],
@@ -180,7 +183,7 @@ export default function AdminCollectionsPage() {
         </h3>
 
         <form onSubmit={handleSubmit} className="grid gap-5">
-          <div className="grid grid-cols-[1fr_280px] gap-6 items-start">
+          <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
             {/* Left side */}
             <div className="grid gap-4">
               <label className={labelCls}>
@@ -230,11 +233,16 @@ export default function AdminCollectionsPage() {
             </div>
 
             {/* Right side — cover image */}
-            <div>
+            <div className="grid gap-5">
               <ImageUpload
                 label="ẢNH BÌA"
                 value={form.coverImage}
                 onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
+              />
+              <ImageUpload
+                label="ẢNH BANNER"
+                value={form.bannerImage}
+                onChange={(url) => setForm((f) => ({ ...f, bannerImage: url }))}
               />
             </div>
           </div>
@@ -347,9 +355,10 @@ export default function AdminCollectionsPage() {
       </div>
 
       {/* ── LIST ── */}
-      <div className="bg-white border border-gray-200">
-        <div className="grid grid-cols-[80px_1fr_100px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="overflow-x-auto bg-white border border-gray-200">
+        <div className="grid min-w-[940px] grid-cols-[80px_140px_1fr_100px_100px_80px_120px] gap-4 px-5 py-3 border-b border-gray-200 bg-gray-50">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Ảnh bìa</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Banner</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tên</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Sản phẩm</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Thứ tự</span>
@@ -370,7 +379,7 @@ export default function AdminCollectionsPage() {
           collections.map((col) => (
             <div
               key={col._id}
-              className="grid grid-cols-[80px_1fr_100px_100px_80px_120px] gap-4 px-5 py-4 items-center border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              className="grid min-w-[940px] grid-cols-[80px_140px_1fr_100px_100px_80px_120px] gap-4 px-5 py-4 items-center border-b border-gray-100 hover:bg-gray-50 transition-colors"
             >
               {/* Cover */}
               <div className="w-16 h-16 bg-gray-100 border border-gray-200 overflow-hidden">
@@ -378,6 +387,17 @@ export default function AdminCollectionsPage() {
                   <img src={col.coverImage} className="w-full h-full object-cover" alt="" />
                 ) : (
                   <div className="w-full h-full grid place-items-center text-[8px] text-gray-300 uppercase">
+                    N/A
+                  </div>
+                )}
+              </div>
+
+              {/* Banner */}
+              <div className="h-16 w-32 overflow-hidden border border-gray-200 bg-gray-100">
+                {col.bannerImage ? (
+                  <img src={col.bannerImage} className="h-full w-full object-cover" alt="" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-[8px] uppercase text-gray-300">
                     N/A
                   </div>
                 )}

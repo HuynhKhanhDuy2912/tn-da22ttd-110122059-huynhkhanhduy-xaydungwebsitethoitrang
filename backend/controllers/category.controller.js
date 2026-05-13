@@ -17,6 +17,39 @@ const normalizeParentId = (value) => {
 
 const normalizeImageUrl = (value) => (value || "").trim();
 
+const list = async (req, res) => {
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 1000, 1), 1000);
+
+    const [items, total] = await Promise.all([
+      Category.find({})
+        .populate({ path: "parentId", select: "name imageUrl" })
+        .sort({ createdAt: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Category.countDocuments({})
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Category list fetched successfully",
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 const getCategoryDepth = async (categoryId) => {
   let depth = 0;
   let cursor = await Category.findById(categoryId).select("parentId");
@@ -224,4 +257,4 @@ const remove = async (req, res) => {
   }
 };
 
-export default { ...baseCrud, create, update, remove };
+export default { ...baseCrud, list, create, update, remove };

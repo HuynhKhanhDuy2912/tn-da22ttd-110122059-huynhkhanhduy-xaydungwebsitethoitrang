@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Filter, Grid2X2, Grid3X3, Rows3 } from "lucide-react";
 import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
@@ -18,7 +19,6 @@ export default function CollectionDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        // Try slug first, fallback to id
         let colRes;
         try {
           colRes = await apiRequest(`/collections/slug/${collectionId}`);
@@ -29,13 +29,12 @@ export default function CollectionDetailPage() {
         const col = colRes.data;
         setCollection(col);
 
-        // Load variants for these products
         if (col.products?.length > 0) {
-          const productIds = col.products.map((p) => p._id || p);
+          const productIds = col.products.map((product) => product._id || product);
           const varRes = await apiRequest("/product-variants?limit=500");
           const allVariants = varRes.data || [];
           setVariants(
-            allVariants.filter((v) => productIds.includes(v.productId?._id || v.productId))
+            allVariants.filter((variant) => productIds.includes(variant.productId?._id || variant.productId))
           );
         }
       } catch (e) {
@@ -44,6 +43,7 @@ export default function CollectionDetailPage() {
         setLoading(false);
       }
     };
+
     load();
     window.scrollTo(0, 0);
   }, [collectionId]);
@@ -62,8 +62,8 @@ export default function CollectionDetailPage() {
           productId: product._id,
           variantId: variant._id,
           quantity: 1,
-          source: "collection",
-        },
+          source: "collection"
+        }
       });
     } catch (e) {
       console.error(e);
@@ -72,10 +72,10 @@ export default function CollectionDetailPage() {
 
   if (loading) {
     return (
-      <section className="min-h-[60vh] flex items-center justify-center">
+      <section className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 text-sm">{error || "Đang tải..."}</p>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent" />
+          <p className="text-sm text-gray-500">{error || "Đang tải..."}</p>
         </div>
       </section>
     );
@@ -83,66 +83,93 @@ export default function CollectionDetailPage() {
 
   if (!collection) {
     return (
-      <section className="min-h-[60vh] flex items-center justify-center">
+      <section className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Không tìm thấy</h2>
-          <p className="text-gray-500 text-sm mb-6">Bộ sưu tập này không tồn tại hoặc đã bị xóa.</p>
+          <h2 className="mb-2 text-xl font-bold">Không tìm thấy</h2>
+          <p className="mb-6 text-sm text-gray-500">
+            Bộ sưu tập này không tồn tại hoặc đã bị xóa.
+          </p>
           <Link
             to="/collections"
-            className="px-6 py-3 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+            className="bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800"
           >
-            XEM TẤT CẢ BỘ SƯU TẬP
+            Xem tất cả bộ sưu tập
           </Link>
         </div>
       </section>
     );
   }
 
-  return (
-    <div>
-      {/* ── Hero Banner ── */}
-      <section className="relative h-[50vh] min-h-[380px] flex items-end overflow-hidden bg-black">
-        {collection.coverImage ? (
-          <img
-            src={collection.coverImage}
-            alt={collection.name}
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+  const bannerImage = collection.bannerImage || collection.coverImage;
 
-        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 lg:px-8 pb-10">
-          <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/50 mb-4">
-            <Link to="/" className="hover:text-white">TRANG CHỦ</Link>
-            <span>/</span>
-            <Link to="/collections" className="hover:text-white">BỘ SƯU TẬP</Link>
-            <span>/</span>
-            <span className="text-white truncate max-w-[200px]">{collection.name}</span>
-          </nav>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white uppercase tracking-wide m-0 mb-3">
-            {collection.name}
-          </h1>
-          {collection.description && (
-            <p className="text-white/70 text-sm leading-relaxed m-0 max-w-2xl">
-              {collection.description}
-            </p>
-          )}
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-4 m-0">
-            {productsWithVariants.length} SẢN PHẨM
-          </p>
+  return (
+    <div className="mx-auto max-w-[1400px] px-4 py-8 lg:px-8">
+      <section className="mb-10 border border-gray-200 bg-white px-5 py-5">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className="font-bold text-black">{productsWithVariants.length} sản phẩm</span>
+            <span className="text-gray-300">/</span>
+            <Link to="/" className="text-gray-500 transition hover:text-black">
+              Trang chủ
+            </Link>
+            <span className="text-gray-300">&gt;</span>
+            <Link to="/collections" className="text-gray-500 transition hover:text-black">
+              Bộ sưu tập
+            </Link>
+            <span className="text-gray-300">&gt;</span>
+            <span className="font-bold text-black">{collection.name}</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-black">
+            <button type="button" className="grid h-9 w-9 place-items-center transition hover:bg-gray-50" aria-label="Lọc">
+              <Filter className="h-5 w-5" strokeWidth={1.7} />
+            </button>
+            <button type="button" className="grid h-9 w-9 place-items-center transition hover:bg-gray-50" aria-label="Sắp xếp">
+              <Rows3 className="h-5 w-5" strokeWidth={1.7} />
+            </button>
+            <button type="button" className="grid h-9 w-9 place-items-center transition hover:bg-gray-50" aria-label="Lưới 2 cột">
+              <Grid2X2 className="h-5 w-5" strokeWidth={1.7} />
+            </button>
+            <button type="button" className="grid h-9 w-9 place-items-center transition hover:bg-gray-50" aria-label="Lưới 3 cột">
+              <Grid3X3 className="h-5 w-5 text-gray-500" strokeWidth={1.7} />
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* ── Products Grid ── */}
-      <section className="max-w-[1400px] mx-auto px-4 lg:px-8 py-12">
+      <section className="mb-6 overflow-hidden bg-gray-100">
+        {bannerImage ? (
+          <img src={bannerImage} alt={collection.name} className="h-auto w-full object-cover" />
+        ) : (
+          <div className="grid aspect-[16/5] place-items-center bg-gray-100 px-6 text-center">
+            <div>
+              <h1 className="mb-2 text-3xl font-extrabold uppercase tracking-wide text-black md:text-5xl">
+                {collection.name}
+              </h1>
+              {collection.description ? (
+                <p className="mx-auto max-w-2xl text-sm leading-6 text-gray-500">{collection.description}</p>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {collection.description ? (
+        <section className="mb-10 max-w-3xl">
+          <h1 className="mb-3 text-2xl font-extrabold uppercase tracking-wide text-black md:text-3xl">
+            {collection.name}
+          </h1>
+          <p className="m-0 text-sm leading-7 text-gray-500">{collection.description}</p>
+        </section>
+      ) : null}
+
+      <section className="py-4">
         {productsWithVariants.length === 0 ? (
-          <div className="text-center py-16 border border-gray-200">
-            <p className="text-gray-400 text-sm m-0">Bộ sưu tập chưa có sản phẩm nào</p>
+          <div className="border border-gray-200 py-16 text-center">
+            <p className="m-0 text-sm text-gray-400">Bộ sưu tập chưa có sản phẩm nào</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
             {productsWithVariants.map((product) => (
               <ProductCard
                 key={product._id}
@@ -154,13 +181,12 @@ export default function CollectionDetailPage() {
         )}
       </section>
 
-      {/* ── CTA ── */}
       <section className="border-t border-gray-200 py-12 text-center">
         <Link
           to="/collections"
-          className="inline-block px-10 py-4 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+          className="inline-block bg-black px-10 py-4 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-gray-800"
         >
-          XEM TẤT CẢ BỘ SƯU TẬP
+          Xem tất cả bộ sưu tập
         </Link>
       </section>
     </div>

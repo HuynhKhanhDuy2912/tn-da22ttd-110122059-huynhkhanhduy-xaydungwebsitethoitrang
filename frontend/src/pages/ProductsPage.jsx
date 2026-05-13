@@ -358,7 +358,7 @@ export default function ProductsPage() {
       <section className="mx-auto w-full max-w-[1400px] px-4 lg:px-8">
         <div className="border border-gray-300 bg-white px-5 py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3 text-[17px]">
+            <div className="flex flex-wrap items-center gap-3 text-[15px]">
               <span className="font-semibold text-black">{filteredProducts.length} Sản phẩm</span>
               <span className="text-gray-400">&gt;</span>
               <Link to="/" className="text-gray-600 hover:text-black">Trang chủ</Link>
@@ -434,7 +434,7 @@ export default function ProductsPage() {
                   <button
                     type="button"
                     onClick={() => handleSelectQuickTag(quickTagBaseId)}
-                    className={`border px-5 py-3 text-[17px] font-medium transition ${selectedScopeForTag === quickTagBaseId
+                    className={`border px-5 py-3 text-[15px] font-medium transition ${selectedScopeForTag === quickTagBaseId
                       ? "border-black bg-black text-white"
                       : "border-gray-300 bg-white text-black hover:border-black"
                       }`}
@@ -448,7 +448,7 @@ export default function ProductsPage() {
                     key={tag._id}
                     type="button"
                     onClick={() => handleSelectQuickTag(tag._id)}
-                    className={`border px-5 py-3 text-[17px] font-medium transition ${selectedScopeForTag === tag._id
+                    className={`border px-5 py-3 text-[15px] font-medium transition ${selectedScopeForTag === tag._id
                       ? "border-black bg-black text-white"
                       : "border-gray-300 bg-white text-black hover:border-black"
                       }`}

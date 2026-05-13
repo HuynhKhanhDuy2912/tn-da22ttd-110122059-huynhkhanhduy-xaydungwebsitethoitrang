@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Home,
   History,
@@ -29,7 +29,7 @@ function sortByCreatedAt(items) {
 function chunkArray(items, columns = 4) {
   const result = Array.from({ length: columns }, () => []);
   const maxPerColumn = 4;
-  items.forEach((item, index) => {
+  items.slice(0, columns * maxPerColumn).forEach((item, index) => {
     const colIndex = Math.min(Math.floor(index / maxPerColumn), columns - 1);
     result[colIndex].push(item);
   });
@@ -110,11 +110,27 @@ export default function Layout() {
     setActiveMegaMenu(null);
   }, [location.pathname, location.search]);
 
-  useEffect(() => {
+  const loadCategories = useCallback(() => {
     apiRequest("/categories?limit=1000")
       .then((response) => setCategories(response.data || []))
       .catch(() => { });
   }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    const handleCategoriesChanged = () => loadCategories();
+
+    window.addEventListener("categories:changed", handleCategoriesChanged);
+    window.addEventListener("focus", handleCategoriesChanged);
+
+    return () => {
+      window.removeEventListener("categories:changed", handleCategoriesChanged);
+      window.removeEventListener("focus", handleCategoriesChanged);
+    };
+  }, [loadCategories]);
 
   useEffect(() => {
     const handleClick = (event) => {
@@ -142,14 +158,13 @@ export default function Layout() {
     };
   }, [activeMegaMenu]);
 
-  // const rootCategories = useMemo(
-  //   () => sortByCreatedAt(categories.filter((category) => !getParentId(category))),
-  //   [categories]
-  // );
-  const rootCategories = useMemo(
-    () => categories.filter((category) => !getParentId(category)),
-    [categories]
-  );
+  const rootCategories = useMemo(() => {
+    return categories
+      .filter((category) => !getParentId(category))
+      .sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      )
+  }, [categories]);
 
   const childrenOf = (parentId) =>
     sortByCreatedAt(categories.filter((category) => getParentId(category) === parentId));

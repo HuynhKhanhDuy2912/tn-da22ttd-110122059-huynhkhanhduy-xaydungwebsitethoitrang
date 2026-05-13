@@ -27,6 +27,11 @@ const collectionSchema = new mongoose.Schema(
       default: ""
     },
 
+    bannerImage: {
+      type: String,
+      default: ""
+    },
+
     products: [
       {
         type: mongoose.Schema.Types.ObjectId,
