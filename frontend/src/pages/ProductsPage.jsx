@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts, buildCatalogFilters, filterProducts } from "../lib/catalog.js";
 import { getProductPath } from "../lib/slug.js";
+import { sortSizes } from "../lib/sizes.js";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
@@ -92,13 +93,19 @@ function getColorGroups(product) {
       groups.set(key, {
         color: key,
         hex: colorToHex(key),
-        previewImage: variant.image || product.images?.[0] || "",
+        previewImage: variant.image || "",
         variants: []
       });
     }
     groups.get(key).variants.push(variant);
     if (!groups.get(key).previewImage && variant.image) {
       groups.get(key).previewImage = variant.image;
+    }
+  });
+
+  groups.forEach((group) => {
+    if (!group.previewImage) {
+      group.previewImage = product.images?.[0] || "";
     }
   });
 
@@ -568,7 +575,7 @@ export default function ProductsPage() {
                   activeColorGroup?.variants?.find((item) => item.image && item.image !== primaryImage)?.image ||
                   primaryImage;
 
-                const sizes = [...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))];
+                const sizes = sortSizes([...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))]);
                 const quickAdd = quickAddByProduct[product._id];
                 const selectedSize = quickAdd?.size || sizes[0] || "";
                 const selectedVariant =

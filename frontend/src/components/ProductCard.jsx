@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import { getProductPath } from "../lib/slug.js";
+import { sortSizes } from "../lib/sizes.js";
 
 function getColorGroups(product) {
   const groups = new Map();
@@ -12,13 +13,19 @@ function getColorGroups(product) {
     if (!groups.has(key)) {
       groups.set(key, {
         color: key,
-        previewImage: variant.image || product.images?.[0] || "",
+        previewImage: variant.image || "",
         variants: []
       });
     }
     groups.get(key).variants.push(variant);
     if (!groups.get(key).previewImage && variant.image) {
       groups.get(key).previewImage = variant.image;
+    }
+  });
+
+  groups.forEach((group) => {
+    if (!group.previewImage) {
+      group.previewImage = product.images?.[0] || "";
     }
   });
 
@@ -56,7 +63,7 @@ export default function ProductCard({
     activeColorGroup?.variants?.find((item) => item.image && item.image !== primaryImage)?.image ||
     primaryImage;
 
-  const sizes = [...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))];
+  const sizes = sortSizes([...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))]);
   const selectedSize = quickAdd?.size || sizes[0] || "";
   const selectedVariant =
     (activeColorGroup?.variants || []).find((item) => item.size === selectedSize) ||

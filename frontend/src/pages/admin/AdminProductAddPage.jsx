@@ -2,7 +2,9 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
+import { sortVariantsBySize } from "../../lib/sizes.js";
 import MultiImageUpload from "../../components/MultiImageUpload.jsx";
+import MultiVideoUpload from "../../components/MultiVideoUpload.jsx";
 import {
   Star,
   Trash2,
@@ -27,6 +29,7 @@ const initialForm = {
   occasion: "casual",
   mainImage: "",
   gallery: [],
+  videos: [],
   color: "",
   sizes: "",
   stock: 0,
@@ -38,6 +41,7 @@ const initialVariantForm = {
   stock: 0,
   price: "",
   images: [],
+  mainImage: "",
 };
 
 export default function AdminProductAddPage() {
@@ -117,6 +121,7 @@ export default function AdminProductAddPage() {
             occasion: p.occasion?.[0] || "casual",
             mainImage: p.images?.[0] || "",
             gallery: [],
+            videos: p.videos || [],
             color: "",
             sizes: "",
             stock: 0,
@@ -159,6 +164,7 @@ export default function AdminProductAddPage() {
         season: [form.season],
         occasion: [form.occasion],
         images: form.mainImage ? [form.mainImage] : [],
+        videos: form.videos || [],
       };
       if (editId) {
         await apiRequest(`/products/${editId}`, {
@@ -301,12 +307,12 @@ export default function AdminProductAddPage() {
     try {
       const variantPrice = variantForm.price === "" ? Number(form.price) : Number(variantForm.price);
       const calculatedAdjustment = variantPrice - Number(form.price);
-      
+
       const baseBody = {
         color: variantForm.color.trim(),
         stock: Number(variantForm.stock),
         priceAdjustment: calculatedAdjustment,
-        image: variantForm.images[0] || "",
+        image: variantForm.mainImage || variantForm.images[0] || "",
         productId: editId,
       };
       const sizes = variantForm.size
@@ -346,7 +352,7 @@ export default function AdminProductAddPage() {
                 body: {
                   productId: editId,
                   imageUrl: url,
-                  isMain: galleryImages.length === 0 && idx === 0,
+                  isMain: galleryImages.length === 0 && url === baseBody.image,
                   color: variantForm.color.trim(),
                 },
               }),
@@ -382,6 +388,7 @@ export default function AdminProductAddPage() {
       stock: v.stock || 0,
       price: Number(form.price) + (v.priceAdjustment || 0),
       images: v.image ? [v.image] : [],
+      mainImage: v.image || "",
     });
   };
   const handleDeleteVariant = async (id) => {
@@ -401,6 +408,7 @@ export default function AdminProductAddPage() {
       stock: v.stock || 0,
       price: Number(form.price) + (v.priceAdjustment || 0),
       images: v.image ? [v.image] : [],
+      mainImage: v.image || "",
     });
   };
 
@@ -436,6 +444,9 @@ export default function AdminProductAddPage() {
       const color = v.color || "Không xác định";
       if (!map.has(color)) map.set(color, []);
       map.get(color).push(v);
+    });
+    map.forEach((items, color) => {
+      map.set(color, sortVariantsBySize(items));
     });
     return map;
   }, [variants]);
@@ -488,6 +499,14 @@ export default function AdminProductAddPage() {
                   onChange={(e) =>
                     setForm((c) => ({ ...c, description: e.target.value }))
                   }
+                />
+              </label>
+              <label className={labelCls}>
+                Chất liệu
+                <input
+                  className={inputCls}
+                  placeholder="Vd: Cotton, Polyester, Linen..."
+                  {...field("material")}
                 />
               </label>
               <div className="grid md:grid-cols-3 gap-4">
@@ -698,8 +717,14 @@ export default function AdminProductAddPage() {
             </div>
             {/* Classification */}
             <div className={cardCls}>
-              <h2 className={headingCls}>Phân loại</h2>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-black m-0">
+                    Thuộc tính
+                  </h2>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
                 <label className={labelCls}>
                   Phong cách
                   <select className={inputCls} {...field("style")}>
@@ -737,15 +762,6 @@ export default function AdminProductAddPage() {
                     <option value="street">Dạo phố</option>
                   </select>
                 </label>
-                {/* <label className={labelCls}>Thương hiệu<input className={inputCls} placeholder="Vd: Paradox, Levents..." {...field("brand")} /></label> */}
-                <label className={labelCls}>
-                  Chất liệu
-                  <input
-                    className={inputCls}
-                    placeholder="Vd: Cotton, Polyester..."
-                    {...field("material")}
-                  />
-                </label>
               </div>
             </div>
           </div>
@@ -769,6 +785,18 @@ export default function AdminProductAddPage() {
                 />
               </div>
             )}
+
+            <div className={cardCls}>
+              <h2 className={headingCls}>Video sản phẩm</h2>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest m-0">
+                Có thể thêm video ngắn để hiển thị trong trang chi tiết sản phẩm.
+              </p>
+              <MultiVideoUpload
+                label=""
+                values={form.videos}
+                onChange={(urls) => setForm((c) => ({ ...c, videos: urls }))}
+              />
+            </div>
 
             {editId && (
               <div className={cardCls}>
@@ -984,7 +1012,18 @@ export default function AdminProductAddPage() {
                     label="Ảnh biến thể"
                     values={variantForm.images}
                     onChange={(urls) =>
-                      setVariantForm((c) => ({ ...c, images: urls }))
+                      setVariantForm((c) => ({
+                        ...c,
+                        images: urls,
+                        mainImage:
+                          c.mainImage && urls.includes(c.mainImage)
+                            ? c.mainImage
+                            : urls[0] || "",
+                      }))
+                    }
+                    mainImage={variantForm.mainImage}
+                    onSetMain={(url) =>
+                      setVariantForm((c) => ({ ...c, mainImage: url }))
                     }
                   />
 

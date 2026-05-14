@@ -4,23 +4,26 @@ import { protect, authorize } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Upload an image
+// Upload an image or video
 router.post('/', protect, authorize('admin'), upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file provided' });
     }
+    const mediaType = req.file.mimetype?.startsWith('video/') ? 'video' : 'image';
     return res.status(200).json({
       success: true,
-      message: 'Image uploaded successfully',
-      imageUrl: req.file.path
+      message: `${mediaType === 'video' ? 'Video' : 'Image'} uploaded successfully`,
+      imageUrl: req.file.path,
+      mediaUrl: req.file.path,
+      mediaType
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Delete an image
+// Delete an image or video
 router.delete('/', protect, authorize('admin'), async (req, res) => {
   try {
     const { imageUrl } = req.body;
@@ -36,12 +39,13 @@ router.delete('/', protect, authorize('admin'), async (req, res) => {
     const folder = urlParts[urlParts.length - 2]; // fashionstore
     const fileNameWithoutExt = lastPart.split('.')[0];
     const publicId = `${folder}/${fileNameWithoutExt}`;
+    const resourceType = imageUrl.includes('/video/upload/') ? 'video' : 'image';
 
-    await cloudinary.uploader.destroy(publicId);
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 
     return res.status(200).json({
       success: true,
-      message: 'Image deleted from Cloudinary'
+      message: 'File deleted from Cloudinary'
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

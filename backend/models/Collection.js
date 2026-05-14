@@ -11,7 +11,6 @@ const collectionSchema = new mongoose.Schema(
 
     slug: {
       type: String,
-      unique: true,
       trim: true,
       lowercase: true
     },
@@ -70,7 +69,7 @@ collectionSchema.pre("validate", function (next) {
   next();
 });
 
-collectionSchema.index({ slug: 1 });
+collectionSchema.index({ slug: 1 }, { unique: true });
 collectionSchema.index({ isActive: 1, order: 1 });
 
 export default mongoose.model("Collection", collectionSchema);

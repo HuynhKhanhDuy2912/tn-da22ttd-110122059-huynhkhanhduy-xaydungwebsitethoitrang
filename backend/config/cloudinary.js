@@ -15,7 +15,8 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'fashionstore',
-    allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+    resource_type: 'auto',
+    allowedFormats: ['jpg', 'png', 'jpeg', 'webp', 'mp4', 'mov', 'webm'],
   },
 });
 
@@ -29,7 +30,8 @@ export const deleteImageFromCloudinary = async (imageUrl) => {
     const folder = urlParts[urlParts.length - 2];
     const fileNameWithoutExt = lastPart.split('.')[0];
     const publicId = `${folder}/${fileNameWithoutExt}`;
-    await cloudinary.uploader.destroy(publicId);
+    const resourceType = imageUrl.includes('/video/upload/') ? 'video' : 'image';
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
   } catch (error) {
     console.error("Error deleting image from Cloudinary:", error);
   }

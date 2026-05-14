@@ -41,8 +41,7 @@ const productSchema = new mongoose.Schema(
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: true,
-      index: true
+      required: true
     },
 
     brand: {
@@ -92,6 +91,11 @@ const productSchema = new mongoose.Schema(
     },
 
     images: {
+      type: [String],
+      default: []
+    },
+
+    videos: {
       type: [String],
       default: []
     },
@@ -171,6 +175,12 @@ productSchema.pre('findOneAndDelete', async function(next) {
       if (docToUpdate.images && docToUpdate.images.length > 0) {
         for (const imgUrl of docToUpdate.images) {
           await deleteImageFromCloudinary(imgUrl);
+        }
+      }
+
+      if (docToUpdate.videos && docToUpdate.videos.length > 0) {
+        for (const videoUrl of docToUpdate.videos) {
+          await deleteImageFromCloudinary(videoUrl);
         }
       }
 

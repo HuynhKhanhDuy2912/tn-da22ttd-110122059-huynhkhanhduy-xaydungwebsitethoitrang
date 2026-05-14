@@ -5,8 +5,13 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
 import { getProductPath } from "../lib/slug.js";
+import { sortSizes } from "../lib/sizes.js";
 import { ChevronLeft, ChevronsRight, ChevronRight, Star, ZoomIn, ZoomOut, Plus, Ruler, X } from "lucide-react";
 import toast from "react-hot-toast";
+
+function isVideoMedia(url = "") {
+  return /\/video\/upload\/|\.mp4($|\?)|\.webm($|\?)|\.mov($|\?)/i.test(url);
+}
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
@@ -69,21 +74,21 @@ export default function ProductDetailPage() {
           const colorToSet = initialColor && uniqueColors.includes(initialColor) ? initialColor : uniqueColors[0];
 
           setSelectedColor(colorToSet);
-          const sizesForColor = currentVariants.filter(v => v.color === colorToSet).map(v => v.size);
+          const sizesForColor = sortSizes(currentVariants.filter(v => v.color === colorToSet).map(v => v.size));
           setSelectedSize(sizesForColor[0]);
 
           const imgsForColor = pImages.filter(i => i.color === colorToSet).map(i => i.imageUrl);
-          const variantImg = currentVariants.find(v => v.color === colorToSet)?.image;
+          const variantImg = currentVariants.find(v => v.color === colorToSet && v.image)?.image;
 
-          if (imgsForColor.length > 0) setActiveImage(imgsForColor[0]);
-          else if (variantImg) setActiveImage(variantImg);
+          if (variantImg) setActiveImage(variantImg);
+          else if (imgsForColor.length > 0) setActiveImage(imgsForColor[0]);
           else {
             const mainGalleryImg = pImages.find(i => i.isMain);
-            setActiveImage(mainGalleryImg?.imageUrl || pImages[0]?.imageUrl || currentProduct.images?.[0] || "");
+            setActiveImage(mainGalleryImg?.imageUrl || pImages[0]?.imageUrl || currentProduct.images?.[0] || currentProduct.videos?.[0] || "");
           }
         } else {
           const mainGalleryImg = pImages.find(i => i.isMain);
-          setActiveImage(mainGalleryImg?.imageUrl || pImages[0]?.imageUrl || currentProduct.images?.[0] || "");
+          setActiveImage(mainGalleryImg?.imageUrl || pImages[0]?.imageUrl || currentProduct.images?.[0] || currentProduct.videos?.[0] || "");
         }
       } catch (e) {
         setError(e.message);
@@ -104,7 +109,7 @@ export default function ProductDetailPage() {
 
   const availableColors = useMemo(() => [...new Set(variants.map(v => v.color))], [variants]);
   const availableSizes = useMemo(
-    () => [...new Set(variants.filter(v => v.color === selectedColor).map(v => v.size))],
+    () => sortSizes([...new Set(variants.filter(v => v.color === selectedColor).map(v => v.size))]),
     [variants, selectedColor]
   );
 
@@ -115,7 +120,7 @@ export default function ProductDetailPage() {
       .map(i => i.imageUrl);
 
     // Lấy ảnh của biến thể màu hiện tại
-    const variantImage = variants.find(v => v.color === selectedColor)?.image;
+    const variantImage = variants.find(v => v.color === selectedColor && v.image)?.image;
 
     // Lấy ảnh chung (không có màu)
     const uncoloredImages = productImages
@@ -123,9 +128,10 @@ export default function ProductDetailPage() {
       .map(i => i.imageUrl);
 
     const all = [
+      variantImage,
       ...imgsForColor,
       ...uncoloredImages,
-      variantImage
+      ...(product?.videos || []),
     ].filter(Boolean);
 
     // Chỉ dùng ảnh gốc của sản phẩm (thường là mảng rỗng hoặc ảnh chính) nếu không có ảnh nào khác
@@ -135,20 +141,22 @@ export default function ProductDetailPage() {
 
   const handleColorChange = (color) => {
     setSelectedColor(color);
-    const sizesForColor = variants.filter(v => v.color === color).map(v => v.size);
+    const sizesForColor = sortSizes(variants.filter(v => v.color === color).map(v => v.size));
     if (!sizesForColor.includes(selectedSize)) setSelectedSize(sizesForColor[0]);
 
     // Khi đổi màu, ưu tiên lấy ảnh đầu tiên của gallery màu đó, nếu không có mới lấy ảnh biến thể
     const imgsForColor = productImages.filter(i => i.color === color).map(i => i.imageUrl);
-    const variantImg = variants.find(v => v.color === color)?.image;
+    const variantImg = variants.find(v => v.color === color && v.image)?.image;
 
-    if (imgsForColor.length > 0) setActiveImage(imgsForColor[0]);
-    else if (variantImg) setActiveImage(variantImg);
+    if (variantImg) setActiveImage(variantImg);
+    else if (imgsForColor.length > 0) setActiveImage(imgsForColor[0]);
+    else if (product?.videos?.[0]) setActiveImage(product.videos[0]);
   };
 
   const activeIndex = galleryImages.indexOf(activeImage);
   const goPrev = () => setActiveImage(galleryImages[(activeIndex - 1 + galleryImages.length) % galleryImages.length]);
   const goNext = () => setActiveImage(galleryImages[(activeIndex + 1) % galleryImages.length]);
+  const activeMediaIsVideo = isVideoMedia(activeImage);
 
   const relatedProducts = useMemo(() =>
     allProducts.filter(i => i._id !== product?._id && product &&
@@ -351,11 +359,11 @@ export default function ProductDetailPage() {
                 </span>
               </summary>
 
-              <div className="px-6 py-2 text-[13px] text-gray-600 leading-6 space-y-2">
+              <div className="px-6 py-2 text-[13px] text-gray-600 space-y-2">
 
                 {product.description && (
-                  <div className="pb-2">
-                    <p className="whitespace-pre-line leading-7 text-gray-500">
+                  <div>
+                    <p className="text-black">
                       {product.description}
                     </p>
                   </div>
@@ -363,7 +371,7 @@ export default function ProductDetailPage() {
 
                 {product.material && (
                   <p>
-                    <span className="font-semibold text-black">
+                    <span className="text-black">
                       Chất liệu:
                     </span>{" "}
                     {product.material}
@@ -371,14 +379,14 @@ export default function ProductDetailPage() {
                 )}
 
                 <p>
-                  <span className="font-semibold text-black">
+                  <span className="text-black">
                     Phong cách:
                   </span>{" "}
                   <span className="capitalize">{product.style}</span>
                 </p>
 
                 <p>
-                  <span className="font-semibold text-black">
+                  <span className="text-black">
                     SKU:
                   </span>{" "}
                   {product._id.slice(-6).toUpperCase()}
@@ -470,7 +478,11 @@ export default function ProductDetailPage() {
                   className={`w-full aspect-square border-2 overflow-hidden transition-all cursor-pointer p-0 bg-transparent ${activeImage === img ? "border-black" : "border-transparent opacity-40 hover:opacity-80"
                     }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  {isVideoMedia(img) ? (
+                    <video src={img} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                  ) : (
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  )}
                 </button>
               ))}
             </div>
@@ -481,7 +493,17 @@ export default function ProductDetailPage() {
             className="flex-1 relative bg-gray-50 overflow-hidden group flex items-center justify-center"
             style={{ minHeight: "600px" }}
           >
-            {activeImage ? (
+            {activeImage && activeMediaIsVideo ? (
+              <video
+                key={activeImage}
+                src={activeImage}
+                className="max-w-full max-h-[78vh] object-contain"
+                autoPlay
+                muted
+                controls
+                playsInline
+              />
+            ) : activeImage ? (
               <img
                 key={activeImage}
                 src={activeImage}
@@ -495,12 +517,14 @@ export default function ProductDetailPage() {
             )}
 
             {/* Zoom icon hint */}
-            <button
-              onClick={() => setIsZoomed(z => !z)}
-              className="absolute bottom-4 right-4 w-9 h-9 bg-white/80 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-gray-200 shadow-sm"
-            >
-              {isZoomed ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
-            </button>
+            {!activeMediaIsVideo && (
+              <button
+                onClick={() => setIsZoomed(z => !z)}
+                className="absolute bottom-4 right-4 w-9 h-9 bg-white/80 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-gray-200 shadow-sm"
+              >
+                {isZoomed ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
+              </button>
+            )}
 
             {/* Arrows */}
             {galleryImages.length > 1 && (
@@ -598,7 +622,7 @@ export default function ProductDetailPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {availableColors.map(color => {
-                  const v = variants.find(v => v.color === color);
+                  const v = variants.find(v => v.color === color && v.image) || variants.find(v => v.color === color);
                   return (
                     <button
                       key={color}
@@ -663,7 +687,7 @@ export default function ProductDetailPage() {
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs font-bold uppercase tracking-widest text-black">SỐ LƯỢNG</p>
               {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
-                <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                <span className="text-[12px] font-bold tracking-wide">
                   Chỉ còn {selectedVariant.stock} sản phẩm
                 </span>
               )}

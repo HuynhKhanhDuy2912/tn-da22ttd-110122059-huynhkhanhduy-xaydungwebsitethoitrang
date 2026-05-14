@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
+import { sortVariantsBySize } from "../../lib/sizes.js";
 import { Plus, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -133,7 +134,7 @@ export default function AdminProductListPage() {
 
                   <div className="flex flex-col gap-1 mt-1">
                     {Object.entries(
-                      (product.variants || []).reduce((acc, variant) => {
+                      sortVariantsBySize(product.variants || []).reduce((acc, variant) => {
                         if (!acc[variant.color]) {
                           acc[variant.color] = [];
                         }

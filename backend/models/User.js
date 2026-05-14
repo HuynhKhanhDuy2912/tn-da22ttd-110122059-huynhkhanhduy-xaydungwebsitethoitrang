@@ -14,8 +14,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       trim: true,
-      lowercase: true,
-      sparse: true
+      lowercase: true
     },
 
     password: {
@@ -26,8 +25,7 @@ const userSchema = new mongoose.Schema(
 
     googleId: {
       type: String,
-      trim: true,
-      sparse: true
+      trim: true
     },
 
     authProviders: {
@@ -141,8 +139,7 @@ const userSchema = new mongoose.Schema(
 
     phone_number: {
       type: String,
-      trim: true,
-      sparse: true
+      trim: true
     },
 
     isActive: {

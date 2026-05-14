@@ -14,6 +14,7 @@ import PageHeader from "../components/PageHeader.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
+import { sortVariantsBySize } from "../lib/sizes.js";
 
 const CHECKOUT_SELECTION_KEY = "fashionstore_checkout_cart_item_ids";
 
@@ -249,7 +250,9 @@ export default function CartPage() {
                 const colors = [...new Set(productVariants.map((variant) => variant.color).filter(Boolean))];
                 const currentColor = item.variantId?.color || "";
                 const currentSize = item.variantId?.size || "";
-                const sizesForColor = productVariants.filter((variant) => variant.color === currentColor);
+                const sizesForColor = sortVariantsBySize(
+                  productVariants.filter((variant) => variant.color === currentColor)
+                );
 
                 return (
                   <article
