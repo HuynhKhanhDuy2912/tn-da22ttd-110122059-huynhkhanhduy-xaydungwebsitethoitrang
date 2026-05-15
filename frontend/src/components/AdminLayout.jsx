@@ -16,15 +16,18 @@ const adminNavItems = [
     ]
   },
   { to: "/admin/users", label: "NGƯỜI DÙNG" },
-  { to: "/admin/orders", label: "ĐƠN HÀNG" }
+  { to: "/admin/orders", label: "ĐƠN HÀNG" },
+  { to: "/admin/banners", label: "BANNER" }
 ];
+
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState(() => {
-    // Auto-open if currently on a products sub-route
-    return location.pathname.startsWith("/admin/products") ? ["SẢN PHẨM"] : [];
+    const autoOpen = [];
+    if (location.pathname.startsWith("/admin/products")) autoOpen.push("SẢN PHẨM");
+    return autoOpen;
   });
 
   const toggleMenu = (label) => {

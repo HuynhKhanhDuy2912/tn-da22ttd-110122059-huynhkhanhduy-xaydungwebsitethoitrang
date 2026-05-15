@@ -19,6 +19,7 @@ import paymentRoutes from "./payment.routes.js";
 import reviewRoutes from "./review.routes.js";
 import uploadRoutes from "./upload.route.js";
 import addressRoutes from "./address.routes.js";
+import bannerRoutes from "./banner.routes.js";
 
 const router = express.Router();
 
@@ -49,5 +50,6 @@ router.use("/payment", paymentRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/upload", uploadRoutes);
 router.use("/addresses", addressRoutes);
+router.use("/banners", bannerRoutes);
 
 export default router;

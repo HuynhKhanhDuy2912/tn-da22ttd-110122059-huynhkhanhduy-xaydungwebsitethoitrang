@@ -248,7 +248,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-black">
+    <div className="min-h-screen bg-white font-sans text-black overflow-x-hidden">
       {!isAdminView ? (
         <>
           <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
@@ -416,7 +416,7 @@ export default function Layout() {
 
           <section
             ref={megaPanelRef}
-            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${
+            className={`fixed left-0 right-0 z-50 bg-white transition-all duration-300 ${
               activeMegaMenu
                 ? "translate-y-0 opacity-100"
                 : "-translate-y-2 opacity-0 pointer-events-none"
@@ -506,11 +506,7 @@ export default function Layout() {
         </>
       ) : null}
 
-      <main
-        className={
-          isAdminView ? "" : "mx-auto w-full max-w-[1400px] p-4 lg:p-8"
-        }
-      >
+      <main className={isAdminView ? "" : ""}>
         <Outlet />
       </main>
 

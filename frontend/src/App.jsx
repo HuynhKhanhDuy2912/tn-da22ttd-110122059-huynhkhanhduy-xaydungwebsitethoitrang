@@ -15,6 +15,7 @@ import AdminProductAddPage from "./pages/admin/AdminProductAddPage.jsx";
 import AdminProductListPage from "./pages/admin/AdminProductListPage.jsx";
 import AdminCollectionsPage from "./pages/admin/AdminCollectionsPage.jsx";
 import AdminUsersPage from "./pages/admin/AdminUsersPage.jsx";
+import AdminBannersPage from "./pages/admin/AdminBannersPage.jsx";
 
 import CartPage from "./pages/CartPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
@@ -108,6 +109,7 @@ export default function App() {
 
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="banners" element={<AdminBannersPage />} />
           </Route>
           </Route>
         </Routes>
