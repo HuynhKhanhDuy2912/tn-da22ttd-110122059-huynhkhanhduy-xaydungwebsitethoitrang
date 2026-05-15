@@ -9,6 +9,8 @@ import { sortSizes } from "../lib/sizes.js";
 import { ChevronLeft, ChevronsRight, ChevronRight, Star, ZoomIn, ZoomOut, Plus, Ruler, X } from "lucide-react";
 import toast from "react-hot-toast";
 
+const CHECKOUT_SELECTION_KEY = "fashionstore_checkout_cart_item_ids";
+
 function isVideoMedia(url = "") {
   return /\/video\/upload\/|\.mp4($|\?)|\.webm($|\?)|\.mov($|\?)/i.test(url);
 }
@@ -195,11 +197,33 @@ export default function ProductDetailPage() {
   const handleBuyNow = async () => {
     if (!selectedVariant) return;
     try {
-      await apiRequest("/carts/me/items", {
-        method: "POST", token,
-        body: { productId: product._id, variantId: selectedVariant._id, quantity, source: "buy_now" }
-      });
-      navigate("/checkout");
+      const cartResponse = await apiRequest("/carts/me", { token });
+      const existingItem = cartResponse.data?.items?.find(
+        (item) => item.variantId?._id === selectedVariant._id
+      );
+      const response = existingItem
+        ? await apiRequest(`/carts/me/items/${existingItem._id}`, {
+            method: "PUT",
+            token,
+            body: { quantity }
+          })
+        : await apiRequest("/carts/me/items", {
+            method: "POST",
+            token,
+            body: { productId: product._id, variantId: selectedVariant._id, quantity, source: "buy_now" }
+          });
+
+      const cartItemId = response.data?._id;
+      if (cartItemId) {
+        const selectedItemIds = [cartItemId];
+        sessionStorage.setItem(CHECKOUT_SELECTION_KEY, JSON.stringify(selectedItemIds));
+        localStorage.removeItem(CHECKOUT_SELECTION_KEY);
+        navigate("/checkout", { state: { selectedItemIds } });
+      } else {
+        sessionStorage.removeItem(CHECKOUT_SELECTION_KEY);
+        localStorage.removeItem(CHECKOUT_SELECTION_KEY);
+        navigate("/checkout");
+      }
     } catch (e) {
       toast.error(e.message);
     }

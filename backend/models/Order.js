@@ -18,6 +18,18 @@ const orderSchema = new mongoose.Schema({
     default: "pending"
   },
 
+  paymentMethod: {
+    type: String,
+    enum: ["cod", "vnpay", "momo", "paypal"],
+    default: "cod"
+  },
+
+  paymentStatus: {
+    type: String,
+    enum: ["pending", "paid", "failed"],
+    default: "pending"
+  },
+
   shippingAddress: { type: String, trim: true, default: "" },
   receiverName: { type: String, trim: true, default: "" },
   receiverPhone: { type: String, trim: true, default: "" },

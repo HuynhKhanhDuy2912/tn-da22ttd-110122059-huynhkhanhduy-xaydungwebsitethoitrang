@@ -79,6 +79,8 @@ export const createOrderFromCart = async (user, body) => {
     shippingFee,
     discount: 0,
     status: "pending",
+    paymentMethod,
+    paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
     shippingAddress,
     receiverName,
     receiverPhone,

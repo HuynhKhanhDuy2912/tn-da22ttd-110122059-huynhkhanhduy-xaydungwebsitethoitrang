@@ -111,7 +111,7 @@ export default function CheckoutPage() {
       });
 
       const orderId = orderResponse.data._id;
-      const orderTotal = orderResponse.data.totalAmount;
+      const orderTotal = orderResponse.data.totalPrice;
 
       // Xử lý thanh toán theo phương thức
       if (paymentMethod === "vnpay") {
