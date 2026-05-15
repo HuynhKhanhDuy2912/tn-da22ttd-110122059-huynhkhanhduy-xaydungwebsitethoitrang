@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Camera, Check, Eye, EyeOff, Loader2, MapPin, Save, User as UserIcon } from "lucide-react";
+import { Camera, Check, Eye, EyeOff, Loader2, MapPin, Save, User as UserIcon, Package } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import AddressManager from "../components/AddressManager.jsx";
+import OrdersTab from "../components/OrdersTab.jsx";
 
 const TABS = [
   { id: "account", label: "Tài khoản", icon: UserIcon },
+  { id: "orders", label: "Đơn hàng", icon: Package },
   { id: "address", label: "Địa chỉ giao nhận", icon: MapPin }
 ];
 
@@ -593,6 +595,10 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+            )}
+
+            {activeTab === "orders" && (
+              <OrdersTab token={token} />
             )}
 
             {activeTab === "address" && (

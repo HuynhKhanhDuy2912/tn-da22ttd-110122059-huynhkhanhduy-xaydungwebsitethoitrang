@@ -11,7 +11,7 @@ import {
   Shirt,
   Store,
   User,
-  X
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -19,20 +19,22 @@ import { apiRequest } from "../lib/api.js";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
-  return typeof category.parentId === "string" ? category.parentId : category.parentId._id || null;
+  return typeof category.parentId === "string"
+    ? category.parentId
+    : category.parentId._id || null;
 }
 
 function sortByCreatedAt(items) {
-  return [...items].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  return [...items].sort(
+    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+  );
 }
 
-function chunkArray(items, columns = 4) {
-  const result = Array.from({ length: columns }, () => []);
-  const maxPerColumn = 4;
-  items.slice(0, columns * maxPerColumn).forEach((item, index) => {
-    const colIndex = Math.min(Math.floor(index / maxPerColumn), columns - 1);
-    result[colIndex].push(item);
-  });
+function chunkArray(items, perColumn = 6) {
+  const result = [];
+  for (let i = 0; i < items.length; i += perColumn) {
+    result.push(items.slice(i, i + perColumn));
+  }
   return result;
 }
 
@@ -40,7 +42,7 @@ const highlightItems = [
   { key: "new", label: "Hàng Mới", type: "new" },
   { key: "easy-buy", label: "Easy Buy", type: "star" },
   { key: "sale", label: "Ưu đãi", type: "sale" },
-  { key: "best-seller", label: "Bán Chạy", type: "hot" }
+  { key: "best-seller", label: "Bán Chạy", type: "hot" },
 ];
 
 function HighlightIcon({ type }) {
@@ -54,7 +56,7 @@ function HighlightIcon({ type }) {
 
   if (type === "sale") {
     return (
-      <div className="grid h-10 w-10 place-items-center bg-red-600 text-[11px] font-bold uppercase text-white">
+      <div className="grid h-10 w-10 place-items-center bg-orange-600 text-[11px] font-bold uppercase text-white">
         SALE
       </div>
     );
@@ -70,7 +72,7 @@ function HighlightIcon({ type }) {
 
   if (type === "hot") {
     return (
-      <div className="grid h-10 w-10 place-items-center bg-orange-500 text-[11px] font-bold uppercase text-white">
+      <div className="grid h-10 w-10 place-items-center bg-red-500 text-[11px] font-bold uppercase text-white">
         HOT
       </div>
     );
@@ -102,8 +104,9 @@ export default function Layout() {
   const isAdminUser = user?.role === "admin";
 
   const searchHref = useMemo(
-    () => `/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ""}`,
-    [search]
+    () =>
+      `/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ""}`,
+    [search],
   );
 
   useEffect(() => {
@@ -113,7 +116,7 @@ export default function Layout() {
   const loadCategories = useCallback(() => {
     apiRequest("/categories?limit=1000")
       .then((response) => setCategories(response.data || []))
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -161,18 +164,19 @@ export default function Layout() {
   const rootCategories = useMemo(() => {
     return categories
       .filter((category) => !getParentId(category))
-      .sort(
-        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-      )
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [categories]);
 
   const childrenOf = (parentId) =>
-    sortByCreatedAt(categories.filter((category) => getParentId(category) === parentId));
+    sortByCreatedAt(
+      categories.filter((category) => getParentId(category) === parentId),
+    );
 
-  const activeMegaRoot = rootCategories.find((root) => root._id === activeMegaMenu) || null;
+  const activeMegaRoot =
+    rootCategories.find((root) => root._id === activeMegaMenu) || null;
 
   const megaColumns = useMemo(() => {
-    if (!activeMegaRoot) return [[], [], [], []];
+    if (!activeMegaRoot) return [];
 
     const level2 = childrenOf(activeMegaRoot._id);
     const flattened = [];
@@ -185,7 +189,7 @@ export default function Layout() {
           _id: item._id,
           name: item.name,
           imageUrl: item.imageUrl || "",
-          isGroupTitle: false
+          isGroupTitle: false,
         });
       });
     } else {
@@ -194,7 +198,7 @@ export default function Layout() {
           _id: group._id,
           name: `${group.name}`,
           imageUrl: group.imageUrl || "",
-          isGroupTitle: true
+          isGroupTitle: true,
         });
 
         childrenOf(group._id).forEach((item) => {
@@ -202,18 +206,21 @@ export default function Layout() {
             _id: item._id,
             name: item.name,
             imageUrl: item.imageUrl || "",
-            isGroupTitle: false
+            isGroupTitle: false,
           });
         });
       });
     }
 
-    return chunkArray(flattened, 4);
+    return chunkArray(flattened, 6);
   }, [activeMegaRoot, categories]);
 
   const startCloseTimer = () => {
     window.clearTimeout(closeTimeoutRef.current);
-    closeTimeoutRef.current = window.setTimeout(() => setActiveMegaMenu(null), 120);
+    closeTimeoutRef.current = window.setTimeout(
+      () => setActiveMegaMenu(null),
+      120,
+    );
   };
 
   const clearCloseTimer = () => {
@@ -249,10 +256,11 @@ export default function Layout() {
               <nav
                 ref={megaTriggerRef}
                 className="hidden items-center gap-5 lg:flex"
-                onMouseLeave={startCloseTimer}
-                onMouseEnter={clearCloseTimer}
               >
-                <NavLink to="/" className="text-[15px] font-normal text-black hover:text-red-600">
+                <NavLink
+                  to="/"
+                  className="text-[15px] font-normal text-black hover:text-red-600"
+                >
                   Trang chủ
                 </NavLink>
 
@@ -262,22 +270,27 @@ export default function Layout() {
                     <button
                       key={root._id}
                       type="button"
-                      onMouseEnter={() => {
-                        clearCloseTimer();
-                        openMegaMenu(root._id);
-                      }}
                       onClick={() => toggleMegaMenu(root._id)}
-                      className={`border-none bg-transparent p-0 text-[15px] transition ${isActive ? "font-medium text-black" : "font-normal text-black hover:text-red-600"
-                        }`}
+                      className={`border-none bg-transparent p-0 text-[15px] transition ${
+                        isActive
+                          ? "font-medium text-black"
+                          : "font-normal text-black hover:text-red-600"
+                      }`}
                     >
                       <span className="tracking-wide">{root.name}</span>
                     </button>
                   );
                 })}
-                <NavLink to="/collections" className="text-[15px] text-black hover:text-red-600">
+                <NavLink
+                  to="/collections"
+                  className="text-[15px] text-black hover:text-red-600"
+                >
                   Bộ sưu tập
                 </NavLink>
-                <NavLink to="/products?tag=uu-dai" className="text-[15px] text-red-600 hover:opacity-80">
+                <NavLink
+                  to="/products?tag=uu-dai"
+                  className="text-[15px] text-red-600 hover:opacity-80"
+                >
                   Ưu đãi
                 </NavLink>
               </nav>
@@ -294,7 +307,11 @@ export default function Layout() {
                     navigate(searchHref);
                   }}
                 >
-                  <Search size={18} strokeWidth={1.75} className="shrink-0 text-gray-500" />
+                  <Search
+                    size={18}
+                    strokeWidth={1.75}
+                    className="shrink-0 text-gray-500"
+                  />
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
@@ -321,7 +338,7 @@ export default function Layout() {
                         {isAdminUser ? (
                           <NavLink
                             to="/admin"
-                            className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-sm font-normal tracking-widest text-black transition hover:bg-gray-50"
+                            className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-[15px] font-normal tracking-wide text-black transition hover:bg-gray-50"
                             onClick={() => setIsAccountOpen(false)}
                           >
                             <Home className="h-5 w-5" />
@@ -331,7 +348,7 @@ export default function Layout() {
 
                         <NavLink
                           to="/profile"
-                          className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 text-sm font-normal tracking-widest text-black transition hover:bg-gray-50"
+                          className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 text-[15px] font-normal tracking-wide text-black transition hover:bg-gray-50"
                           onClick={() => setIsAccountOpen(false)}
                         >
                           <IdCard className="h-5 w-5" />
@@ -339,8 +356,8 @@ export default function Layout() {
                         </NavLink>
 
                         <NavLink
-                          to="/orders"
-                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-sm font-normal tracking-widest text-black transition hover:bg-gray-50"
+                          to="/profile?tab=orders"
+                          className="flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-[15px] font-normal tracking-wide text-black transition hover:bg-gray-50"
                           onClick={() => setIsAccountOpen(false)}
                         >
                           <History className="h-5 w-5" />
@@ -349,7 +366,7 @@ export default function Layout() {
 
                         <button
                           type="button"
-                          className="flex w-full items-center gap-3 border-none bg-white px-4 py-4 text-sm font-normal tracking-widest text-red-500 transition hover:bg-gray-50"
+                          className="flex w-full items-center gap-3 border-none bg-white px-4 py-4 text-[15px] font-normal tracking-wide text-red-500 transition hover:bg-gray-50"
                           onClick={() => {
                             setIsAccountOpen(false);
                             logout();
@@ -362,7 +379,10 @@ export default function Layout() {
                     ) : null}
                   </div>
                 ) : (
-                  <NavLink to="/login" className="flex items-center gap-2 text-sm text-black hover:text-red-600">
+                  <NavLink
+                    to="/login"
+                    className="flex items-center gap-2 text-sm text-black hover:text-red-600"
+                  >
                     <User className="h-5 w-5" />
                     <span className="hidden lg:inline">Đăng nhập</span>
                   </NavLink>
@@ -382,24 +402,35 @@ export default function Layout() {
                     ) : null}
                   </NavLink>
                 ) : null}
-
               </div>
             </div>
           </header>
 
           <div
-            className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${activeMegaMenu ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-              }`}
+            className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity duration-300 ${
+              activeMegaMenu
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0"
+            }`}
           />
 
           <section
             ref={megaPanelRef}
-            onMouseEnter={clearCloseTimer}
-            onMouseLeave={startCloseTimer}
-            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${activeMegaMenu ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
-              }`}
+            className={`fixed left-0 right-0 top-16 z-50 bg-white transition-all duration-300 ${
+              activeMegaMenu
+                ? "translate-y-0 opacity-100"
+                : "-translate-y-2 opacity-0 pointer-events-none"
+            }`}
           >
             <div className="mx-auto max-w-[1200px] px-6 pb-20 pt-8">
+              <button
+                type="button"
+                className="absolute left-1/2 bottom-4 grid h-10 w-10 place-items-center rounded-full bg-black text-white"
+                onClick={() => setActiveMegaMenu(null)}
+                aria-label="Đóng menu"
+              >
+                <X size={20} />
+              </button>
               <div className="mb-4 grid grid-cols-4 gap-12 border-b border-gray-100 pb-6">
                 {highlightItems.map((item) => (
                   <button
@@ -410,20 +441,32 @@ export default function Layout() {
                       if (item.key === "stores") navigate("/products");
                       if (item.key === "sale") navigate("/products?tag=uu-dai");
                       if (item.key === "new") navigate("/products?sort=newest");
-                      if (item.key === "easy-buy") navigate("/products?tag=easy-buy");
-                      if (item.key === "best-seller") navigate("/products?tag=ban-chay");
+                      if (item.key === "easy-buy")
+                        navigate("/products?tag=easy-buy");
+                      if (item.key === "best-seller")
+                        navigate("/products?tag=ban-chay");
                       setActiveMegaMenu(null);
                     }}
                   >
                     <HighlightIcon type={item.type} />
-                    <span className="text-[15px] font-normal text-black">{item.label}</span>
+                    <span className="text-[15px] font-normal text-black">
+                      {item.label}
+                    </span>
                   </button>
                 ))}
               </div>
 
-              <div className="grid grid-cols-4 gap-12">
+              <div
+                className="grid gap-12"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.max(megaColumns.length, 1)}, minmax(0, 1fr))`,
+                }}
+              >
                 {megaColumns.map((col, colIndex) => (
-                  <div key={`col-${colIndex}`} className="grid content-start gap-2">
+                  <div
+                    key={`col-${colIndex}`}
+                    className="grid content-start gap-2"
+                  >
                     {col.map((item) => (
                       <button
                         key={item._id}
@@ -431,16 +474,25 @@ export default function Layout() {
                         onClick={() => handleCategoryClick(item._id)}
                         className="group flex items-center gap-4 py-1 text-left"
                       >
-                        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden bg-white">
+                        <div className="grid h-12 w-12 shrink-0 place-items-center overflow-visible bg-white">
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain" />
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-110"
+                            />
                           ) : (
-                            <Shirt size={24} strokeWidth={1.4} className="text-zinc-700" />
+                            <Shirt
+                              size={24}
+                              strokeWidth={1.4}
+                              className="text-zinc-700 transition-transform duration-200 group-hover:scale-110"
+                            />
                           )}
                         </div>
                         <span
-                          className={`line-clamp-2 text-[15px] text-black transition group-hover:text-red-600 ${item.isGroupTitle ? "font-medium" : "font-normal"
-                            }`}
+                          className={`line-clamp-2 text-[15px] text-black transition transition-transform duration-200 group-hover:scale-105 ${
+                            item.isGroupTitle ? "font-normal" : "font-normal"
+                          }`}
                         >
                           {item.name}
                         </span>
@@ -449,43 +501,16 @@ export default function Layout() {
                   </div>
                 ))}
               </div>
-
-              <div className="mt-8 border-t border-gray-100 pt-6">
-                <form
-                  className="mx-auto flex w-full items-center border border-gray-200 px-4 py-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    setActiveMegaMenu(null);
-                    navigate(searchHref);
-                  }}
-                >
-                  <Search className="h-5 w-5 shrink-0 text-gray-500" />
-                  <input
-                    className="mx-3 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-                    placeholder="Tìm kiếm"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                  />
-                  <button type="button" className="text-gray-500">
-                    <ImageIcon className="h-5 w-5" />
-                  </button>
-                </form>
-              </div>
             </div>
-
-            <button
-              type="button"
-              className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-black text-white"
-              onClick={() => setActiveMegaMenu(null)}
-              aria-label="Đóng menu"
-            >
-              <X size={20} />
-            </button>
           </section>
         </>
       ) : null}
 
-      <main className={isAdminView ? "" : "mx-auto w-full max-w-[1400px] p-4 lg:p-8"}>
+      <main
+        className={
+          isAdminView ? "" : "mx-auto w-full max-w-[1400px] p-4 lg:p-8"
+        }
+      >
         <Outlet />
       </main>
 
@@ -493,53 +518,86 @@ export default function Layout() {
         <footer className="mt-16 border-t border-gray-100 bg-white py-12">
           <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 px-4 md:grid-cols-4 lg:px-8">
             <div>
-              <h3 className="mb-4 text-lg font-extrabold uppercase tracking-[0.1em]">FashionStore</h3>
+              <h3 className="mb-4 text-lg font-extrabold uppercase tracking-[0.1em]">
+                FashionStore
+              </h3>
               <p className="mb-4 text-sm leading-relaxed text-gray-500">
-                Thương hiệu thời trang nam nữ mang phong cách tối giản, hiện đại và trẻ trung.
+                Thương hiệu thời trang nam nữ mang phong cách tối giản, hiện đại
+                và trẻ trung.
               </p>
             </div>
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">Về chúng tôi</h4>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
+                Về chúng tôi
+              </h4>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li>
-                  <a href="#" className="hover:text-black">Câu chuyện thương hiệu</a>
+                  <a href="#" className="hover:text-black">
+                    Câu chuyện thương hiệu
+                  </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black">Tuyển dụng</a>
+                  <a href="#" className="hover:text-black">
+                    Tuyển dụng
+                  </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black">Liên hệ</a>
+                  <a href="#" className="hover:text-black">
+                    Liên hệ
+                  </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">Chính sách</h4>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
+                Chính sách
+              </h4>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li>
-                  <a href="#" className="hover:text-black">Chính sách đổi trả</a>
+                  <a href="#" className="hover:text-black">
+                    Chính sách đổi trả
+                  </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black">Chính sách bảo mật</a>
+                  <a href="#" className="hover:text-black">
+                    Chính sách bảo mật
+                  </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black">Hướng dẫn mua hàng</a>
+                  <a href="#" className="hover:text-black">
+                    Hướng dẫn mua hàng
+                  </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">Đăng ký nhận tin</h4>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
+                Đăng ký nhận tin
+              </h4>
               <div className="flex border-b border-black pb-2">
-                <input type="email" placeholder="Nhập email của bạn" className="w-full bg-transparent text-sm outline-none" />
-                <button className="text-xs font-bold uppercase hover:text-gray-500">Gửi</button>
+                <input
+                  type="email"
+                  placeholder="Nhập email của bạn"
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+                <button className="text-xs font-bold uppercase hover:text-gray-500">
+                  Gửi
+                </button>
               </div>
             </div>
           </div>
           <div className="mx-auto mt-12 flex max-w-[1400px] flex-col items-center justify-between border-t border-gray-100 px-4 pt-8 text-xs text-gray-400 md:flex-row lg:px-8">
             <p>© 2026 FashionStore. All rights reserved.</p>
             <div className="mt-4 flex gap-4 md:mt-0">
-              <a href="#" className="hover:text-black">Facebook</a>
-              <a href="#" className="hover:text-black">Instagram</a>
-              <a href="#" className="hover:text-black">Tiktok</a>
+              <a href="#" className="hover:text-black">
+                Facebook
+              </a>
+              <a href="#" className="hover:text-black">
+                Instagram
+              </a>
+              <a href="#" className="hover:text-black">
+                Tiktok
+              </a>
             </div>
           </div>
         </footer>

@@ -185,7 +185,7 @@ export default function ProductDetailPage() {
         }
       });
 
-      toast.success("Đã thêm vào giỏ hàng!", {
+      toast.success("Đã thêm sản phẩm vào giỏ hàng!", {
         duration: 3000
       });
 

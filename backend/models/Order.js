@@ -35,6 +35,9 @@ const orderSchema = new mongoose.Schema({
   receiverPhone: { type: String, trim: true, default: "" },
   note: { type: String, trim: true, default: "" },
 
+  completedAt: { type: Date, default: null },
+  cancelledAt: { type: Date, default: null }
+
 }, { timestamps: true });
 
 export default mongoose.model("Order", orderSchema);

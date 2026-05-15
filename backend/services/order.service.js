@@ -97,12 +97,8 @@ export const createOrderFromCart = async (user, body) => {
     paymentStatus: "pending"
   });
 
-  // Deduct stock
-  for (const item of cartItems) {
-    await ProductVariant.findByIdAndUpdate(item.variantId._id, {
-      $inc: { stock: -item.quantity }
-    });
-  }
+  // KHÔNG trừ stock ngay - chỉ trừ khi đơn hàng được xác nhận (confirmed)
+  // Stock sẽ được trừ trong updateAdminOrderStatus khi status chuyển sang "confirmed"
 
   // Remove only purchased items from the cart.
   await CartItem.deleteMany(
@@ -115,7 +111,19 @@ export const createOrderFromCart = async (user, body) => {
 };
 
 export const getMyOrders = async (userId) => {
-  return Order.find({ userId }).sort({ createdAt: -1 }).populate(ORDER_POPULATE);
+  const orders = await Order.find({ userId }).sort({ createdAt: -1 }).populate(ORDER_POPULATE);
+
+  const ordersWithItems = await Promise.all(
+    orders.map(async (order) => {
+      const items = await OrderItem.find({ orderId: order._id })
+        .populate("productId", "name price discount images")
+        .populate("variantId", "size color sku priceAdjustment");
+
+      return { ...order.toObject(), items };
+    })
+  );
+
+  return ordersWithItems;
 };
 
 export const getOrderDetail = async (userId, orderId) => {
@@ -123,8 +131,8 @@ export const getOrderDetail = async (userId, orderId) => {
   if (!order) throw new Error("Order not found");
 
   const items = await OrderItem.find({ orderId })
-    .populate("productId", "name price images")
-    .populate("variantId", "size color image");
+    .populate("productId", "name price discount images")
+    .populate("variantId", "size color sku stock priceAdjustment");
 
   return { ...order.toObject(), items };
 };
@@ -136,12 +144,14 @@ export const cancelOrder = async (userId, orderId) => {
     throw new Error("Cannot cancel order at this stage");
   }
 
-  // Restore stock
-  const items = await OrderItem.find({ orderId });
-  for (const item of items) {
-    await ProductVariant.findByIdAndUpdate(item.variantId, {
-      $inc: { stock: item.quantity }
-    });
+  // Restore stock - chỉ hoàn trả nếu đơn hàng đã được confirmed (đã trừ stock)
+  if (order.status === "confirmed") {
+    const items = await OrderItem.find({ orderId });
+    for (const item of items) {
+      await ProductVariant.findByIdAndUpdate(item.variantId, {
+        $inc: { stock: item.quantity }
+      });
+    }
   }
 
   order.status = "cancelled";
@@ -168,7 +178,51 @@ export const updateAdminOrderStatus = async (orderId, status) => {
   const validStatuses = ["pending", "confirmed", "shipping", "completed", "cancelled"];
   if (!validStatuses.includes(status)) throw new Error("Invalid status");
 
-  const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+  const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
+
+  const previousStatus = order.status;
+
+  // Khi chuyển từ pending sang confirmed - trừ stock
+  if (previousStatus === "pending" && status === "confirmed") {
+    const items = await OrderItem.find({ orderId });
+    for (const item of items) {
+      const variant = await ProductVariant.findById(item.variantId);
+      if (!variant) throw new Error(`Variant not found for item ${item._id}`);
+      if (variant.stock < item.quantity) {
+        throw new Error(`Not enough stock for variant ${variant.sku}`);
+      }
+      await ProductVariant.findByIdAndUpdate(item.variantId, {
+        $inc: { stock: -item.quantity }
+      });
+    }
+  }
+
+  // Khi admin hủy đơn hàng đã confirmed - hoàn trả stock
+  if (previousStatus === "confirmed" && status === "cancelled") {
+    const items = await OrderItem.find({ orderId });
+    for (const item of items) {
+      await ProductVariant.findByIdAndUpdate(item.variantId, {
+        $inc: { stock: item.quantity }
+      });
+    }
+  }
+
+  // Cập nhật completedAt khi đơn hàng hoàn thành
+  if (status === "completed") {
+    order.completedAt = new Date();
+  } else if (previousStatus === "completed" && status !== "completed") {
+    order.completedAt = null;
+  }
+
+  // Cập nhật cancelledAt khi đơn hàng bị hủy
+  if (status === "cancelled") {
+    order.cancelledAt = new Date();
+  } else if (previousStatus === "cancelled" && status !== "cancelled") {
+    order.cancelledAt = null;
+  }
+
+  order.status = status;
+  await order.save();
   return order;
 };

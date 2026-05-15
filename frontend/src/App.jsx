@@ -20,7 +20,6 @@ import CartPage from "./pages/CartPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import OrdersPage from "./pages/OrdersPage.jsx";
 import ProductDetailPage from "./pages/ProductDetailPage.jsx";
 import ProductsPage from "./pages/ProductsPage.jsx";
 import RecommendationsPage from "./pages/RecommendationsPage.jsx";
@@ -80,11 +79,7 @@ export default function App() {
           />
           <Route
             path="/orders"
-            element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/profile?tab=orders" replace />}
           />
           <Route
             path="/profile"
