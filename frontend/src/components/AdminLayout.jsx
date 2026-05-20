@@ -136,11 +136,11 @@ export default function AdminLayout() {
         {!collapsed ? (
           <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-4">
             <div className="grid h-8 w-8 shrink-0 place-items-center border border-gray-300 bg-gray-100 text-xs font-bold uppercase">
-              {(user?.full_name || user?.username || "A").slice(0, 1)}
+              {(user?.fullname || user?.username || "A").slice(0, 1)}
             </div>
             <div className="min-w-0">
               <strong className="block truncate text-xs uppercase tracking-widest">
-                {user?.full_name || user?.username}
+                {user?.fullname || user?.username}
               </strong>
               <span className="block truncate text-[10px] text-gray-500">
                 {user?.email || "Quản trị viên"}
@@ -150,9 +150,9 @@ export default function AdminLayout() {
         ) : (
           <div
             className="mx-auto my-3 grid h-8 w-8 place-items-center border border-gray-300 bg-gray-100 text-xs font-bold uppercase"
-            title={user?.full_name || user?.username}
+            title={user?.fullname || user?.username}
           >
-            {(user?.full_name || user?.username || "A").slice(0, 1)}
+            {(user?.fullname || user?.username || "A").slice(0, 1)}
           </div>
         )}
 

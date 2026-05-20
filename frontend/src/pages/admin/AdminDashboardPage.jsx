@@ -378,7 +378,7 @@ export default function AdminDashboardPage() {
                       <tr key={order._id} className="hover:bg-slate-50/80">
                         <td className="py-3.5 pr-4">
                           <p className="font-medium text-slate-800">
-                            {order.userId?.full_name || order.userId?.username || "Khách"}
+                            {order.userId?.fullname || order.userId?.username || "Khách"}
                           </p>
                         </td>
                         <td className="py-3.5 pr-4 text-slate-500">

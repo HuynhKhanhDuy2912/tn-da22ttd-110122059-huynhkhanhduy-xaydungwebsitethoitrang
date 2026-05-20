@@ -1,12 +1,9 @@
 import { Star, X } from "lucide-react";
 import { useState } from "react";
 
-function isVideoMedia(url = "") {
-  return /\/video\/upload\/|\.mp4($|\?)|\.webm($|\?)|\.mov($|\?)/i.test(url);
-}
-
 export default function ReviewsModal({ open, onClose, reviews = [], averageRating = 0, totalReviews = 0, onWriteReview }) {
   const [lightboxMedia, setLightboxMedia] = useState(null);
+  const [expandedReviews, setExpandedReviews] = useState(new Set());
 
   if (!open) return null;
 
@@ -24,6 +21,18 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
 
   const closeLightbox = () => {
     setLightboxMedia(null);
+  };
+
+  const toggleExpand = (reviewId) => {
+    setExpandedReviews(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -50,7 +59,7 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
             {/* Left Sidebar - Rating Overview */}
             <div className="w-80 border-r border-gray-200 p-6 flex flex-col">
               <div className="mb-6">
-                <div className="text-5xl font-bold text-black mb-2">
+                <div className="text-2xl font-bold text-black mb-2">
                   {totalReviews} <span className="text-2xl">Đánh giá</span>
                 </div>
 
@@ -74,7 +83,7 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
                 {ratingDistribution.map(({ star, count, percentage }) => (
                   <div key={star} className="flex items-center gap-3">
                     <span className="text-sm w-3">{star}</span>
-                    <Star size={14} className="text-gray-400" />
+                    <Star size={14} className="text-yellow-400 fill-yellow-400" />
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-black transition-all"
@@ -90,7 +99,7 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
               <button
                 type="button"
                 onClick={onWriteReview}
-                className="w-full bg-black text-white py-3 text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition"
+                className="w-full bg-black text-white py-3 text-sm font-bold hover:bg-gray-800 transition"
               >
                 Viết đánh giá sản phẩm
               </button>
@@ -104,101 +113,117 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <div key={review._id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                      <div className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                            {review.userId?.avatar ? (
-                              <img
-                                src={review.userId.avatar}
-                                alt={review.userId.username || "User"}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-gray-600">
-                                {(review.userId?.username || "U").charAt(0).toUpperCase()}
+                  {reviews.map((review) => {
+                    const isExpanded = expandedReviews.has(review._id);
+                    const hasLongComment = review.comment && review.comment.length > 200;
+                    const displayComment = hasLongComment && !isExpanded
+                      ? review.comment.slice(0, 200) + "..."
+                      : review.comment;
+
+                    return (
+                      <div key={review._id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                        <div className="flex gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                              {review.userId?.avatar ? (
+                                <img
+                                  src={review.userId.avatar}
+                                  alt={review.userId.username || "User"}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-sm font-bold text-gray-600">
+                                  {(review.userId?.username || "U").charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-sm text-black">
+                                {review.userId?.fullname || "Người dùng"}
                               </span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(review.createdAt).toLocaleDateString("vi-VN")}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 mb-2">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  size={14}
+                                  className={
+                                    star <= review.rating
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "text-gray-300"
+                                  }
+                                />
+                              ))}
+                            </div>
+
+                            {review.comment && (
+                              <div className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
+                                {displayComment}
+                                {hasLongComment && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpand(review._id)}
+                                    className="ml-2 text-black font-medium underline hover:text-gray-700 transition bg-transparent border-none p-0 cursor-pointer"
+                                  >
+                                    {isExpanded ? "Thu gọn" : "Xem thêm"}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Ảnh và Video chung 1 hàng */}
+                            {((review.imageUrls && review.imageUrls.length > 0) || (review.videoUrls && review.videoUrls.length > 0)) && (
+                              <div className="flex flex-wrap gap-2">
+                                {/* Hiển thị ảnh */}
+                                {review.imageUrls && review.imageUrls.map((url, index) => (
+                                  <button
+                                    key={`img-${index}`}
+                                    type="button"
+                                    onClick={() => openLightbox({ type: 'image', url })}
+                                    className="w-20 h-20 border border-gray-200 rounded overflow-hidden hover:opacity-80 transition cursor-pointer bg-transparent p-0"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Review ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </button>
+                                ))}
+
+                                {/* Hiển thị video */}
+                                {review.videoUrls && review.videoUrls.map((url, index) => (
+                                  <button
+                                    key={`vid-${index}`}
+                                    type="button"
+                                    onClick={() => openLightbox({ type: 'video', url })}
+                                    className="w-20 h-20 border border-gray-200 rounded overflow-hidden hover:opacity-80 transition cursor-pointer bg-transparent p-0 relative"
+                                  >
+                                    <video
+                                      src={url}
+                                      className="w-full h-full object-cover"
+                                      preload="metadata"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                      <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
+                                        <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-black border-b-[5px] border-b-transparent ml-0.5"></div>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
                             )}
                           </div>
                         </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-sm text-black">
-                              {review.userId?.username || "Người dùng"}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(review.createdAt).toLocaleDateString("vi-VN")}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1 mb-2">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                size={14}
-                                className={
-                                  star <= review.rating
-                                    ? "fill-black text-black"
-                                    : "text-gray-300"
-                                }
-                              />
-                            ))}
-                          </div>
-
-                          {review.comment && (
-                            <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
-                              {review.comment}
-                            </p>
-                          )}
-
-                          {review.imageUrls && review.imageUrls.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {review.imageUrls.map((url, index) => (
-                                <button
-                                  key={index}
-                                  type="button"
-                                  onClick={() => openLightbox({ type: 'image', url })}
-                                  className="w-20 h-20 border border-gray-200 rounded overflow-hidden hover:opacity-80 transition cursor-pointer bg-transparent p-0"
-                                >
-                                  <img
-                                    src={url}
-                                    alt={`Review ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {review.videoUrls && review.videoUrls.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {review.videoUrls.map((url, index) => (
-                                <button
-                                  key={index}
-                                  type="button"
-                                  onClick={() => openLightbox({ type: 'video', url })}
-                                  className="w-32 h-20 border border-gray-200 rounded overflow-hidden hover:opacity-80 transition cursor-pointer bg-transparent p-0 relative"
-                                >
-                                  <video
-                                    src={url}
-                                    className="w-full h-full object-cover"
-                                    preload="metadata"
-                                  />
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                    <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                                      <div className="w-0 h-0 border-t-4 border-t-transparent border-l-6 border-l-black border-b-4 border-b-transparent ml-0.5"></div>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -218,7 +243,7 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
             className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-light w-10 h-10 flex items-center justify-center border-none bg-transparent cursor-pointer"
             aria-label="Đóng"
           >
-            ×
+            <X size={24} strokeWidth={1.5} />
           </button>
 
           <div className="max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
@@ -228,7 +253,7 @@ export default function ReviewsModal({ open, onClose, reviews = [], averageRatin
                 alt="Review"
                 className="w-full h-full object-contain"
               />
-            ) : (
+            ) : ( 
               <video
                 src={lightboxMedia.url}
                 controls

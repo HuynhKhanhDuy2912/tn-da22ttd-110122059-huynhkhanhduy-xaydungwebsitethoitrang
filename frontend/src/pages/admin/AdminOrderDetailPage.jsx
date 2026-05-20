@@ -214,7 +214,7 @@ export default function AdminOrderDetailPage() {
     <section className="min-h-screen bg-slate-50 p-6">
       <AdminPageHeader
         title={`Đơn hàng #${order._id.slice(-8).toUpperCase()}`}
-        description={`Tạo lúc ${formatDateTime(order.createdAt)} · Khách hàng: ${order.userId?.full_name || order.userId?.username || "-"}`}
+        description={`Tạo lúc ${formatDateTime(order.createdAt)} · Khách hàng: ${order.userId?.fullname || order.userId?.username || "-"}`}
         aside={(
           <Link
             to="/admin/orders"
@@ -403,7 +403,7 @@ export default function AdminOrderDetailPage() {
                     <User className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-900">{order.userId?.full_name || order.userId?.username || "-"}</p>
+                    <p className="font-bold text-slate-900">{order.userId?.fullname || order.userId?.username || "-"}</p>
                     <p className="mt-1 break-all text-slate-600">{order.userId?.email || "-"}</p>
                   </div>
                 </div>

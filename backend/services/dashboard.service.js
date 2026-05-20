@@ -236,7 +236,7 @@ export async function getAdminDashboardStats() {
     Order.find({})
       .sort({ createdAt: -1 })
       .limit(6)
-      .populate("userId", "username email full_name")
+      .populate("userId", "username email fullname")
       .lean(),
     User.countDocuments(),
     User.countDocuments({ createdAt: { $gte: monthStart } }),

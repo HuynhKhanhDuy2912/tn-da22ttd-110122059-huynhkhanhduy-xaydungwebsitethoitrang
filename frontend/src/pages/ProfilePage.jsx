@@ -54,11 +54,10 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    full_name: "",
+    fullname: "",
     email: "",
     phone_number: "",
     gender: "",
-    bodyShape: "",
     address: "",
     avatar: "",
     favoriteColors: [],
@@ -87,11 +86,10 @@ export default function ProfilePage() {
     }
 
     setFormData({
-      full_name: user.full_name || "",
+      fullname: user.fullname || "",
       email: user.email || "",
       phone_number: user.phone_number || "",
       gender: user.gender || "",
-      bodyShape: user.bodyShape || "",
       address: user.address || "",
       avatar: user.avatar || "",
       favoriteColors: user.favoriteColors || [],
@@ -252,7 +250,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="mb-2 text-2xl font-bold uppercase tracking-wide">
-        {user.full_name || user.username}
+        {user.fullname || user.username}
       </h1>
       <div className="mb-8 flex items-center gap-4 text-sm text-gray-500">
         <span>Số điểm đang có: <strong className="text-black">0 điểm</strong></span>
@@ -309,11 +307,11 @@ export default function ProfilePage() {
                       <input
                         type="text"
                         name="first_name"
-                        value={formData.full_name.split(" ").slice(0, -1).join(" ") || ""}
+                        value={formData.fullname.split(" ").slice(0, -1).join(" ") || ""}
                         onChange={(e) => {
                           const firstName = e.target.value;
-                          const lastName = formData.full_name.split(" ").slice(-1)[0] || "";
-                          setFormData((prev) => ({ ...prev, full_name: `${firstName} ${lastName}` }));
+                          const lastName = formData.fullname.split(" ").slice(-1)[0] || "";
+                          setFormData((prev) => ({ ...prev, fullname: `${firstName} ${lastName}` }));
                         }}
                         className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                       />
@@ -324,11 +322,11 @@ export default function ProfilePage() {
                       <input
                         type="text"
                         name="last_name"
-                        value={formData.full_name.split(" ").slice(-1)[0] || ""}
+                        value={formData.fullname.split(" ").slice(-1)[0] || ""}
                         onChange={(e) => {
-                          const firstName = formData.full_name.split(" ").slice(0, -1).join(" ") || "";
+                          const firstName = formData.fullname.split(" ").slice(0, -1).join(" ") || "";
                           const lastName = e.target.value;
-                          setFormData((prev) => ({ ...prev, full_name: `${firstName} ${lastName}`}));
+                          setFormData((prev) => ({ ...prev, fullname: `${firstName} ${lastName}`}));
                         }}
                         className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                       />

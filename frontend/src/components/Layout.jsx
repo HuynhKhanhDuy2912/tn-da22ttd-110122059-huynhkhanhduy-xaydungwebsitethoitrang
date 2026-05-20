@@ -329,7 +329,7 @@ export default function Layout() {
                     >
                       <User className="h-5 w-5" />
                       <span className="hidden max-w-[140px] truncate lg:inline">
-                        {user?.full_name || user?.username || "Người dùng"}
+                        {user?.fullname || user?.username || "Người dùng"}
                       </span>
                     </button>
 

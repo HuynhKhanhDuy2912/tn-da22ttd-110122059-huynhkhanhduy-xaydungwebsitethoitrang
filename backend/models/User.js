@@ -63,7 +63,7 @@ const userSchema = new mongoose.Schema(
       default: ""
     },
 
-    full_name: {
+    fullname: {
       type: String,
       trim: true,
       maxlength: 100,
@@ -76,13 +76,6 @@ const userSchema = new mongoose.Schema(
       enum: ["male", "female", "other"]
     },
 
-    bodyShape: {
-      type: String,
-      trim: true,
-      enum: ["rectangle", "triangle", "inverted_triangle", "hourglass", "round", ""],
-      default: ""
-    },
-
     favoriteStyles: {
       type: [String],
       default: []
@@ -93,48 +86,11 @@ const userSchema = new mongoose.Schema(
       default: []
     },
 
-    sizeProfile: {
-      top: {
-        type: String,
-        trim: true,
-        default: ""
-      },
-      bottom: {
-        type: String,
-        trim: true,
-        default: ""
-      },
-      shoes: {
-        type: String,
-        trim: true,
-        default: ""
-      }
-    },
-
-    budgetRange: {
-      min: {
-        type: Number,
-        min: 0,
-        default: 0
-      },
-      max: {
-        type: Number,
-        min: 0,
-        default: 0
-      }
-    },
-
     role: {
       type: String,
       trim: true,
       enum: ["user", "admin"],
       default: "user"
-    },
-
-    address: {
-      type: String,
-      trim: true,
-      default: ""
     },
 
     city: {

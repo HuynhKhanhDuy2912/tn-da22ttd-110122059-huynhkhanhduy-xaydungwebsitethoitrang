@@ -14,7 +14,7 @@ import {
 
 const baseOrderController = createCrudControllers(Order, {
   modelName: "Order",
-  populate: [{ path: "userId", select: "username email full_name" }]
+  populate: [{ path: "userId", select: "username email fullname" }]
 });
 
 export const checkoutMyOrder = async (req, res) => {

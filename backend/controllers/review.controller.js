@@ -9,7 +9,7 @@ const REVIEWABLE_ORDER_STATUSES = ["completed", "delivered"];
 const baseReviewController = createCrudControllers(Review, {
   modelName: "Review",
   populate: [
-    { path: "userId", select: "username avatar" },
+    { path: "userId", select: "username fullname avatar" },
     { path: "productId", select: "name" }
   ]
 });
@@ -180,7 +180,7 @@ const create = async (req, res) => {
     await updateProductRatingSummary(productId);
 
     const createdReview = await Review.findById(review._id)
-      .populate("userId", "username avatar")
+      .populate("userId", "username fullname avatar")
       .populate("productId", "name");
 
     return res.status(201).json({

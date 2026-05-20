@@ -106,7 +106,7 @@ export default function AdminUsersPage() {
     if (searchTerm.trim()) {
       const kw = searchTerm.toLowerCase();
       result = result.filter(u =>
-        (u.full_name || "").toLowerCase().includes(kw) ||
+        (u.fullname || "").toLowerCase().includes(kw) ||
         (u.username || "").toLowerCase().includes(kw) ||
         (u.email || "").toLowerCase().includes(kw) ||
         (u.phone_number || "").includes(kw)
@@ -295,14 +295,14 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4 text-left">
                       <div className="flex items-center gap-3">
                         {user.avatar ? (
-                          <img src={user.avatar} alt={user.full_name} className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100" />
+                          <img src={user.avatar} alt={user.fullname} className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-100" />
                         ) : (
                           <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${getAvatarColor(user._id)}`}>
-                            {getInitials(user.full_name || user.username)}
+                            {getInitials(user.fullname || user.username)}
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{user.full_name || user.username}</p>
+                          <p className="text-sm font-semibold text-gray-900">{user.fullname || user.username}</p>
                           {/* <p className="text-xs text-gray-400">@{user.username}</p> */}
                         </div>
                       </div>
@@ -425,7 +425,7 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${getAvatarColor(editUser._id)}`}>
-                  {getInitials(editUser.full_name || editUser.username)}
+                  {getInitials(editUser.fullname || editUser.username)}
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-gray-900">Chỉnh sửa người dùng</h3>
@@ -443,7 +443,7 @@ export default function AdminUsersPage() {
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600">Họ và tên</label>
                   <input
                     disabled
-                    value={editUser.full_name || ""}
+                    value={editUser.fullname || ""}
                     className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-400 cursor-not-allowed"
                   />
                 </div>
@@ -525,10 +525,10 @@ export default function AdminUsersPage() {
             <div className="px-6 py-5">
               <div className="mb-4 flex items-center gap-3 rounded-xl bg-red-50 p-4">
                 <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${getAvatarColor(deleteTarget._id)}`}>
-                  {getInitials(deleteTarget.full_name || deleteTarget.username)}
+                  {getInitials(deleteTarget.fullname || deleteTarget.username)}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{deleteTarget.full_name || deleteTarget.username}</p>
+                  <p className="text-sm font-semibold text-gray-900">{deleteTarget.fullname || deleteTarget.username}</p>
                   <p className="text-xs text-gray-500">{deleteTarget.email}</p>
                 </div>
               </div>

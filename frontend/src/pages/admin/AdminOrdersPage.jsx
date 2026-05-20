@@ -134,7 +134,7 @@ export default function AdminOrdersPage() {
       const keyword = searchTerm.trim().toLowerCase();
       result = result.filter((order) => {
         const customerName = (
-          order.userId?.full_name ||
+          order.userId?.fullname ||
           order.userId?.username ||
           ""
         ).toLowerCase();
@@ -405,7 +405,7 @@ export default function AdminOrdersPage() {
 
                       <td className="px-6 py-4 text-sm text-gray-700">
                         <p className="font-medium text-gray-900">
-                          {order.userId?.full_name ||
+                          {order.userId?.fullname ||
                             order.userId?.username ||
                             "-"}
                         </p>

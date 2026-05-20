@@ -50,15 +50,11 @@ const sanitizeUser = (user) => ({
   email: user.email,
   googleId: user.googleId,
   avatar: user.avatar,
-  full_name: user.full_name,
+  fullname: user.fullname,
   gender: user.gender,
-  bodyShape: user.bodyShape,
   favoriteStyles: user.favoriteStyles,
   favoriteColors: user.favoriteColors,
-  sizeProfile: user.sizeProfile,
-  budgetRange: user.budgetRange,
   role: user.role,
-  address: user.address,
   phone_number: user.phone_number,
   authProviders: user.authProviders,
   isPhoneVerified: user.isPhoneVerified,
@@ -180,7 +176,7 @@ export const getMe = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { credential, full_name } = req.body;
+    const { credential, fullname } = req.body;
 
     if (!process.env.GOOGLE_CLIENT_ID) {
       return res.status(500).json({
@@ -220,14 +216,14 @@ export const googleAuth = async (req, res) => {
         username: generateUsername(normalizedEmail.split("@")[0]),
         email: normalizedEmail,
         googleId: payload.sub,
-        full_name: full_name || payload.name || "",
+        fullname: fullname || payload.name || "",
         avatar: payload.picture || "",
         authProviders: ["google"]
       });
     } else {
       user.googleId = user.googleId || payload.sub;
       user.email = user.email || normalizedEmail;
-      user.full_name = user.full_name || full_name || payload.name || "";
+      user.fullname = user.fullname || fullname || payload.name || "";
       user.avatar = user.avatar || payload.picture || "";
       user.authProviders = uniqueValues([...(user.authProviders || []), "google"]);
       await user.save();
@@ -245,7 +241,7 @@ export const googleAuth = async (req, res) => {
 
 export const requestPhoneOtp = async (req, res) => {
   try {
-    const { phone_number, full_name } = req.body;
+    const { phone_number, fullname } = req.body;
     const normalizedPhone = normalizePhone(phone_number);
 
     if (!normalizedPhone) {
@@ -264,7 +260,7 @@ export const requestPhoneOtp = async (req, res) => {
         username: generateUsername(normalizedPhone.slice(-4)),
         email: generatePhoneEmail(normalizedPhone),
         phone_number: normalizedPhone,
-        full_name: full_name || "",
+        fullname: fullname || "",
         authProviders: ["phone"]
       });
       user = await User.findById(user._id).select(
@@ -295,8 +291,8 @@ export const requestPhoneOtp = async (req, res) => {
     user.phoneOtpLastSentAt = new Date();
     user.authProviders = uniqueValues([...(user.authProviders || []), "phone"]);
 
-    if (full_name && !user.full_name) {
-      user.full_name = full_name;
+    if (fullname && !user.fullname) {
+      user.fullname = fullname;
     }
 
     await user.save();
@@ -328,7 +324,7 @@ export const requestPhoneOtp = async (req, res) => {
 
 export const verifyPhoneOtp = async (req, res) => {
   try {
-    const { phone_number, otp, full_name } = req.body;
+    const { phone_number, otp, fullname } = req.body;
     const normalizedPhone = normalizePhone(phone_number);
 
     if (!normalizedPhone || !otp) {
@@ -370,8 +366,8 @@ export const verifyPhoneOtp = async (req, res) => {
     user.isPhoneVerified = true;
     user.authProviders = uniqueValues([...(user.authProviders || []), "phone"]);
 
-    if (full_name && !user.full_name) {
-      user.full_name = full_name;
+    if (fullname && !user.fullname) {
+      user.fullname = fullname;
     }
 
     user.lastLoginAt = new Date();
@@ -388,14 +384,10 @@ export const verifyPhoneOtp = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const {
-      full_name,
+      fullname,
       gender,
-      bodyShape,
       favoriteStyles,
       favoriteColors,
-      sizeProfile,
-      budgetRange,
-      address,
       phone_number,
       avatar,
       city,
@@ -430,14 +422,10 @@ export const updateProfile = async (req, res) => {
       user.phone_number = normalizedPhone;
     }
 
-    if (full_name !== undefined) user.full_name = full_name;
+    if (fullname !== undefined) user.fullname = fullname;
     if (gender !== undefined) user.gender = gender;
-    if (bodyShape !== undefined) user.bodyShape = bodyShape;
     if (favoriteStyles !== undefined) user.favoriteStyles = favoriteStyles;
     if (favoriteColors !== undefined) user.favoriteColors = favoriteColors;
-    if (sizeProfile !== undefined) user.sizeProfile = sizeProfile;
-    if (budgetRange !== undefined) user.budgetRange = budgetRange;
-    if (address !== undefined) user.address = address;
     if (avatar !== undefined) user.avatar = avatar;
     if (city !== undefined) user.city = city;
     if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;

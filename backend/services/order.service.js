@@ -7,7 +7,7 @@ import ProductVariant from "../models/ProductVariant.js";
 import Review from "../models/Review.js";
 
 const ORDER_POPULATE = [
-  { path: "userId", select: "username email full_name" }
+  { path: "userId", select: "username email fullname" }
 ];
 
 const populateOrder = (query) => query.populate(ORDER_POPULATE);

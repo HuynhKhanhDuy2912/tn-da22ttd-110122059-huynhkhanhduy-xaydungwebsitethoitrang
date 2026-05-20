@@ -21,7 +21,7 @@ export default function RegisterPage() {
     confirmPassword: ""
   });
   const [phoneForm, setPhoneForm] = useState({
-    full_name: "",
+    fullname: "",
     phone_number: "",
     otp: ""
   });
@@ -108,7 +108,7 @@ export default function RegisterPage() {
 
     try {
       const response = await requestPhoneOtp({
-        full_name: phoneForm.full_name,
+        fullname: phoneForm.fullname,
         phone_number: phoneForm.phone_number
       });
 
@@ -308,9 +308,9 @@ export default function RegisterPage() {
                 </label>
                 <input
                   className="w-full border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
-                  value={phoneForm.full_name}
+                  value={phoneForm.fullname}
                   onChange={(event) =>
-                    setPhoneForm((current) => ({ ...current, full_name: event.target.value }))
+                    setPhoneForm((current) => ({ ...current, fullname: event.target.value }))
                   }
                   placeholder="Nguyễn Văn A"
                 />

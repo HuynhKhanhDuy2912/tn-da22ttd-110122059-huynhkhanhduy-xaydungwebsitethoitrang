@@ -53,12 +53,6 @@ const outfitSchema = new mongoose.Schema(
       default: "all_season"
     },
 
-    bodyShape: {
-      type: [String],
-      enum: ["rectangle", "triangle", "inverted_triangle", "hourglass", "round"],
-      default: []
-    },
-
     style: {
       type: String,
       trim: true,

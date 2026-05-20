@@ -33,7 +33,6 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [activeImage, setActiveImage] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isZoomed, setIsZoomed] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -43,7 +42,6 @@ export default function ProductDetailPage() {
   const [reviewImageFiles, setReviewImageFiles] = useState([]);
   const [reviewVideoFiles, setReviewVideoFiles] = useState([]);
   const [reviews, setReviews] = useState([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
 
   useEffect(() => {
@@ -100,7 +98,8 @@ export default function ProductDetailPage() {
           setActiveImage(mainGalleryImg?.imageUrl || pImages[0]?.imageUrl || currentProduct.images?.[0] || currentProduct.videos?.[0] || "");
         }
 
-        loadReviews(currentProduct._id);
+        const reviewsResponse = await apiRequest(`/reviews?productId=${currentProduct._id}&limit=50`);
+        setReviews(reviewsResponse.data || []);
       } catch (e) {
         setError(e.message);
       }
@@ -108,7 +107,6 @@ export default function ProductDetailPage() {
 
     loadProduct();
     setQuantity(1);
-    setMessage("");
     setError("");
     window.scrollTo(0, 0);
   }, [navigate, productId, selectedColorParam]);
@@ -164,25 +162,12 @@ export default function ProductDetailPage() {
     const sizesForColor = sortSizes(variants.filter(v => v.color === color).map(v => v.size));
     if (!sizesForColor.includes(selectedSize)) setSelectedSize(sizesForColor[0]);
 
-    // Khi đổi màu, ưu tiên lấy ảnh đầu tiên của gallery màu đó, nếu không có mới lấy ảnh biến thể
     const imgsForColor = productImages.filter(i => i.color === color).map(i => i.imageUrl);
     const variantImg = variants.find(v => v.color === color && v.image)?.image;
 
     if (variantImg) setActiveImage(variantImg);
     else if (imgsForColor.length > 0) setActiveImage(imgsForColor[0]);
     else if (product?.videos?.[0]) setActiveImage(product.videos[0]);
-  };
-
-  const loadReviews = async (prodId) => {
-    setReviewsLoading(true);
-    try {
-      const response = await apiRequest(`/reviews?productId=${prodId}&limit=50`);
-      setReviews(response.data || []);
-    } catch (e) {
-      console.error("Failed to load reviews:", e);
-    } finally {
-      setReviewsLoading(false);
-    }
   };
 
   const activeIndex = galleryImages.indexOf(activeImage);
@@ -325,9 +310,13 @@ export default function ProductDetailPage() {
         }
       });
 
-      const refreshedProduct = await apiRequest(`/products/${product._id}`);
+      const [refreshedProduct, reviewsResponse] = await Promise.all([
+        apiRequest(`/products/${product._id}`),
+        apiRequest(`/reviews?productId=${product._id}&limit=50`)
+      ]);
+
       setProduct(refreshedProduct.data);
-      await loadReviews(product._id);
+      setReviews(reviewsResponse.data || []);
       setShowReviewForm(false);
       setReviewRating(5);
       setReviewComment("");
