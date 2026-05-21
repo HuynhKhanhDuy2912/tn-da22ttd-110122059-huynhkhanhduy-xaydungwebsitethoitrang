@@ -26,7 +26,6 @@ import ProductDetailPage from "./pages/ProductDetailPage.jsx";
 import ProductsPage from "./pages/ProductsPage.jsx";
 import RecommendationsPage from "./pages/RecommendationsPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
-import WishlistPage from "./pages/WishlistPage.jsx";
 import CollectionsPage from "./pages/CollectionsPage.jsx";
 import CollectionDetailPage from "./pages/CollectionDetailPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
@@ -53,14 +52,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RecommendationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/wishlist"
-            element={
-              <ProtectedRoute>
-                <WishlistPage />
               </ProtectedRoute>
             }
           />

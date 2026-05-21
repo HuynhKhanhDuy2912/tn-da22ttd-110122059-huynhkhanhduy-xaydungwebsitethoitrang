@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Camera, Check, Eye, EyeOff, Loader2, MapPin, Save, User as UserIcon, Package } from "lucide-react";
+import { Camera, Check, Eye, EyeOff, Heart, Loader2, MapPin, User as UserIcon, Package } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import AddressManager from "../components/AddressManager.jsx";
 import OrdersTab from "../components/OrdersTab.jsx";
+import WishlistTab from "../components/WishlistTab.jsx";
 
 const TABS = [
   { id: "account", label: "Tài khoản", icon: UserIcon },
   { id: "orders", label: "Đơn hàng", icon: Package },
+  { id: "wishlist", label: "Sản phẩm yêu thích", icon: Heart },
   { id: "address", label: "Địa chỉ giao nhận", icon: MapPin }
 ];
 
@@ -248,7 +250,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl mt-4">
       <h1 className="mb-2 text-2xl font-bold uppercase tracking-wide">
         {user.fullname || user.username}
       </h1>
@@ -268,7 +270,7 @@ export default function ProfilePage() {
                   key={tab.id}
                   type="button"
                   onClick={() => handleTabChange(tab.id)}
-                  className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-4 text-left text-sm transition last:border-b-0 ${
+                  className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-4 text-left text-l transition last:border-b-0 ${
                     isActive
                       ? "bg-gray-100 font-semibold text-black"
                       : "text-gray-700 hover:bg-gray-50"
@@ -589,6 +591,10 @@ export default function ProfilePage() {
 
             {activeTab === "orders" && (
               <OrdersTab token={token} />
+            )}
+
+            {activeTab === "wishlist" && (
+              <WishlistTab token={token} onError={(message) => setError(message)} />
             )}
 
             {activeTab === "address" && (

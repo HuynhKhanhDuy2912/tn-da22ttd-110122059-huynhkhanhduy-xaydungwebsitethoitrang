@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, X } from "lucide-react";
+import { Heart, Plus, X } from "lucide-react";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 
@@ -48,7 +48,8 @@ export default function ProductCard({
   product,
   onAddToWishlist,
   onAddToCart,
-  actionLabel = "THÊM GIỎ"
+  actionLabel = "THÊM GIỎ",
+  isWishlisted = false
 }) {
   const colorGroups = useMemo(() => getColorGroups(product), [product]);
   const [activeColorName, setActiveColorName] = useState(colorGroups[0]?.color || "");
@@ -108,9 +109,9 @@ export default function ProductCard({
           }}
         >
           <div className="flex h-full items-center justify-center gap-3">
-            {product.collectionName || product.tags?.[0] ? (
+            {product.collectionName || product.collectionId?.name || product.tags?.[0] ? (
               <p className="mr-auto text-[11px] font-semibold leading-4 text-red-600">
-                {product.collectionName || product.tags?.[0]}
+                {product.collectionName || product.collectionId?.name || product.tags?.[0]}
               </p>
             ) : null}
             {onAddToCart ? (
@@ -186,21 +187,22 @@ export default function ProductCard({
             </button>
           ))}
         </div>
-
+        
         <div className="mt-3 flex items-center justify-between gap-3">
           <p className="m-0 text-[16px] font-semibold text-black">{formatPrice(price)}</p>
           {onAddToWishlist ? (
             <button
               type="button"
               onClick={() => onAddToWishlist(product)}
-              className="shrink-0 text-xs font-medium text-gray-500 transition hover:text-red-600"
+              className={`inline-flex shrink-0 items-center gap-1 text-xs font-medium transition ${isWishlisted ? "text-red-600" : "text-gray-500 hover:text-red-600"}`}
             >
+              <Heart size={13} className={isWishlisted ? "fill-red-600 text-red-600" : "text-current"} />
               Yêu thích
             </button>
           ) : null}
         </div>
 
-        <h3 className="line-clamp-1 text-[18px] font-bold text-black">
+        <h3 className="line-clamp-1 text-[15px] font-bold text-black">
           <Link to={productPath} className="hover:text-red-600">{product.name}</Link>
         </h3>
       </div>

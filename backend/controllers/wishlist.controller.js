@@ -79,7 +79,7 @@ export const getMyWishlistSummary = async (req, res) => {
   try {
     const items = await Wishlist.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
-      .populate("productId", "name price discount style averageRating");
+      .populate("productId", "name slug price discount style averageRating gender occasion images tags");
 
     return res.status(200).json({
       success: true,

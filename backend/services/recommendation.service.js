@@ -31,7 +31,7 @@ export const getPersonalizedRecommendations = async (user, limitParam) => {
 
     // Lọc theo giới tính
     if (user.gender) {
-      query.$or = [{ gender: user.gender }, { gender: "unisex" }];
+      query.$or = [{ gender: user.gender }, { gender: "" }];
     }
 
     // Tính điểm ưu tiên style từ hành vi

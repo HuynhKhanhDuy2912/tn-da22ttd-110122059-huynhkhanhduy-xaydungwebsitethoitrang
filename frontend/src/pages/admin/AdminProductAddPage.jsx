@@ -22,7 +22,7 @@ const initialForm = {
   price: "",
   discount: 0,
   categoryId: "",
-  brand: "",
+  gender: "male",
   material: "",
   style: "casual",
   season: "all_season",
@@ -117,7 +117,7 @@ export default function AdminProductAddPage() {
             price: p.price || "",
             discount: p.discount || 0,
             categoryId: catId,
-            brand: p.brand || "",
+            gender: p.gender || "male",
             material: p.material || "",
             style: p.style || "casual",
             season: p.season?.[0] || "all_season",
@@ -161,7 +161,7 @@ export default function AdminProductAddPage() {
         price: Number(form.price),
         discount: Number(form.discount),
         categoryId: form.categoryId,
-        brand: form.brand,
+        gender: form.gender,
         material: form.material,
         style: form.style,
         season: [form.season],
@@ -509,14 +509,23 @@ export default function AdminProductAddPage() {
                   }
                 />
               </label>
-              <label className={labelCls}>
-                Chất liệu
-                <input
-                  className={inputCls}
-                  placeholder="Vd: Cotton, Polyester, Linen..."
-                  {...field("material")}
-                />
-              </label>
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className={labelCls}>
+                  Chất liệu
+                  <input
+                    className={inputCls}
+                    placeholder="Vd: Cotton, Polyester, Linen..."
+                    {...field("material")}
+                  />
+                </label>
+                <label className={labelCls}>
+                  Giới tính
+                  <select className={inputCls} {...field("gender")}>
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                  </select>
+                </label>
+              </div>
               <div className="grid md:grid-cols-3 gap-4">
                 {/* LEVEL 1 */}
                 <label className={labelCls}>

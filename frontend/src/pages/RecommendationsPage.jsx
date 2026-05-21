@@ -1,19 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
+import { attachVariantsToProducts } from "../lib/catalog.js";
 
 export default function RecommendationsPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [wishlistProductIds, setWishlistProductIds] = useState(new Set());
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
+  const itemsWithVariants = useMemo(
+    () => attachVariantsToProducts(items, variants),
+    [items, variants],
+  );
+
   const loadRecommendations = async () => {
     try {
-      const response = await apiRequest("/recommendations/me", { token });
-      setItems(response.data);
+      const [recommendationResponse, variantResponse, wishlistResponse] = await Promise.all([
+        apiRequest("/recommendations/me", { token }),
+        apiRequest("/product-variants?limit=1200"),
+        token ? apiRequest("/wishlists/me", { token }) : Promise.resolve({ data: { items: [] } }),
+      ]);
+
+      setItems(recommendationResponse.data || []);
+      setVariants(variantResponse.data || []);
+      setWishlistProductIds(
+        new Set((wishlistResponse.data?.items || []).map((item) => item.productId?._id).filter(Boolean)),
+      );
+      setError("");
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -21,20 +41,46 @@ export default function RecommendationsPage() {
 
   useEffect(() => {
     loadRecommendations();
-  }, []);
+  }, [token]);
 
   const handleWishlist = async (product) => {
-    try {
-      await apiRequest("/wishlists/me", {
-        method: "POST",
-        token,
-        body: {
-          productId: product._id,
-          addedFrom: "recommendation"
-        }
-      });
+    const productId = product?._id;
+    if (!productId) return;
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-      setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+    const isWishlisted = wishlistProductIds.has(productId);
+
+    try {
+      if (isWishlisted) {
+        await apiRequest(`/wishlists/me/product/${productId}`, {
+          method: "DELETE",
+          token,
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.delete(productId);
+          return next;
+        });
+        setMessage(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+      } else {
+        await apiRequest("/wishlists/me", {
+          method: "POST",
+          token,
+          body: {
+            productId,
+            addedFrom: "recommendation"
+          }
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.add(productId);
+          return next;
+        });
+        setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+      }
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -89,18 +135,19 @@ export default function RecommendationsPage() {
       {message ? <p className="text-black bg-gray-100 px-6 py-4 border-l-4 border-black font-medium mb-8 text-sm">{message}</p> : null}
       {error ? <p className="text-red-500 bg-red-50 px-6 py-4 border-l-4 border-red-600 font-bold mb-8 text-sm">{error}</p> : null}
       
-      {items.length === 0 && !error ? (
+      {itemsWithVariants.length === 0 && !error ? (
         <div className="text-center py-32 bg-gray-50 border border-gray-200">
           <h3 className="text-xl font-bold text-black mb-3 uppercase tracking-widest">CHƯA CÓ ĐỦ DỮ LIỆU</h3>
           <p className="text-gray-500 text-sm">Hãy tương tác thêm với các sản phẩm để chúng tôi có thể đưa ra gợi ý tốt hơn cho bạn.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-10">
-          {items.map((product) => (
+          {itemsWithVariants.map((product) => (
             <ProductCard
               key={product._id}
               product={product}
               onAddToWishlist={handleWishlist}
+              isWishlisted={wishlistProductIds.has(product._id)}
               onAddToCart={handleAddToCart}
             />
           ))}

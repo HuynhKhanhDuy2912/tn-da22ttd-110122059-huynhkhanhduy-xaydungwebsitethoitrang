@@ -29,6 +29,7 @@ export default function AdminProductListPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [styleFilter, setStyleFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
   const [discountFilter, setDiscountFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -86,6 +87,7 @@ export default function AdminProductListPage() {
       const categoryMatch =
         categoryFilter === "all" || p.categoryId?._id === categoryFilter;
       const styleMatch = styleFilter === "all" || p.style === styleFilter;
+      const genderMatch = genderFilter === "all" || p.gender === genderFilter;
       const discountMatch =
         discountFilter === "all" ||
         (discountFilter === "yes" && p.discount > 0) ||
@@ -104,6 +106,7 @@ export default function AdminProductListPage() {
         searchMatch &&
         categoryMatch &&
         styleMatch &&
+        genderMatch &&
         discountMatch &&
         stockMatch
       );
@@ -136,6 +139,7 @@ export default function AdminProductListPage() {
     search,
     categoryFilter,
     styleFilter,
+    genderFilter,
     discountFilter,
     stockFilter,
     sortBy,
@@ -160,15 +164,17 @@ export default function AdminProductListPage() {
     if (search) count++;
     if (categoryFilter !== "all") count++;
     if (styleFilter !== "all") count++;
+    if (genderFilter !== "all") count++;
     if (discountFilter !== "all") count++;
     if (stockFilter !== "all") count++;
     return count;
-  }, [search, categoryFilter, styleFilter, discountFilter, stockFilter]);
+  }, [search, categoryFilter, styleFilter, genderFilter, discountFilter, stockFilter]);
 
   const clearAllFilters = () => {
     setSearch("");
     setCategoryFilter("all");
     setStyleFilter("all");
+    setGenderFilter("all");
     setDiscountFilter("all");
     setStockFilter("all");
   };
@@ -291,7 +297,7 @@ export default function AdminProductListPage() {
         </div>
 
         {showFilters && (
-          <div className="mb-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2 lg:grid-cols-5">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-gray-700">
                 Danh mục
@@ -325,6 +331,21 @@ export default function AdminProductListPage() {
                     {style}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                Giới tính
+              </label>
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">Tất cả</option>
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
               </select>
             </div>
 
@@ -394,16 +415,16 @@ export default function AdminProductListPage() {
               <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
                 Biến thể
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-center text-gray-600">
                 Danh mục
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-center text-gray-600">
                 Giá
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-center text-gray-600">
                 Giảm giá
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-center text-gray-600">
                 Thao tác
               </span>
             </div>
@@ -434,7 +455,7 @@ export default function AdminProductListPage() {
                   return (
                     <div
                       key={product._id}
-                      className="grid grid-cols-[80px_1fr_200px_140px_120px_100px_140px] gap-4 px-5 py-4 transition hover:bg-gray-50"
+                      className="grid items-center grid-cols-[80px_1fr_200px_140px_120px_100px_140px] gap-4 px-5 py-4 transition hover:bg-gray-50"
                     >
                       <div className="relative h-16 w-16 overflow-hidden rounded border border-gray-200 bg-gray-100">
                         {product.images?.[0] ? (
@@ -464,6 +485,9 @@ export default function AdminProductListPage() {
                         <div className="flex flex-wrap gap-2">
                           <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
                             {product.style || "N/A"}
+                          </span>
+                          <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+                            {product.gender === "female" ? "Nữ" : "Nam"}
                           </span>
                         </div>
                       </div>
@@ -511,13 +535,13 @@ export default function AdminProductListPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center">
+                      <div className="flex items-center justify-center">
                         <span className="truncate text-xs font-medium text-gray-700">
                           {product.categoryId?.name || "—"}
                         </span>
                       </div>
 
-                      <div className="flex flex-col justify-center">
+                      <div className="flex flex-col justify-center text-center">
                         <span className="text-sm font-bold text-gray-900">
                           {Number(product.price).toLocaleString("vi-VN")}₫
                         </span>
@@ -532,7 +556,7 @@ export default function AdminProductListPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center">
+                      <div className="flex items-center justify-center">
                         {product.discount > 0 ? (
                           <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-600">
                             -{product.discount}%

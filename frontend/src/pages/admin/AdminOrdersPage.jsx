@@ -388,6 +388,7 @@ export default function AdminOrdersPage() {
                   const StatusIcon = statusConfig.icon;
 
                   const allowedStatuses = getAllowedStatuses(order.status);
+                  const isFinalStatus = ["completed", "cancelled"].includes(order.status);
 
                   return (
                     <tr
@@ -455,9 +456,7 @@ export default function AdminOrdersPage() {
                       <td className="px-6 py-4">
                         <select
                           disabled={
-                            updatingOrderId === order._id ||
-                            order.status === "completed" ||
-                            order.status === "cancelled"
+                            updatingOrderId === order._id || isFinalStatus
                           }
                           value={order.status}
                           onChange={(event) =>

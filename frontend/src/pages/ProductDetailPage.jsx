@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom"
 import ProductCard from "../components/ProductCard.jsx";
 import ReviewModal from "../components/ReviewModal.jsx";
 import ReviewsModal from "../components/ReviewsModal.jsx";
+import ProductInfoModal from "../components/ProductInfoModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
@@ -43,6 +44,7 @@ export default function ProductDetailPage() {
   const [reviewVideoFiles, setReviewVideoFiles] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [showProductInfoModal, setShowProductInfoModal] = useState(false);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -424,53 +426,20 @@ export default function ProductDetailPage() {
             </details>
 
             {/* ================= PRODUCT INFO ================= */}
-            <details className="group border-t border-gray-200">
-              <summary className="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
-
+            <button
+              type="button"
+              onClick={() => setShowProductInfoModal(true)}
+              className="w-full border-t border-gray-200 bg-transparent px-6 py-4 text-left"
+            >
+              <span className="flex items-center justify-between">
                 <span className="text-[13px] font-bold uppercase tracking-wide text-[#c58b45]">
                   Thông tin sản phẩm
                 </span>
-
-                <span className="text-[#c58b45] transition-transform duration-300 group-open:translate-x-1">
+                <span className="text-[#c58b45]">
                   <ChevronsRight size={18} strokeWidth={1.8} />
                 </span>
-              </summary>
-
-              <div className="px-6 py-2 text-[13px] text-gray-600 space-y-2">
-
-                {product.description && (
-                  <div>
-                    <p className="text-black">
-                      {product.description}
-                    </p>
-                  </div>
-                )}
-
-                {product.material && (
-                  <p>
-                    <span className="text-black">
-                      Chất liệu:
-                    </span>{" "}
-                    {product.material}
-                  </p>
-                )}
-
-                <p>
-                  <span className="text-black">
-                    Phong cách:
-                  </span>{" "}
-                  <span className="capitalize">{product.style}</span>
-                </p>
-
-                <p>
-                  <span className="text-black">
-                    SKU:
-                  </span>{" "}
-                  {product._id.slice(-6).toUpperCase()}
-                </p>
-
-              </div>
-            </details>
+              </span>
+            </button>
 
             {/* ================= FAQ ================= */}
             <details className="group border-t border-gray-200">
@@ -682,13 +651,22 @@ export default function ProductDetailPage() {
               ))}
               <span className="ml-1 text-xs text-gray-500">({totalReviews})</span>
             </div>
-            <button
-              type="button"
-              onClick={handleOpenReviewForm}
-              className="border-none bg-transparent p-0 text-xs font-medium text-black underline"
-            >
-              Viết đánh giá sản phẩm
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleOpenReviewForm}
+                className="border-none bg-transparent p-0 text-xs font-medium text-black underline"
+              >
+                Viết đánh giá sản phẩm
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowProductInfoModal(true)}
+                className="border-none bg-transparent p-0 text-xs font-medium text-[#c58b45] underline"
+              >
+                Thông tin sản phẩm
+              </button>
+            </div>
           </div>
 
           {/* Màu sắc */}
@@ -813,11 +791,30 @@ export default function ProductDetailPage() {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 gap-y-10">
             {relatedWithVariants.map(item => (
-              <ProductCard key={item._id} product={item} />
+              <ProductCard
+                key={item._id}
+                product={item}
+                onAddToCart={token ? (product, variant) => apiRequest("/carts/me/items", {
+                  method: "POST",
+                  token,
+                  body: {
+                    productId: product._id,
+                    variantId: variant._id,
+                    quantity: 1,
+                    source: "product_detail_related"
+                  }
+                }) : null}
+              />
             ))}
           </div>
         </section>
       )}
+
+      <ProductInfoModal
+        open={showProductInfoModal}
+        onClose={() => setShowProductInfoModal(false)}
+        product={product}
+      />
 
       <ReviewsModal
         open={showReviewsModal}

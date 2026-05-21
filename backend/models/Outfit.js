@@ -71,8 +71,8 @@ const outfitSchema = new mongoose.Schema(
     genderTarget: {
       type: String,
       trim: true,
-      enum: ["male", "female", "unisex"],
-      default: "unisex"
+      enum: ["male", "female"],
+      default: ""
     },
 
     colors: {

@@ -152,12 +152,12 @@ export default function AdminBannersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
         <form className="bg-white border border-gray-200 p-7 grid gap-5 sticky top-6" onSubmit={handleSubmit}>
-          <h3 className="text-black text-sm m-0 mb-2 pb-4 border-b border-gray-200 font-bold uppercase tracking-widest">
+          <h3 className="text-black text-sm m-0 mb-2 pb-4 border-b border-gray-200 font-bold uppercase">
             {editingId ? "SỬA BANNER" : "THÊM BANNER MỚI"}
           </h3>
 
           <label className={labelClass}>
-            Tiêu đề (tùy chọn)
+            Tiêu đề
             <input
               className={inputClass}
               value={form.title}
@@ -167,7 +167,7 @@ export default function AdminBannersPage() {
           </label>
 
           <label className={labelClass}>
-            Bộ sưu tập *
+            Bộ sưu tập
             <select
               className={inputClass}
               value={form.collectionId}

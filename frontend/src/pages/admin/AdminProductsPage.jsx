@@ -10,8 +10,7 @@ const initialForm = {
   price: 0,
   discount: 0,
   categoryId: "",
-  brand: "",
-  gender: "unisex",
+  gender: "",
   material: "",
   style: "casual",
   season: "all_season",
@@ -52,7 +51,6 @@ export default function AdminProductsPage() {
     price: Number(form.price),
     discount: Number(form.discount),
     categoryId: form.categoryId,
-    brand: form.brand,
     gender: form.gender,
     material: form.material,
     style: form.style,
@@ -98,8 +96,7 @@ export default function AdminProductsPage() {
       price: product.price || 0,
       discount: product.discount || 0,
       categoryId: product.categoryId?._id || "",
-      brand: product.brand || "",
-      gender: product.gender || "unisex",
+      gender: product.gender || "",
       material: product.material || "",
       style: product.style || "casual",
       season: product.season?.[0] || "all_season",
@@ -196,7 +193,6 @@ export default function AdminProductsPage() {
                   setForm((current) => ({ ...current, gender: event.target.value }))
                 }
               >
-                <option value="unisex">Unisex</option>
                 <option value="male">Nam</option>
                 <option value="female">Nữ</option>
               </select>
@@ -242,14 +238,6 @@ export default function AdminProductsPage() {
               />
             </label>
           </div>
-          <label className={labelClass}>
-            Thương hiệu
-            <input
-              className={inputClass}
-              value={form.brand}
-              onChange={(event) => setForm((current) => ({ ...current, brand: event.target.value }))}
-            />
-          </label>
           <label className={labelClass}>
             Chất liệu
             <input

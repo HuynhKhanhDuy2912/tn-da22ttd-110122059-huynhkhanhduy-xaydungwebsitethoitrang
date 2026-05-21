@@ -44,17 +44,11 @@ const productSchema = new mongoose.Schema(
       required: true
     },
 
-    brand: {
-      type: String,
-      trim: true,
-      default: ""
-    },
-
     gender: {
       type: String,
       trim: true,
-      enum: ["male", "female", "unisex"],
-      default: "unisex"
+      enum: ["male", "female"],
+      default: ""
     },
 
     material: {
@@ -127,7 +121,7 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ categoryId: 1, gender: 1, isActive: 1 });
-productSchema.index({ style: 1, brand: 1 });
+productSchema.index({ style: 1 });
 productSchema.index({ season: 1 });
 productSchema.index({ occasion: 1 });
 productSchema.index({ tags: 1 });

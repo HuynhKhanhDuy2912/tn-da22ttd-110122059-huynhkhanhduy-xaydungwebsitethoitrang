@@ -52,7 +52,7 @@ function NavItemContent({ icon: Icon, label, collapsed, chevron }) {
       </span>
       {!collapsed ? (
         <>
-          <span className="flex-1 truncate text-left text-xs font-bold uppercase tracking-widest">
+          <span className="flex-1 truncate text-left text-xs font-bold uppercase">
             {label}
           </span>
           {chevron}
@@ -96,7 +96,7 @@ export default function AdminLayout() {
   };
 
   const linkClass = ({ isActive }) =>
-    `mx-0 flex items-center gap-2 px-4 py-3.5 text-xs font-bold uppercase tracking-widest transition-colors ${isActive
+    `mx-0 flex items-center gap-2 px-4 py-3.5 text-xs font-bold uppercase transition-colors ${isActive
       ? "bg-black text-white"
       : "text-gray-500 hover:bg-gray-50 hover:text-black"
     } ${collapsed ? "justify-center px-2" : ""}`;
@@ -108,12 +108,12 @@ export default function AdminLayout() {
         className="fixed inset-y-0 left-0 z-30 flex flex-col border-r border-gray-200 bg-white text-black transition-[width] duration-300 ease-in-out"
       >
         <div className={`flex shrink-0 border-b border-gray-200 ${collapsed ? "flex-col items-center gap-2 py-3" : "items-center gap-2 px-4 py-5"}`}>
-          <span className="grid h-10 w-10 shrink-0 place-items-center bg-black text-sm font-extrabold tracking-widest text-white">
+          <span className="grid h-10 w-10 shrink-0 place-items-center bg-black text-sm font-extrabold text-white">
             FS
           </span>
           {!collapsed ? (
             <div className="min-w-0 flex-1">
-              <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <span className="mb-0.5 block text-[11px] font-bold tracking-widest text-gray-500">
                 Trang quản trị
               </span>
               <h2 className="m-0 truncate text-sm font-bold uppercase tracking-widest">
@@ -135,14 +135,14 @@ export default function AdminLayout() {
 
         {!collapsed ? (
           <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-4">
-            <div className="grid h-8 w-8 shrink-0 place-items-center border border-gray-300 bg-gray-100 text-xs font-bold uppercase">
+            <div className="grid h-8 w-8 shrink-0 place-items-center border border-gray-300 bg-gray-100 text-xs font-bold">
               {(user?.fullname || user?.username || "A").slice(0, 1)}
             </div>
             <div className="min-w-0">
-              <strong className="block truncate text-xs uppercase tracking-widest">
+              <strong className="block truncate text-xs uppercase">
                 {user?.fullname || user?.username}
               </strong>
-              <span className="block truncate text-[10px] text-gray-500">
+              <span className="block truncate text-[11px] text-gray-500">
                 {user?.email || "Quản trị viên"}
               </span>
             </div>
@@ -181,7 +181,7 @@ export default function AdminLayout() {
                     type="button"
                     onClick={() => toggleMenu(item.label)}
                     title={item.label}
-                    className={`flex w-full items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-widest transition-colors ${isActive
+                    className={`flex w-full items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase transition-colors ${isActive
                         ? "bg-black text-white"
                         : "text-gray-500 hover:bg-gray-50 hover:text-black"
                       }`}
@@ -206,7 +206,7 @@ export default function AdminLayout() {
                           to={child.to}
                           title={child.label}
                           className={({ isActive }) =>
-                            `flex items-center gap-2 py-3 pl-10 pr-4 text-xs font-bold uppercase tracking-widest transition-colors ${isActive
+                            `flex items-center gap-2 py-3 pl-10 pr-4 text-xs font-bold uppercase transition-colors ${isActive
                               ? "border-l-4 border-black bg-gray-200 text-black"
                               : "border-l-4 border-transparent text-gray-500 hover:bg-gray-100 hover:text-black"
                             }`
@@ -252,7 +252,7 @@ export default function AdminLayout() {
             type="button"
             title="Đăng xuất"
             onClick={logout}
-            className={`flex items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-gray-500 transition hover:bg-gray-50 hover:text-red-600 ${collapsed ? "justify-center px-2" : ""
+            className={`flex items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase text-gray-500 transition hover:bg-gray-50 hover:text-red-600 ${collapsed ? "justify-center px-2" : ""
               }`}
           >
             <span className="grid h-8 w-8 shrink-0 place-items-center">

@@ -1,24 +1,44 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, LayoutGrid, List, Plus, SlidersHorizontal, SortAsc, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Heart,
+  LayoutGrid,
+  List,
+  Plus,
+  SlidersHorizontal,
+  SortAsc,
+  X,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
-import { attachVariantsToProducts, buildCatalogFilters, filterProducts } from "../lib/catalog.js";
+import {
+  attachVariantsToProducts,
+  buildCatalogFilters,
+  filterProducts,
+} from "../lib/catalog.js";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
-  return typeof category.parentId === "string" ? category.parentId : category.parentId._id || null;
+  return typeof category.parentId === "string"
+    ? category.parentId
+    : category.parentId._id || null;
 }
 
 function sortByCreatedAt(items) {
-  return [...items].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  return [...items].sort(
+    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+  );
 }
 
 function getCategoryIdFromProduct(product) {
   if (!product?.categoryId) return null;
-  return typeof product.categoryId === "string" ? product.categoryId : product.categoryId._id || null;
+  return typeof product.categoryId === "string"
+    ? product.categoryId
+    : product.categoryId._id || null;
 }
 
 function collectCategoryScope(categories, rootCategoryId) {
@@ -76,7 +96,7 @@ function colorToHex(color) {
     be: "#D6C6AE",
     kem: "#EFE7DA",
     nau: "#7C4A2D",
-    brown: "#7C4A2D"
+    brown: "#7C4A2D",
   };
 
   const key = (color || "").trim().toLowerCase();
@@ -94,7 +114,7 @@ function getColorGroups(product) {
         color: key,
         hex: colorToHex(key),
         previewImage: variant.image || "",
-        variants: []
+        variants: [],
       });
     }
     groups.get(key).variants.push(variant);
@@ -114,7 +134,7 @@ function getColorGroups(product) {
       color: "Mặc định",
       hex: "#9CA3AF",
       previewImage: product.images?.[0] || "",
-      variants: []
+      variants: [],
     });
   }
 
@@ -130,7 +150,7 @@ const sortLabelMap = {
   newest: "Mới nhất",
   price_asc: "Giá tăng",
   price_desc: "Giá giảm",
-  name_asc: "Tên A-Z"
+  name_asc: "Tên A-Z",
 };
 
 export default function ProductsPage() {
@@ -146,18 +166,22 @@ export default function ProductsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showMobileCategoryPanel, setShowMobileCategoryPanel] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
   const [activeSwatchByProduct, setActiveSwatchByProduct] = useState({});
   const [quickAddByProduct, setQuickAddByProduct] = useState({});
+  const [wishlistProductIds, setWishlistProductIds] = useState(new Set());
   const [filters, setFilters] = useState({
     search: searchParams.get("search") || "",
     style: "",
     gender: "",
-    occasion: ""
+    occasion: "",
   });
 
   const selectedCategoryId = searchParams.get("categoryId") || "";
+  const isCategoryContext = Boolean(selectedCategoryId);
+  const useNewAllProductsLayout = !isCategoryContext;
 
   // Map productId -> collection name
   const productCollectionMap = useMemo(() => {
@@ -175,75 +199,136 @@ export default function ProductsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [productResponse, variantResponse, categoryResponse, collectionResponse] = await Promise.all([
+        const requests = [
           apiRequest("/products?limit=500"),
           apiRequest("/product-variants?limit=1200"),
           apiRequest("/categories?limit=1000"),
-          apiRequest("/collections?limit=100&isActive=true")
-        ]);
+          apiRequest("/collections?limit=100&isActive=true"),
+        ];
+        if (token) requests.push(apiRequest("/wishlists/me", { token }));
+
+        const [
+          productResponse,
+          variantResponse,
+          categoryResponse,
+          collectionResponse,
+          wishlistResponse,
+        ] = await Promise.all(requests);
 
         setProducts(productResponse.data || []);
         setVariants(variantResponse.data || []);
         setCategories(categoryResponse.data || []);
         setCollections(collectionResponse.data || []);
+        setWishlistProductIds(
+          new Set(
+            (wishlistResponse?.data?.items || [])
+              .map((item) => item.productId?._id)
+              .filter(Boolean),
+          ),
+        );
       } catch (loadError) {
         setError(loadError.message);
       }
     };
 
     loadData();
-  }, []);
+  }, [token]);
+
+  const toggleWishlist = async (product) => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    const isWishlisted = wishlistProductIds.has(product._id);
+
+    try {
+      if (isWishlisted) {
+        await apiRequest(`/wishlists/me/product/${product._id}`, {
+          method: "DELETE",
+          token,
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.delete(product._id);
+          return next;
+        });
+        setMessage(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+      } else {
+        await apiRequest("/wishlists/me", {
+          method: "POST",
+          token,
+          body: {
+            productId: product._id,
+            addedFrom: "product_page",
+          },
+        });
+        setWishlistProductIds((current) => new Set([...current, product._id]));
+        setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  };
 
   useEffect(() => {
     setFilters((current) => ({
       ...current,
-      search: searchParams.get("search") || ""
+      search: searchParams.get("search") || "",
     }));
   }, [searchParams]);
 
   const productsWithVariants = useMemo(
     () => attachVariantsToProducts(products, variants),
-    [products, variants]
+    [products, variants],
   );
 
   const filterOptions = useMemo(
     () => buildCatalogFilters(productsWithVariants),
-    [productsWithVariants]
+    [productsWithVariants],
   );
 
   const categoryScope = useMemo(
     () => collectCategoryScope(categories, selectedCategoryId),
-    [categories, selectedCategoryId]
+    [categories, selectedCategoryId],
   );
 
   const baseFilteredProducts = useMemo(() => {
     const byPanelFilters = filterProducts(productsWithVariants, filters);
     if (!selectedCategoryId) return byPanelFilters;
-    return byPanelFilters.filter((product) => categoryScope.has(getCategoryIdFromProduct(product)));
+    return byPanelFilters.filter((product) =>
+      categoryScope.has(getCategoryIdFromProduct(product)),
+    );
   }, [productsWithVariants, filters, selectedCategoryId, categoryScope]);
 
   const filteredProducts = useMemo(() => {
     const data = [...baseFilteredProducts];
-    if (sortBy === "price_asc") data.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    if (sortBy === "price_desc") data.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    if (sortBy === "name_asc") data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi"));
-    if (sortBy === "newest") data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (sortBy === "price_asc")
+      data.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    if (sortBy === "price_desc")
+      data.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    if (sortBy === "name_asc")
+      data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi"));
+    if (sortBy === "newest")
+      data.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      );
     return data;
   }, [baseFilteredProducts, sortBy]);
 
   const selectedRootCategoryId = useMemo(
     () => getRootCategoryId(categories, selectedCategoryId),
-    [categories, selectedCategoryId]
+    [categories, selectedCategoryId],
   );
 
   const breadcrumbPath = useMemo(
     () => findCategoryPath(categories, selectedCategoryId),
-    [categories, selectedCategoryId]
+    [categories, selectedCategoryId],
   );
 
   const selectedNode = useMemo(
     () => categories.find((item) => item._id === selectedCategoryId) || null,
-    [categories, selectedCategoryId]
+    [categories, selectedCategoryId],
   );
 
   const level2AnchorId = useMemo(() => {
@@ -268,16 +353,108 @@ export default function ProductsPage() {
 
   const quickTagCategories = useMemo(() => {
     if (!quickTagBaseId) return [];
-    return sortByCreatedAt(categories.filter((category) => getParentId(category) === quickTagBaseId));
+    return sortByCreatedAt(
+      categories.filter((category) => getParentId(category) === quickTagBaseId),
+    );
   }, [categories, quickTagBaseId]);
 
   const selectedScopeForTag = selectedCategoryId || quickTagBaseId || "";
 
-  const handleSelectQuickTag = (tagCategoryId) => {
+  const selectedCategoryLabel = selectedNode?.name || "Tất cả sản phẩm";
+
+  const categoryLevel1 = useMemo(
+    () => sortByCreatedAt(categories.filter((item) => !getParentId(item))),
+    [categories],
+  );
+
+  const selectedLevel1Id = useMemo(() => {
+    if (!selectedCategoryId) return "";
+    return breadcrumbPath[0]?._id || "";
+  }, [selectedCategoryId, breadcrumbPath]);
+
+  const categoryLevel2 = useMemo(() => {
+    if (!selectedLevel1Id) return [];
+    return sortByCreatedAt(
+      categories.filter((item) => getParentId(item) === selectedLevel1Id),
+    );
+  }, [categories, selectedLevel1Id]);
+
+  const selectedLevel2Id = useMemo(() => {
+    if (breadcrumbPath.length >= 2) return breadcrumbPath[1]?._id || "";
+    return "";
+  }, [breadcrumbPath]);
+
+  const categoryLevel3 = useMemo(() => {
+    if (!selectedLevel2Id) return [];
+    return sortByCreatedAt(
+      categories.filter((item) => getParentId(item) === selectedLevel2Id),
+    );
+  }, [categories, selectedLevel2Id]);
+
+  const handleSelectCategory = (categoryId) => {
     const next = new URLSearchParams(searchParams);
-    if (tagCategoryId) next.set("categoryId", tagCategoryId);
+    if (categoryId) next.set("categoryId", categoryId);
     else next.delete("categoryId");
     setSearchParams(next);
+    setShowMobileCategoryPanel(false);
+  };
+
+  const handleSelectQuickTag = (tagCategoryId) => {
+    handleSelectCategory(tagCategoryId);
+  };
+  function getOccasionLabel(occasion) {
+    const map = {
+      casual: "Thường ngày",
+      work: "Đi làm",
+      party: "Tiệc tùng",
+      date: "Hẹn hò",
+      travel: "Du lịch",
+      sport: "Thể thao",
+      formal: "Trang trọng",
+      street: "Dạo phố",
+    };
+    return map[occasion] || occasion;
+  }
+
+  const clearFiltersKeepCategory = () => {
+    setFilters({ search: "", style: "", gender: "", occasion: "" });
+    setSortBy("newest");
+  };
+
+  const activeFilterChips = [
+    selectedCategoryId
+      ? { key: "category", label: `Danh mục: ${selectedCategoryLabel}` }
+      : null,
+    filters.search
+      ? { key: "search", label: `Từ khóa: ${filters.search}` }
+      : null,
+    filters.style
+      ? { key: "style", label: `Phong cách: ${filters.style}` }
+      : null,
+    filters.gender
+      ? {
+          key: "gender",
+          label: `Giới tính: ${filters.gender === "male" ? "Nam" : "Nữ"}`,
+        }
+      : null,
+    filters.occasion
+      ? { key: "occasion", label: `Dịp sử dụng: ${getOccasionLabel(filters.occasion)}` }
+      : null,
+    sortBy !== "newest"
+      ? { key: "sort", label: `Sắp xếp: ${sortLabelMap[sortBy]}` }
+      : null,
+  ].filter(Boolean);
+
+  const clearSingleChip = (key) => {
+    if (key === "category") {
+      handleSelectCategory("");
+      return;
+    }
+    if (key === "sort") {
+      setSortBy("newest");
+      return;
+    }
+    setFilters((current) => ({ ...current, [key]: "" }));
   };
 
   const handleWishlist = async (product) => {
@@ -292,8 +469,8 @@ export default function ProductsPage() {
         token,
         body: {
           productId: product._id,
-          addedFrom: "product_page"
-        }
+          addedFrom: "product_page",
+        },
       });
       setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
     } catch (requestError) {
@@ -335,8 +512,8 @@ export default function ProductsPage() {
           productId: product._id,
           variantId: variant._id,
           quantity: 1,
-          source: "product_page"
-        }
+          source: "product_page",
+        },
       });
 
       setMessage(`Đã thêm ${product.name} vào giỏ hàng`);
@@ -358,33 +535,48 @@ export default function ProductsPage() {
 
   const inputClass =
     "w-full appearance-none border border-gray-200 bg-white px-4 py-2.5 text-sm text-black transition-colors focus:border-black focus:outline-none";
-  const labelClass = "mb-2 block text-[11px] font-bold uppercase tracking-widest text-black";
+  const labelClass =
+    "mb-2 block text-[13px] font-semibold text-black";
 
   return (
+    /* Container */
     <div className="bg-[#f6f6f6] pb-16 pt-6">
       <section className="mx-auto w-full max-w-[1400px] px-4 lg:px-8">
-        <div className="border border-gray-300 bg-white px-5 py-5">
+        <div className="border border-gray-300 bg-white px-5 py-2">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3 text-[15px]">
-              <span className="font-semibold text-black">{filteredProducts.length} Sản phẩm</span>
+              <span className="font-semibold text-black">
+                {filteredProducts.length} Sản phẩm
+              </span>
               <span className="text-gray-400">&gt;</span>
-              <Link to="/" className="text-gray-600 hover:text-black">Trang chủ</Link>
+              <Link to="/" className="text-gray-600 hover:text-black">
+                Trang chủ
+              </Link>
               <span className="text-gray-400">&gt;</span>
 
               {breadcrumbPath.length ? (
                 breadcrumbPath.map((item, index) => (
-                  <span key={item._id} className="inline-flex items-center gap-3">
-                    <span className={index === breadcrumbPath.length - 1 ? "font-semibold text-black" : "text-gray-600"}>
+                  <span
+                    key={item._id}
+                    className="inline-flex items-center gap-3"
+                  >
+                    <span
+                      className={
+                        index === breadcrumbPath.length - 1
+                          ? "font-semibold text-black"
+                          : "text-gray-600"
+                      }
+                    >
                       {item.name}
                     </span>
-                    {index !== breadcrumbPath.length - 1 ? <span className="text-gray-400">&gt;</span> : null}
+                    {index !== breadcrumbPath.length - 1 ? (
+                      <span className="text-gray-400">&gt;</span>
+                    ) : null}
                   </span>
                 ))
               ) : (
                 <>
-                  <span className="text-gray-600">Thời trang nam</span>
-                  <span className="text-gray-400">&gt;</span>
-                  <span className="font-semibold text-black">Áo</span>
+                  <span className="text-gray-600">Tất cả sản phẩm</span>
                 </>
               )}
             </div>
@@ -392,8 +584,11 @@ export default function ProductsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className={`grid h-9 w-9 place-items-center border transition ${showFilterPanel ? "border-black bg-black text-white" : "border-gray-300 bg-white text-black"
-                  }`}
+                className={`grid h-9 w-9 place-items-center border transition ${
+                  showFilterPanel
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-black"
+                }`}
                 onClick={() => setShowFilterPanel((current) => !current)}
                 aria-label="Bộ lọc"
               >
@@ -413,8 +608,11 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
-                className={`grid h-9 w-9 place-items-center border transition ${viewMode === "grid" ? "border-black bg-black text-white" : "border-gray-300 bg-white text-black"
-                  }`}
+                className={`grid h-9 w-9 place-items-center border transition ${
+                  viewMode === "grid"
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-black"
+                }`}
                 aria-label="Chế độ lưới"
               >
                 <LayoutGrid size={16} />
@@ -423,8 +621,11 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`grid h-9 w-9 place-items-center border transition ${viewMode === "list" ? "border-black bg-black text-white" : "border-gray-300 bg-white text-black"
-                  }`}
+                className={`grid h-9 w-9 place-items-center border transition ${
+                  viewMode === "list"
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-black"
+                }`}
                 aria-label="Chế độ danh sách"
               >
                 <List size={16} />
@@ -435,80 +636,93 @@ export default function ProductsPage() {
 
         <div className="mt-4">
           <div className="flex items-center gap-2">
-            <div ref={tagsRef} className="scrollbar-hide flex-1 overflow-x-auto whitespace-nowrap">
+            <div
+              ref={tagsRef}
+              className="scrollbar-hide flex-1 overflow-x-auto whitespace-nowrap"
+            >
               <div className="inline-flex gap-2">
                 {quickTagBaseId ? (
                   <button
                     type="button"
                     onClick={() => handleSelectQuickTag(quickTagBaseId)}
-                    className={`border px-5 py-3 text-[15px] font-medium transition ${selectedScopeForTag === quickTagBaseId
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 bg-white text-black hover:border-black"
-                      }`}
+                    className={`border px-5 py-3 text-[15px] font-medium transition ${
+                      selectedScopeForTag === quickTagBaseId
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-black hover:border-black"
+                    }`}
                   >
                     Tất cả
                   </button>
                 ) : null}
-
+                
                 {quickTagCategories.map((tag) => (
                   <button
                     key={tag._id}
                     type="button"
                     onClick={() => handleSelectQuickTag(tag._id)}
-                    className={`border px-5 py-3 text-[15px] font-medium transition ${selectedScopeForTag === tag._id
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 bg-white text-black hover:border-black"
-                      }`}
+                    className={`border px-5 py-3 text-[15px] font-medium transition ${
+                      selectedScopeForTag === tag._id
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-black hover:border-black"
+                    }`}
                   >
                     {tag.name}
                   </button>
                 ))}
               </div>
             </div>
-
-            <button
-              type="button"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-black hover:border-black"
-              onClick={() => tagsRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
-              aria-label="Cuộn danh mục"
-            >
-              <ArrowRight size={18} />
-            </button>
           </div>
         </div>
 
         {showFilterPanel ? (
-          <div className="mt-4 grid gap-4 border border-gray-200 bg-white p-4 md:grid-cols-4">
-            <label>
+          <div className="mt-6 mb-6 grid grid-cols-1 gap-5 border border-gray-200 bg-white p-5 md:grid-cols-4">
+            <label className="block min-w-0">
               <span className={labelClass}>Tìm kiếm</span>
               <input
-                className={inputClass}
+                className={`${inputClass} w-full`}
                 placeholder="Tìm kiếm sản phẩm..."
                 value={filters.search}
-                onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    search: event.target.value,
+                  }))
+                }
               />
             </label>
 
-            <label>
+            <label className="block min-w-0">
               <span className={labelClass}>Phong cách</span>
               <select
-                className={inputClass}
+                className={`${inputClass} w-full`}
                 value={filters.style}
-                onChange={(event) => setFilters((current) => ({ ...current, style: event.target.value }))}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    style: event.target.value,
+                  }))
+                }
               >
                 <option value="">Tất cả</option>
                 {filterOptions.styles.map((item) => (
-                  <option key={item} value={item}>{item}</option>
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
                 ))}
               </select>
             </label>
 
-            <label>
+            <label className="block min-w-0">
               <span className={labelClass}>Giới tính</span>
               <select
-                className={inputClass}
+                className={`${inputClass} w-full`}
                 value={filters.gender}
-                onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    gender: event.target.value,
+                  }))
+                }
               >
                 <option value="">Tất cả</option>
                 <option value="male">Nam</option>
@@ -516,25 +730,32 @@ export default function ProductsPage() {
               </select>
             </label>
 
-            <label>
+            <label className="block min-w-0">
               <span className={labelClass}>Dịp sử dụng</span>
               <select
-                className={inputClass}
+                className={`${inputClass} w-full`}
                 value={filters.occasion}
-                onChange={(event) => setFilters((current) => ({ ...current, occasion: event.target.value }))}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    occasion: event.target.value,
+                  }))
+                }
               >
                 <option value="">Tất cả</option>
                 {filterOptions.occasions.map((item) => (
-                  <option key={item} value={item}>{item}</option>
+                  <option key={item} value={item}>
+                    {getOccasionLabel(item)}
+                  </option>
                 ))}
               </select>
             </label>
 
-            <div className="md:col-span-4">
+            <div className="col-span-full flex justify-end">
               <button
                 type="button"
-                className="border border-black px-5 py-2 text-xs font-bold uppercase tracking-widest transition hover:bg-black hover:text-white"
-                onClick={() => setFilters({ search: "", style: "", gender: "", occasion: "" })}
+                className="border border-black px-4 py-2 text-[13px] font-bold transition hover:bg-black hover:text-white"
+                onClick={clearFiltersKeepCategory}
               >
                 Xóa bộ lọc
               </button>
@@ -543,171 +764,358 @@ export default function ProductsPage() {
         ) : null}
 
         {message ? (
-          <p className="mt-4 border-l-4 border-black bg-gray-100 px-4 py-3 text-sm text-black">{message}</p>
+          <p className="mt-4 border-l-4 border-black bg-gray-100 px-4 py-3 text-sm text-black">
+            {message}
+          </p>
         ) : null}
         {error ? (
-          <p className="mt-4 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+          <p className="mt-4 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </p>
         ) : null}
 
-        <div className="mt-5">
-          {filteredProducts.length === 0 ? (
-            <div className="border border-gray-200 bg-white py-24 text-center">
-              <h3 className="mb-2 text-lg font-semibold text-black">Không tìm thấy sản phẩm</h3>
-              <p className="text-sm text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm của bạn.</p>
-            </div>
-          ) : (
-            <div
-              className={
-                viewMode === "list"
-                  ? "grid grid-cols-1 gap-4"
-                  : "grid grid-cols-2 gap-[1px] bg-gray-200 md:grid-cols-3 xl:grid-cols-4"
-              }
-            >
-              {filteredProducts.map((product) => {
-                const colorGroups = getColorGroups(product);
-                const activeColorName = activeSwatchByProduct[product._id] || colorGroups[0]?.color;
-                const activeColorGroup =
-                  colorGroups.find((group) => group.color === activeColorName) || colorGroups[0];
-                const primaryImage =
-                  activeColorGroup?.previewImage || product.images?.[0] || "https://placehold.co/900x1200/F5F5F5/222?text=Fashion";
-                const secondaryImage =
-                  product.images?.[1] ||
-                  activeColorGroup?.variants?.find((item) => item.image && item.image !== primaryImage)?.image ||
-                  primaryImage;
+        {useNewAllProductsLayout && activeFilterChips.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => clearSingleChip(chip.key)}
+                className="inline-flex items-center gap-1 border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-black hover:border-black"
+              >
+                {chip.label}
+                <X size={12} />
+              </button>
+            ))}
+          </div>
+        ) : null}
 
-                const sizes = sortSizes([...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))]);
-                const quickAdd = quickAddByProduct[product._id];
-                const selectedSize = quickAdd?.size || sizes[0] || "";
-                const selectedVariant =
-                  (activeColorGroup?.variants || []).find((item) => item.size === selectedSize) ||
-                  activeColorGroup?.variants?.[0] ||
-                  null;
+        <div
+          className={`mt-6 ${useNewAllProductsLayout ? "grid gap-4 lg:grid-cols-[280px_1fr]" : ""}`}
+        >
+          {useNewAllProductsLayout ? (
+            <aside className="hidden lg:block border border-gray-200 bg-white p-4 h-fit sticky top-6">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-black">
+                  Danh mục
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => handleSelectCategory("")}
+                  className="text-xs text-gray-500 hover:text-black"
+                >
+                  Tất cả
+                </button>
+              </div>
 
-                return (
-                  <article
-                    key={product._id}
-                    className={`group bg-white ${viewMode === "list" ? "grid grid-cols-[220px_1fr] gap-4 border border-gray-200 p-3" : ""}`}
+              <div className="space-y-1">
+                {categoryLevel1.map((cat) => (
+                  <button
+                    key={cat._id}
+                    type="button"
+                    onClick={() => handleSelectCategory(cat._id)}
+                    className={`w-full text-left px-2 py-2 text-sm ${selectedLevel1Id === cat._id ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
                   >
-                    <div className="relative overflow-hidden bg-gray-100">
-                      <Link to={getProductPath(product, { color: activeColorName })} className="absolute inset-0 block">
-                        <img
-                          src={primaryImage}
-                          alt={product.name}
-                          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                        />
-                        <img
-                          src={secondaryImage}
-                          alt={product.name}
-                          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                        />
-                      </Link>
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
 
-                      <div className={`${viewMode === "list" ? "aspect-[4/5]" : "aspect-[4/5]"}`} />
+              {categoryLevel2.length > 0 && (
+                <div className="mt-4 border-t border-gray-100 pt-3 space-y-1">
+                  {categoryLevel2.map((cat) => (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat._id)}
+                      className={`w-full text-left px-2 py-1.5 text-sm ${selectedLevel2Id === cat._id ? "font-semibold text-black" : "text-gray-600 hover:text-black"}`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {categoryLevel3.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3 space-y-1">
+                  {categoryLevel3.map((cat) => (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat._id)}
+                      className={`w-full text-left px-2 py-1.5 text-sm ${selectedCategoryId === cat._id ? "font-semibold text-black" : "text-gray-600 hover:text-black"}`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </aside>
+          ) : null}
+
+          <div>
+            <div className="mb-3 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setShowMobileCategoryPanel((prev) => !prev)}
+                className="inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-black"
+              >
+                Danh mục
+                <ChevronDown size={16} />
+              </button>
+            </div>
+
+            {showMobileCategoryPanel && (
+              <div className="mb-4 border border-gray-200 bg-white p-3 lg:hidden">
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCategory("")}
+                    className="border border-gray-300 px-3 py-2 text-left text-sm"
+                  >
+                    Tất cả sản phẩm
+                  </button>
+                  {[
+                    ...categoryLevel1,
+                    ...categoryLevel2,
+                    ...categoryLevel3,
+                  ].map((cat) => (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat._id)}
+                      className={`px-3 py-2 text-left text-sm border ${selectedCategoryId === cat._id ? "border-black bg-black text-white" : "border-gray-300 bg-white"}`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filteredProducts.length === 0 ? (
+              <div className="border border-gray-200 bg-white py-24 text-center">
+                <h3 className="mb-2 text-lg font-semibold text-black">
+                  Không tìm thấy sản phẩm
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm của bạn.
+                </p>
+              </div>
+            ) : (
+              <div
+                className={
+                  viewMode === "list"
+                    ? "grid grid-cols-1 gap-4"
+                    : "grid grid-cols-2 gap-[1px] bg-gray-200 md:grid-cols-3 xl:grid-cols-4"
+                }
+              >
+                {filteredProducts.map((product) => {
+                  const colorGroups = getColorGroups(product);
+                  const activeColorName =
+                    activeSwatchByProduct[product._id] || colorGroups[0]?.color;
+                  const activeColorGroup =
+                    colorGroups.find(
+                      (group) => group.color === activeColorName,
+                    ) || colorGroups[0];
+                  const primaryImage =
+                    activeColorGroup?.previewImage ||
+                    product.images?.[0] ||
+                    "https://placehold.co/900x1200/F5F5F5/222?text=Fashion";
+                  const secondaryImage =
+                    product.images?.[1] ||
+                    activeColorGroup?.variants?.find(
+                      (item) => item.image && item.image !== primaryImage,
+                    )?.image ||
+                    primaryImage;
+
+                  const sizes = sortSizes([
+                    ...new Set(
+                      (activeColorGroup?.variants || [])
+                        .map((item) => item.size)
+                        .filter(Boolean),
+                    ),
+                  ]);
+                  const quickAdd = quickAddByProduct[product._id];
+                  const selectedSize = quickAdd?.size || sizes[0] || "";
+                  const selectedVariant =
+                    (activeColorGroup?.variants || []).find(
+                      (item) => item.size === selectedSize,
+                    ) ||
+                    activeColorGroup?.variants?.[0] ||
+                    null;
+
+                  return (
+                    <article
+                      key={product._id}
+                      className={`group bg-white ${viewMode === "list" ? "grid grid-cols-[220px_1fr] gap-4 border border-gray-200 p-3" : ""}`}
+                    >
+                      <div className="relative overflow-hidden bg-gray-100 border-t border-gray-200">
+                        <Link
+                          to={getProductPath(product, {
+                            color: activeColorName,
+                          })}
+                          className="absolute inset-0 block"
+                        >
+                          <img
+                            src={primaryImage}
+                            alt={product.name}
+                            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                          />
+                          <img
+                            src={secondaryImage}
+                            alt={product.name}
+                            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                          />
+                        </Link>
+
+                        <div
+                          className={`${viewMode === "list" ? "aspect-[4/5]" : "aspect-[4/5]"}`}
+                        />
+
+                        <div className="absolute inset-x-0 bottom-0 border-t border-gray-200 bg-white/95 px-3 py-2 backdrop-blur-[1px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              {productCollectionMap.get(product._id) ? (
+                                <p className="line-clamp-1 text-[12px] font-bold uppercase text-red-600">
+                                  {productCollectionMap.get(product._id)}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400"></p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQuickAddToggle(product._id, sizes[0])
+                              }
+                              className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold uppercase transition ${quickAdd ? "border-black bg-black text-white" : "border-gray-300 bg-white text-black hover:border-black"}`}
+                              aria-label="Thêm nhanh vào giỏ"
+                            >
+                              {quickAdd ? <X size={13} /> : <Plus size={13} />}
+                              {quickAdd ? "Đóng" : "Thêm"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {quickAdd ? (
+                          <div className="absolute bottom-14 right-2 z-10 w-44 border border-gray-200 bg-white p-3 shadow-xl">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500">
+                              Chọn size
+                            </p>
+                            <div className="mb-3 flex flex-wrap gap-2">
+                              {(sizes.length ? sizes : ["M"]).map((size) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  onClick={() =>
+                                    handleQuickAddSize(product._id, size)
+                                  }
+                                  className={`h-8 w-8 border text-xs font-medium transition ${
+                                    selectedSize === size
+                                      ? "border-black bg-black text-white"
+                                      : "border-gray-300 bg-white text-black hover:border-black"
+                                  }`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleAddToCart(product, selectedVariant)
+                              }
+                              className="w-full bg-black py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800"
+                            >
+                              Thêm giỏ hàng
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
 
                       <div
-                        className="absolute inset-x-0 bottom-0 h-[52px] border-t border-gray-200 bg-white/95 px-3 py-1"
-                        style={{
-                          backgroundImage:
-                            "repeating-linear-gradient(90deg, rgba(219,231,245,0.55) 0px, rgba(219,231,245,0.55) 2px, rgba(255,255,255,0.9) 2px, rgba(255,255,255,0.9) 4px)"
-                        }}
+                        className={`${viewMode === "list" ? "pt-2" : "px-3 py-3"} bg-white`}
                       >
-                        <div className="flex h-full items-center justify-center">
-                          <p className="text-[32px] md:text-[31px] lg:text-[30px]">{""}</p>
-                          <p className="max-w-[70%] text-[31px]">{""}</p>
-                          {productCollectionMap.get(product._id) && (
-                            <p className="text-[11px] font-semibold leading-4 text-red-600 text-right">
-                              {productCollectionMap.get(product._id)}
-                            </p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleQuickAddToggle(product._id, sizes[0])}
-                            className="grid h-8 w-8 place-items-center rounded-full border border-gray-300 bg-white text-black transition hover:border-black"
-                            aria-label="Thêm nhanh vào giỏ"
-                          >
-                            {quickAdd ? <X size={14} /> : <Plus size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {quickAdd ? (
-                        <div className="absolute bottom-14 right-2 z-10 w-44 border border-gray-200 bg-white p-3 shadow-xl">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500">Chọn size</p>
-                          <div className="mb-3 flex flex-wrap gap-2">
-                            {(sizes.length ? sizes : ["M"]).map((size) => (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => handleQuickAddSize(product._id, size)}
-                                className={`h-8 w-8 border text-xs font-medium transition ${selectedSize === size
-                                  ? "border-black bg-black text-white"
-                                  : "border-gray-300 bg-white text-black hover:border-black"
-                                  }`}
-                              >
-                                {size}
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleAddToCart(product, selectedVariant)}
-                            className="w-full bg-black py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800"
-                          >
-                            Thêm giỏ hàng
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className={`${viewMode === "list" ? "pt-2" : "px-3 py-3"} bg-white`}>
-
-                      <div className="mt-2 flex items-center gap-2">
-                        {colorGroups.slice(0, 6).map((group) => (
-                          <button
-                            key={`${product._id}-${group.color}`}
-                            type="button"
-                            title={group.color}
-                            onMouseEnter={() =>
-                              setActiveSwatchByProduct((current) => ({ ...current, [product._id]: group.color }))
-                            }
-                            onClick={() =>
-                              setActiveSwatchByProduct((current) => ({ ...current, [product._id]: group.color }))
-                            }
-                            className={`relative overflow-hidden w-8 h-10 border transition-all p-0 m-0 bg-white ${activeColorName === group.color
-                              ? "border-black"
-                              : "border-gray-200 opacity-70 hover:opacity-100"
+                        <div className="mt-2 flex items-center gap-2">
+                          {colorGroups.slice(0, 6).map((group) => (
+                            <button
+                              key={`${product._id}-${group.color}`}
+                              type="button"
+                              title={group.color}
+                              onMouseEnter={() =>
+                                setActiveSwatchByProduct((current) => ({
+                                  ...current,
+                                  [product._id]: group.color,
+                                }))
+                              }
+                              onClick={() =>
+                                setActiveSwatchByProduct((current) => ({
+                                  ...current,
+                                  [product._id]: group.color,
+                                }))
+                              }
+                              className={`relative overflow-hidden w-8 h-10 border transition-all p-0 m-0 bg-white ${
+                                activeColorName === group.color
+                                  ? "border-black"
+                                  : "border-gray-200 opacity-70 hover:opacity-100"
                               }`}
-                          >
-                            {group.previewImage ? (
-                              <img src={group.previewImage} alt={group.color} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[8px] font-bold uppercase tracking-widest text-center flex items-center justify-center h-full w-full leading-tight px-0.5">{group.color}</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
+                            >
+                              {group.previewImage ? (
+                                <img
+                                  src={group.previewImage}
+                                  alt={group.color}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-center flex items-center justify-center h-full w-full leading-tight px-0.5">
+                                  {group.color}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
 
-                      <div className="mt-3 flex items-center justify-between">
-                        <p className="text-[16px] font-semibold text-black">{formatPrice(product.price + (selectedVariant?.priceAdjustment || 0))}</p>
-                        <button
-                          type="button"
-                          onClick={() => handleWishlist(product)}
-                          className="text-xs font-medium text-gray-500 transition hover:text-red-600"
-                        >
-                          Yêu thích
-                        </button>
+                        <div className="mt-3 flex items-center justify-between">
+                          <p className="text-[16px] font-semibold text-black">
+                            {formatPrice(
+                              product.price +
+                                (selectedVariant?.priceAdjustment || 0),
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => toggleWishlist(product)}
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium transition ${wishlistProductIds.has(product._id) ? "text-red-600" : "text-gray-500 hover:text-red-600"}`}
+                          >
+                            <Heart
+                              size={13}
+                              className={
+                                wishlistProductIds.has(product._id)
+                                  ? "fill-red-600 text-red-600"
+                                  : "text-current"
+                              }
+                            />
+                            Yêu thích
+                          </button>
+                        </div>
+                        <h2 className="line-clamp-1 text-s text-black font-bold">
+                          <Link
+                            to={getProductPath(product, {
+                              color: activeColorName,
+                            })}
+                            className="hover:text-red-600"
+                          >
+                            {product.name}
+                          </Link>
+                        </h2>
                       </div>
-                      <h2 className="line-clamp-1 text-s text-black font-bold">
-                        <Link to={getProductPath(product, { color: activeColorName })} className="hover:text-red-600">
-                          {product.name}
-                        </Link>
-                      </h2>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </div>

@@ -10,7 +10,7 @@ const initialForm = {
   occasion: "casual",
   season: "all_season",
   style: "casual",
-  genderTarget: "unisex",
+  genderTarget: "",
   products: []
 };
 
@@ -82,7 +82,7 @@ export default function AdminOutfitsPage() {
       occasion: outfit.occasion || "casual",
       season: outfit.season || "all_season",
       style: outfit.style || "casual",
-      genderTarget: outfit.genderTarget || "unisex",
+      genderTarget: outfit.genderTarget || "",
       products: (outfit.products || []).map((item) => item._id || item)
     });
   };

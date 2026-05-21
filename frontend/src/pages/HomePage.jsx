@@ -141,23 +141,27 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [wishlistProductIds, setWishlistProductIds] = useState(new Set());
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [productResponse, variantResponse, bannerResponse, collectionResponse] =
+        const [productResponse, variantResponse, bannerResponse, collectionResponse, wishlistResponse] =
           await Promise.all([
             apiRequest("/products?limit=100"),
             apiRequest("/product-variants?limit=1200"),
             apiRequest("/banners/active"),
             apiRequest("/collections?limit=6&isActive=true"),
+            token ? apiRequest("/wishlists/me", { token }) : Promise.resolve({ data: { items: [] } }),
           ]);
 
         setProducts(productResponse.data);
         setVariants(variantResponse.data);
         setBanners(bannerResponse.data || []);
         setCollections(collectionResponse.data || []);
+        const wishlistIds = new Set((wishlistResponse.data?.items || []).map((item) => item.productId?._id).filter(Boolean));
+        setWishlistProductIds(wishlistIds);
         setError("");
       } catch (loadError) {
         setError(loadError.message);
@@ -167,7 +171,7 @@ export default function HomePage() {
     };
 
     loadData();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -224,17 +228,39 @@ export default function HomePage() {
       return;
     }
 
-    try {
-      await apiRequest("/wishlists/me", {
-        method: "POST",
-        token,
-        body: {
-          productId: product._id,
-          addedFrom,
-        },
-      });
+    const productId = product?._id;
+    if (!productId) return;
 
-      setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+    const isWishlisted = wishlistProductIds.has(productId);
+
+    try {
+      if (isWishlisted) {
+        await apiRequest(`/wishlists/me/product/${productId}`, {
+          method: "DELETE",
+          token,
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.delete(productId);
+          return next;
+        });
+        setMessage(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+      } else {
+        await apiRequest("/wishlists/me", {
+          method: "POST",
+          token,
+          body: {
+            productId,
+            addedFrom,
+          },
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.add(productId);
+          return next;
+        });
+        setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+      }
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -507,6 +533,7 @@ export default function HomePage() {
                   key={product._id}
                   product={product}
                   onAddToWishlist={(item) => handleWishlist(item, "home")}
+                  isWishlisted={wishlistProductIds.has(product._id)}
                   onAddToCart={handleAddToCart}
                 />
               ))}
@@ -578,6 +605,7 @@ export default function HomePage() {
                   key={product._id}
                   product={product}
                   onAddToWishlist={(item) => handleWishlist(item, "home")}
+                  isWishlisted={wishlistProductIds.has(product._id)}
                   onAddToCart={handleAddToCart}
                 />
               ))}
@@ -600,6 +628,7 @@ export default function HomePage() {
                   key={product._id}
                   product={product}
                   onAddToWishlist={(item) => handleWishlist(item, "home")}
+                  isWishlisted={wishlistProductIds.has(product._id)}
                   onAddToCart={handleAddToCart}
                 />
               ))}
