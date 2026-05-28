@@ -15,19 +15,12 @@ const behaviorSchema = new mongoose.Schema(
       default: null
     },
 
-    outfitId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Outfit",
-      default: null
-    },
-
     actionType: {
       type: String,
       required: true,
       trim: true,
       enum: [
         "view_product",
-        "view_outfit",
         "search",
         "click",
         "favorite",
@@ -50,7 +43,6 @@ const behaviorSchema = new mongoose.Schema(
         "wishlist",
         "cart",
         "product_page",
-        "outfit",
         "other"
       ],
       default: "other"
@@ -84,6 +76,16 @@ const behaviorSchema = new mongoose.Schema(
         trim: true,
         default: ""
       },
+      gender: {
+        type: String,
+        trim: true,
+        default: ""
+      },
+      occasion: {
+        type: String,
+        trim: true,
+        default: ""
+      },
       position: {
         type: Number,
         min: 0,
@@ -109,6 +111,5 @@ const behaviorSchema = new mongoose.Schema(
 behaviorSchema.index({ userId: 1, createdAt: -1 });
 behaviorSchema.index({ userId: 1, actionType: 1, createdAt: -1 });
 behaviorSchema.index({ productId: 1, actionType: 1 });
-behaviorSchema.index({ outfitId: 1, actionType: 1 });
 
 export default mongoose.model("UserBehavior", behaviorSchema);

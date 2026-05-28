@@ -17,6 +17,7 @@ import BestSellersSection from "../components/BestSellersSection.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
+import { trackBehavior } from "../lib/tracking.js";
 
 const categoryCards = [
   {
@@ -272,6 +273,13 @@ export default function HomePage() {
           return next;
         });
         setMessage(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+        
+        // Track remove_from_wishlist behavior
+        trackBehavior(token, {
+          actionType: "remove_from_wishlist",
+          productId,
+          source: addedFrom
+        });
       } else {
         await apiRequest("/wishlists/me", {
           method: "POST",
@@ -287,6 +295,18 @@ export default function HomePage() {
           return next;
         });
         setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+        
+        // Track favorite behavior
+        const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        trackBehavior(token, {
+          actionType: "favorite",
+          productId,
+          source: addedFrom,
+          metadata: {
+            categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+            style: styleToTrack || ""
+          }
+        });
       }
     } catch (requestError) {
       setError(requestError.message);

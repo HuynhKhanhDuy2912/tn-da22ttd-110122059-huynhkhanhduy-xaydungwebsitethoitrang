@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
+import { trackBehavior } from "../lib/tracking.js";
 import { ChevronLeft, ChevronsRight, ChevronRight, Star, ZoomIn, ZoomOut, Plus, Ruler, ArrowLeft, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -85,6 +86,20 @@ export default function ProductDetailPage() {
           apiRequest(`/size-guides/by-category/${catId}`)
             .then(res => setSizeGuide(res.data))
             .catch(() => setSizeGuide(null));
+        }
+
+        // Track view_product behavior
+        if (token) {
+          const styleToTrack = Array.isArray(currentProduct.style) ? currentProduct.style[0] : currentProduct.style;
+          trackBehavior(token, {
+            actionType: "view_product",
+            productId: currentProduct._id,
+            source: "product_page",
+            metadata: {
+              categoryId: typeof currentProduct.categoryId === "object" ? currentProduct.categoryId?._id : currentProduct.categoryId,
+              style: styleToTrack || ""
+            }
+          });
         }
 
         setProduct(currentProduct);
@@ -278,6 +293,13 @@ export default function ProductDetailPage() {
           return next;
         });
         toast.success(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+        
+        // Track remove_from_wishlist behavior
+        trackBehavior(token, {
+          actionType: "remove_from_wishlist",
+          productId,
+          source: addedFrom
+        });
       } else {
         await apiRequest("/wishlists/me", {
           method: "POST",
@@ -293,6 +315,18 @@ export default function ProductDetailPage() {
           return next;
         });
         toast.success(`Đã thêm ${product.name} vào danh sách yêu thích`);
+        
+        // Track favorite behavior
+        const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        trackBehavior(token, {
+          actionType: "favorite",
+          productId,
+          source: addedFrom,
+          metadata: {
+            categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+            style: styleToTrack || ""
+          }
+        });
       }
     } catch (requestError) {
       toast.error(requestError.message);

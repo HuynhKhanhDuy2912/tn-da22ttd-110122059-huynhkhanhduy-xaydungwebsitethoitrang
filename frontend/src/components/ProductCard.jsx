@@ -213,9 +213,26 @@ export default function ProductCard({
             </button>
           ))}
         </div>
-        
+
         <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="m-0 text-[16px] font-semibold text-black">{formatPrice(price)}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <p className="m-0 text-[16px] font-semibold text-black">
+              {formatPrice(price)}
+            </p>
+            {effectiveDiscount > 0 && (
+              <>
+                <p className="m-0 text-[16px] font-normal text-gray-400 line-through decoration-gray-400 decoration-[1px]">
+                  {formatPrice(priceBeforeDiscount)}
+                </p>
+                <span
+                  className="inline-flex items-center bg-red-600 py-0.5 pr-1.5 pl-2 text-[12px] font-bold text-white leading-none"
+                  style={{ clipPath: "polygon(18% 0%, 100% 0%, 100% 100%, 6px 100%, 0% 50%)" }}
+                >
+                  -{effectiveDiscount}%
+                </span>
+              </>
+            )}
+          </div>
           {onAddToWishlist ? (
             <button
               type="button"

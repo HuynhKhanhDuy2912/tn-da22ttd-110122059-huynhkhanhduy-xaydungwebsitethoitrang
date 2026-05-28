@@ -169,7 +169,6 @@ export class UserProfileBuilder {
   constructor() {
     this.actionWeights = {
       view_product: 1,
-      view_outfit: 1,
       search: 0.5,
       click: 1.5,
       favorite: 3,

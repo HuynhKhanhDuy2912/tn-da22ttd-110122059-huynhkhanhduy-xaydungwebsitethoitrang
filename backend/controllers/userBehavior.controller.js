@@ -6,7 +6,6 @@ const baseUserBehaviorController = createCrudControllers(UserBehavior, {
   populate: [
     { path: "userId", select: "username email" },
     { path: "productId", select: "name price" },
-    { path: "outfitId", select: "name style occasion" },
     { path: "metadata.categoryId", select: "name" }
   ]
 });
@@ -21,7 +20,6 @@ export const trackBehavior = async (req, res) => {
     const populatedBehavior = await UserBehavior.findById(behavior._id)
       .populate("userId", "username email")
       .populate("productId", "name price style")
-      .populate("outfitId", "name style occasion")
       .populate("metadata.categoryId", "name");
 
     return res.status(201).json({

@@ -30,7 +30,7 @@ function sortByCreatedAt(items) {
   );
 }
 
-function chunkArray(items, perColumn = 6) {
+function chunkArray(items, perColumn = 5) {
   const result = [];
   for (let i = 0; i < items.length; i += perColumn) {
     result.push(items.slice(i, i + perColumn));
@@ -212,7 +212,7 @@ export default function Layout() {
       });
     }
 
-    return chunkArray(flattened, 6);
+    return chunkArray(flattened, 5);
   }, [activeMegaRoot, categories]);
 
   const startCloseTimer = () => {

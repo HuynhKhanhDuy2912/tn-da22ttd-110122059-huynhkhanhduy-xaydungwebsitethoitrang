@@ -20,6 +20,7 @@ import {
 } from "../lib/catalog.js";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
+import { trackBehavior } from "../lib/tracking.js";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
@@ -260,6 +261,13 @@ export default function ProductsPage() {
           return next;
         });
         setMessage(`Đã bỏ ${product.name} khỏi danh sách yêu thích`);
+        
+        // Track remove_from_wishlist behavior
+        trackBehavior(token, {
+          actionType: "remove_from_wishlist",
+          productId: product._id,
+          source: "category"
+        });
       } else {
         await apiRequest("/wishlists/me", {
           method: "POST",
@@ -271,6 +279,18 @@ export default function ProductsPage() {
         });
         setWishlistProductIds((current) => new Set([...current, product._id]));
         setMessage(`Đã thêm ${product.name} vào danh sách yêu thích`);
+        
+        // Track favorite behavior
+        const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        trackBehavior(token, {
+          actionType: "favorite",
+          productId: product._id,
+          source: "category",
+          metadata: {
+            categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+            style: styleToTrack || ""
+          }
+        });
       }
     } catch (requestError) {
       setError(requestError.message);
@@ -289,6 +309,44 @@ export default function ProductsPage() {
       setSortBy("newest");
     }
   }, [searchParams]);
+
+  // Track search behavior with debounce
+  useEffect(() => {
+    if (!token) return;
+
+    // Only track if at least one filter is active
+    const hasSearch = filters.search.trim().length > 0;
+    const hasFilters = filters.style || filters.gender || filters.occasion || selectedCategoryId;
+    
+    if (!hasSearch && !hasFilters) return;
+
+    const timer = setTimeout(() => {
+      // Build a descriptive keyword for DB logging if user is just filtering
+      let keyword = filters.search.trim();
+      if (!keyword && hasFilters) {
+        const filterParts = [];
+        if (selectedCategoryId) filterParts.push(`Category`);
+        if (filters.style) filterParts.push(`Style: ${getStyleLabel(filters.style)}`);
+        if (filters.gender) filterParts.push(`Gender: ${filters.gender}`);
+        if (filters.occasion) filterParts.push(`Occasion: ${getOccasionLabel(filters.occasion)}`);
+        keyword = `[Bộ lọc] ${filterParts.join(" | ")}`;
+      }
+
+      trackBehavior(token, {
+        actionType: "search",
+        source: "category",
+        searchKeyword: keyword,
+        metadata: {
+          categoryId: selectedCategoryId || null,
+          style: filters.style || "",
+          gender: filters.gender || "",
+          occasion: filters.occasion || ""
+        }
+      });
+    }, 1500); // 1.5s debounce
+
+    return () => clearTimeout(timer);
+  }, [filters, selectedCategoryId, token]);
 
   const productsWithVariants = useMemo(
     () => attachVariantsToProducts(products, variants),
@@ -435,6 +493,19 @@ export default function ProductsPage() {
     return map[occasion] || occasion;
   }
 
+  function getStyleLabel(style) {
+    const map = {
+      casual: "Thường ngày (Casual)",
+      minimal: "Tối giản (Minimal)",
+      streetwear: "Đường phố (Streetwear)",
+      elegant: "Thanh lịch (Elegant)",
+      sporty: "Thể thao (Sporty)",
+      vintage: "Cổ điển (Vintage)",
+      smart_casual: "Công sở năng động (Smart Casual)",
+    };
+    return map[style] || style;
+  }
+
   const clearFiltersKeepCategory = () => {
     setFilters({ search: "", style: "", gender: "", occasion: "", soldOnly: isBestSellerContext });
     setSortBy("newest");
@@ -448,7 +519,7 @@ export default function ProductsPage() {
       ? { key: "search", label: `Từ khóa: ${filters.search}` }
       : null,
     filters.style
-      ? { key: "style", label: `Phong cách: ${filters.style}` }
+      ? { key: "style", label: `Phong cách: ${getStyleLabel(filters.style)}` }
       : null,
     filters.gender
       ? {
@@ -736,7 +807,7 @@ export default function ProductsPage() {
                 <option value="">Tất cả</option>
                 {filterOptions.styles.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {getStyleLabel(item)}
                   </option>
                 ))}
               </select>

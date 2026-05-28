@@ -9,7 +9,14 @@ export function attachVariantsToProducts(products, variants) {
 }
 
 export function buildCatalogFilters(productsWithVariants) {
-  const styles = [...new Set(productsWithVariants.map((item) => item.style).filter(Boolean))];
+  const styles = [
+    ...new Set(
+      productsWithVariants.flatMap((item) => {
+        if (!item.style) return [];
+        return Array.isArray(item.style) ? item.style : [item.style];
+      }).filter(Boolean)
+    )
+  ];
   const genders = [...new Set(productsWithVariants.map((item) => item.gender).filter(Boolean))];
   const occasions = [
     ...new Set(productsWithVariants.flatMap((item) => item.occasion || []).filter(Boolean))
@@ -29,7 +36,11 @@ export function filterProducts(products, filters) {
       product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
       product.description?.toLowerCase().includes(filters.search.toLowerCase());
 
-    const matchesStyle = !filters.style || product.style === filters.style;
+    const matchesStyle = !filters.style || (
+      Array.isArray(product.style)
+        ? product.style.includes(filters.style)
+        : product.style === filters.style
+    );
     const matchesGender = !filters.gender || product.gender === filters.gender;
     const matchesOccasion =
       !filters.occasion || (product.occasion || []).includes(filters.occasion);
