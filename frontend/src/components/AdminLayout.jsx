@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { NotificationProvider } from "../context/NotificationContext.jsx";
+import AdminContactInboxButton from "./AdminContactInboxButton.jsx";
 import AdminNotificationBell from "./AdminNotificationBell.jsx";
 
 const SIDEBAR_EXPANDED = 260;
@@ -57,6 +58,7 @@ const adminNavItems = [
   { to: "/admin/orders", label: "Đơn hàng", icon: ShoppingCart },
   { to: "/admin/users", label: "Người dùng", icon: Users },
   { to: "/admin/reviews", label: "Đánh giá", icon: MessageSquare },
+  { to: "/admin/contact-messages", label: "Liên hệ", icon: Mail },
   { to: "/admin/banners", label: "Banner", icon: Image },
   { to: "/admin/size-guides", label: "Bảng size", icon: Ruler },
 ];
@@ -84,7 +86,8 @@ function NavItemContent({ icon: Icon, label, collapsed, chevron }) {
 }
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth();
+  const auth = useAuth() || {};
+  const { user, logout = () => {} } = auth;
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -306,15 +309,7 @@ export default function AdminLayout() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="relative grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-black hover:text-black"
-                aria-label="Tin nhắn"
-                title="Tin nhắn"
-              >
-                <Mail className="h-4 w-4" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-              </button>
+              <AdminContactInboxButton />
 
               <AdminNotificationBell />
 

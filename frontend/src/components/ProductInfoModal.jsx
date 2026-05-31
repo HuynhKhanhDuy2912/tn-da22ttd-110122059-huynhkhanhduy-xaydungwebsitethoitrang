@@ -1,5 +1,23 @@
 import { X } from "lucide-react";
 
+function formatStyleName(style) {
+  const normalizedStyle = String(style || "").trim().replace(/_/g, " ");
+
+  if (!normalizedStyle) return "";
+
+  return normalizedStyle.charAt(0).toUpperCase() + normalizedStyle.slice(1);
+}
+
+function formatProductStyles(style) {
+  const styles = Array.isArray(style)
+    ? style
+    : String(style || "")
+        .split(",")
+        .map((item) => item.trim());
+
+  return styles.filter(Boolean).map(formatStyleName).join(", ");
+}
+
 export default function ProductInfoModal({ open, onClose, product }) {
   if (!open || !product) return null;
 
@@ -39,7 +57,7 @@ export default function ProductInfoModal({ open, onClose, product }) {
 
           <p>
             <span className="text-black">Phong cách:</span>{" "}
-            <span className="capitalize">{product.style}</span>
+            <span>{formatProductStyles(product.style)}</span>
           </p>
 
           <p>

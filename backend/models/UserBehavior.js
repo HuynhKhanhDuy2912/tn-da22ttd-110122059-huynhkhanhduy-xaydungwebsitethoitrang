@@ -71,11 +71,6 @@ const behaviorSchema = new mongoose.Schema(
         trim: true,
         default: ""
       },
-      color: {
-        type: String,
-        trim: true,
-        default: ""
-      },
       gender: {
         type: String,
         trim: true,
@@ -85,24 +80,7 @@ const behaviorSchema = new mongoose.Schema(
         type: String,
         trim: true,
         default: ""
-      },
-      position: {
-        type: Number,
-        min: 0,
-        default: null
-      },
-      deviceType: {
-        type: String,
-        trim: true,
-        enum: ["desktop", "mobile", "tablet", ""],
-        default: ""
       }
-    },
-
-    sessionId: {
-      type: String,
-      trim: true,
-      default: ""
     }
   },
   { timestamps: true }

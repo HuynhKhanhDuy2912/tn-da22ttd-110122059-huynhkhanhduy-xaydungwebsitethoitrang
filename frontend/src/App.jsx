@@ -21,6 +21,7 @@ import AdminReviewsPage from "./pages/admin/AdminReviewsPage.jsx";
 import AdminSizeGuidesPage from "./pages/admin/AdminSizeGuidesPage.jsx";
 import AdminInventoryPage from "./pages/admin/AdminInventoryPage.jsx";
 import AdminInventoryHistoryPage from "./pages/admin/AdminInventoryHistoryPage.jsx";
+import AdminContactMessagesPage from "./pages/admin/AdminContactMessagesPage.jsx";
 
 import CartPage from "./pages/CartPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
@@ -32,6 +33,7 @@ import RecommendationsPage from "./pages/RecommendationsPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import CollectionsPage from "./pages/CollectionsPage.jsx";
 import CollectionDetailPage from "./pages/CollectionDetailPage.jsx";
+import ContactPage from "./pages/ContactPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage.jsx";
 import PaymentFailedPage from "./pages/PaymentFailedPage.jsx";
@@ -51,6 +53,7 @@ export default function App() {
           <Route path="/products/:productId" element={<ProductDetailPage />} />
           <Route path="/collections" element={<CollectionsPage />} />
           <Route path="/collections/:collectionId" element={<CollectionDetailPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/recommendations"
             element={
@@ -113,6 +116,8 @@ export default function App() {
             <Route path="orders/:orderId" element={<AdminOrderDetailPage />} />
             <Route path="banners" element={<AdminBannersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="contact-messages" element={<AdminContactMessagesPage />} />
+            <Route path="contact-messages/:requestId" element={<AdminContactMessagesPage />} />
             <Route path="size-guides" element={<AdminSizeGuidesPage />} />
           </Route>
           </Route>

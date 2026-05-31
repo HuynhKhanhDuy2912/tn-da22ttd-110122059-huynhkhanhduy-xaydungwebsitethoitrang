@@ -20,3 +20,9 @@
     scrollbar-width: none;
   }
 }
+
+@layer components {
+  .contact-input {
+    @apply w-full border border-[#E4DED6] bg-[#FAF8F5] px-4 py-3 text-sm text-[#171717] outline-none transition placeholder:text-[#9A9087] focus:border-[#C58B45] focus:bg-white;
+  }
+}

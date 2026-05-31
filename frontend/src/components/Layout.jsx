@@ -538,9 +538,9 @@ export default function Layout() {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black">
+                  <NavLink to="/contact" className="hover:text-black">
                     Liên hệ
-                  </a>
+                  </NavLink>
                 </li>
               </ul>
             </div>

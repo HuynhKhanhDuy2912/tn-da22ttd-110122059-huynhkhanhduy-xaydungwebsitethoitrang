@@ -63,12 +63,6 @@ const searchSchema = new mongoose.Schema(
       type: Number,
       min: 0,
       default: 0
-    },
-
-    sessionId: {
-      type: String,
-      trim: true,
-      default: ""
     }
   },
   { timestamps: true }
