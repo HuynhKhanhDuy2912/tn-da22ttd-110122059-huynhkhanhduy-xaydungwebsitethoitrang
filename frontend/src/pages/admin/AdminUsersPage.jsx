@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   Filter,
@@ -89,9 +90,11 @@ function InitialAvatar({ user, className = "" }) {
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(globalSearch);
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -115,6 +118,11 @@ export default function AdminUsersPage() {
   useEffect(() => {
     loadUsers();
   }, [token]);
+
+  useEffect(() => {
+    setSearchTerm(globalSearch);
+    setPage(1);
+  }, [globalSearch]);
 
   // Stats
   const stats = useMemo(

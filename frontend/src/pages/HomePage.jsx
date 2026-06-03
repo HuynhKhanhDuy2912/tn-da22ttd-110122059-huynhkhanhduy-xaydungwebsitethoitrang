@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowLeft,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   Headphones,
@@ -162,6 +163,7 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [wishlistProductIds, setWishlistProductIds] = useState(new Set());
   const [newArrivalsPage, setNewArrivalsPage] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -212,6 +214,16 @@ export default function HomePage() {
     }, 4000);
     return () => clearTimeout(timer);
   }, [message, error]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 700);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const productsWithVariants = useMemo(
     () => attachVariantsToProducts(products, variants),
@@ -403,6 +415,18 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       <CouponPopup />
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className={`fixed bottom-6 right-4 z-40 grid h-12 w-12 place-items-center rounded-full border border-gray-200 bg-white text-black shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-black md:bottom-8 md:right-8 ${
+          showBackToTop
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-4 opacity-0"
+        }`}
+        aria-label="Trở về đầu trang"
+      >
+        <ArrowUp className="h-5 w-5" strokeWidth={2} />
+      </button>
       <Toast
         message={message}
         error={error}
@@ -575,7 +599,7 @@ export default function HomePage() {
             <Link
               key={item.title}
               to={item.link}
-              className="group relative flex min-h-[400px] flex-col justify-end overflow-hidden rounded-none md:min-h-[500px]"
+              className="group relative flex min-h-[300px] flex-col justify-end overflow-hidden rounded-none md:min-h-[400px]"
             >
               <img
                 src={item.image}

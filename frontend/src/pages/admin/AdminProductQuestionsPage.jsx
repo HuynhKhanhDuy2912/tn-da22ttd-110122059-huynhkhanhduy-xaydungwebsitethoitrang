@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { getProductPath } from "../../lib/slug.js";
 import { formatProductName } from "../../lib/productName.js";
@@ -38,12 +38,14 @@ function formatDate(d) {
 
 export default function AdminProductQuestionsPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [questions, setQuestions] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState(globalSearch);
+  const [searchInput, setSearchInput] = useState(globalSearch);
 
   // Answer state
   const [answeringId, setAnsweringId] = useState(null);
@@ -74,6 +76,11 @@ export default function AdminProductQuestionsPage() {
   useEffect(() => {
     loadQuestions(1);
   }, [loadQuestions]);
+
+  useEffect(() => {
+    setSearch(globalSearch);
+    setSearchInput(globalSearch);
+  }, [globalSearch]);
 
   const handleSearch = (e) => {
     e.preventDefault();

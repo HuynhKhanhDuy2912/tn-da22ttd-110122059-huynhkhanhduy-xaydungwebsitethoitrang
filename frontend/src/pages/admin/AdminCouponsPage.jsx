@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Loader2, Plus, Search, Tag, Trash2, ToggleLeft, ToggleRight, Pencil, Truck, BadgePercent } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
@@ -51,9 +52,11 @@ const EMPTY_FORM = {
 
 export default function AdminCouponsPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(globalSearch);
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
@@ -66,6 +69,10 @@ export default function AdminCouponsPage() {
   useEffect(() => {
     loadCoupons();
   }, [filterType, filterStatus]);
+
+  useEffect(() => {
+    setSearchTerm(globalSearch);
+  }, [globalSearch]);
 
   const loadCoupons = async () => {
     setLoading(true);

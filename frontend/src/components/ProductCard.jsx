@@ -49,7 +49,7 @@ export default function ProductCard({
   product,
   onAddToWishlist,
   onAddToCart,
-  actionLabel = "THÊM GIỎ",
+  actionLabel = "THÊM VÀO GIỎ",
   isWishlisted = false
 }) {
   const colorGroups = useMemo(() => getColorGroups(product), [product]);

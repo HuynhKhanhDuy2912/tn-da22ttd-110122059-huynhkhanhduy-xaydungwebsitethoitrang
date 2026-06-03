@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -67,12 +67,14 @@ export default function AdminContactMessagesPage() {
   const { requestId } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(globalSearch);
   const [replyForm, setReplyForm] = useState({
     subject: "",
     message: "",
@@ -127,7 +129,11 @@ export default function AdminContactMessagesPage() {
 
   useEffect(() => {
     loadMessages();
-  }, [token, statusFilter]);
+  }, [token, statusFilter, search]);
+
+  useEffect(() => {
+    setSearch(globalSearch);
+  }, [globalSearch]);
 
   useEffect(() => {
     loadMessageDetail(requestId);

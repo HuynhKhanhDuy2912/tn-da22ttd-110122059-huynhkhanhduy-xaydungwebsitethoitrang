@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -93,6 +94,8 @@ function filterTree(nodes, query, levelFilter, imageFilter) {
 
 export default function AdminCategoriesPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
 
   const [categories, setCategories] = useState([]);
   const [rootForm, setRootForm] = useState(initialRootForm);
@@ -101,7 +104,7 @@ export default function AdminCategoriesPage() {
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState(initialEditForm);
   const [activeForm, setActiveForm] = useState("root");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(globalSearch);
   const [levelFilter, setLevelFilter] = useState("all");
   const [imageFilter, setImageFilter] = useState("all");
   const [expandedNodes, setExpandedNodes] = useState(new Set());
@@ -124,6 +127,10 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     loadCategories();
   }, [token]);
+
+  useEffect(() => {
+    setSearch(globalSearch);
+  }, [globalSearch]);
 
   const categoryTree = useMemo(
     () => buildCategoryTree(categories),

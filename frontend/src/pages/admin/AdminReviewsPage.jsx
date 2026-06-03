@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
@@ -15,10 +16,12 @@ import toast from "react-hot-toast";
 
 export default function AdminReviewsPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
 
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(globalSearch);
   const [statusFilter, setStatusFilter] = useState("all");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [expandedReviewId, setExpandedReviewId] = useState(null);
@@ -64,7 +67,12 @@ export default function AdminReviewsPage() {
 
   useEffect(() => {
     loadReviews();
-  }, [token, page, statusFilter, ratingFilter]);
+  }, [token, page, statusFilter, ratingFilter, searchTerm]);
+
+  useEffect(() => {
+    setSearchTerm(globalSearch);
+    setPage(1);
+  }, [globalSearch]);
 
   const handleSearch = (e) => {
     e.preventDefault();

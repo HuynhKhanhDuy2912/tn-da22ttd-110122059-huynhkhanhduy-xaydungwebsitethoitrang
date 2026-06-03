@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Calendar,
   CheckCircle2,
@@ -95,13 +95,15 @@ const formatCurrency = (value) => `${(value || 0).toLocaleString("vi-VN")} ₫`;
 
 export default function AdminOrdersPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(globalSearch);
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -128,6 +130,10 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     loadOrders();
   }, [token]);
+
+  useEffect(() => {
+    setSearchTerm(globalSearch);
+  }, [globalSearch]);
 
   const stats = useMemo(() => {
     const total = orders.length;

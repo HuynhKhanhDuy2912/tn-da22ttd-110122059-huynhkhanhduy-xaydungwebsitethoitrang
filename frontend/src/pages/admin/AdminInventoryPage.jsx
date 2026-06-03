@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest } from "../../lib/api";
 import toast from "react-hot-toast";
@@ -20,12 +21,14 @@ import {
 
 export default function AdminInventoryPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [inventory, setInventory] = useState([]);
   const [stats, setStats] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(globalSearch);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [stockFilter, setStockFilter] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
@@ -53,6 +56,10 @@ export default function AdminInventoryPage() {
     loadData();
     loadCategories();
   }, [token]);
+
+  useEffect(() => {
+    setSearch(globalSearch);
+  }, [globalSearch]);
 
   const loadData = async () => {
     try {

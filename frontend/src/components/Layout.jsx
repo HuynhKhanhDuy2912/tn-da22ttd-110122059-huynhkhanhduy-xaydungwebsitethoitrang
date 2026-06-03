@@ -4,12 +4,19 @@ import {
   Home,
   History,
   IdCard,
-  Image as ImageIcon,
   LogOut,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  RotateCcw,
   Search,
+  Send,
+  ShieldCheck,
   ShoppingCart,
   Shirt,
   Store,
+  Truck,
   User,
   X,
 } from "lucide-react";
@@ -44,6 +51,84 @@ const highlightItems = [
   { key: "easy-buy", label: "Easy Buy", type: "star" },
   { key: "sale", label: "Ưu đãi", type: "sale" },
   { key: "best-seller", label: "Bán Chạy", type: "hot" },
+];
+
+const footerShopLinks = [
+  { label: "Tất cả sản phẩm", to: "/products" },
+  { label: "Hàng mới về", to: "/products?newArrivals=1" },
+  { label: "Bán chạy", to: "/products?bestSeller=1" },
+  { label: "Ưu đãi", to: "/products?sale=1" },
+  { label: "Bộ sưu tập", to: "/collections" },
+];
+
+const footerSupportLinks = [
+  { label: "Tài khoản của tôi", to: "/profile" },
+  { label: "Theo dõi đơn hàng", to: "/profile?tab=orders" },
+  { label: "Gợi ý cho bạn", to: "/recommendations" },
+  { label: "Ưu đãi của tôi", to: "/profile?tab=coupons" },
+  { label: "Liên hệ hỗ trợ", to: "/contact" },
+];
+
+const footerPolicyLinks = [
+  "Chính sách đổi trả",
+  "Chính sách vận chuyển",
+  "Bảo mật thông tin",
+  "Điều khoản mua hàng",
+];
+
+const footerServiceItems = [
+  {
+    icon: Truck,
+    title: "Giao hàng toàn quốc",
+    copy: "Miễn phí từ 999.000đ",
+  },
+  {
+    icon: RotateCcw,
+    title: "Đổi trả 30 ngày",
+    copy: "Linh hoạt, rõ ràng",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Thanh toán an toàn",
+    copy: "MoMo, VNPay, PayPal",
+  },
+  {
+    icon: MessageCircle,
+    title: "Tư vấn nhanh",
+    copy: "Hỗ trợ chọn size",
+  },
+];
+
+function InstagramLogo({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="17.5" cy="6.5" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TikTokLogo({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16.7 3c.28 2.38 1.62 3.8 3.95 3.95v3.08a7.5 7.5 0 0 1-3.88-.95v5.79c0 7.36-8.02 9.65-11.25 4.38-2.08-3.39-.8-9.35 5.87-9.59v3.25c-.49.08-1.02.21-1.5.38-1.45.49-2.27 1.41-2.04 3.04.44 3.12 6.16 4.05 5.68-2.06V3h3.17Z" />
+    </svg>
+  );
+}
+
+function FacebookLogo({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06C2 17.08 5.66 21.25 10.44 22v-7.03H7.9v-2.91h2.54V9.84c0-2.52 1.5-3.91 3.77-3.91 1.1 0 2.24.2 2.24.2V8.6h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.78l-.44 2.91h-2.34V22C18.34 21.25 22 17.08 22 12.06Z" />
+    </svg>
+  );
+}
+
+const footerSocials = [
+  { label: "Instagram", icon: InstagramLogo, href: "https://instagram.com" },
+  { label: "TikTok", icon: TikTokLogo, href: "https://tiktok.com" },
+  { label: "Facebook", icon: FacebookLogo, href: "https://facebook.com" },
 ];
 
 function HighlightIcon({ type }) {
@@ -512,89 +597,156 @@ export default function Layout() {
       </main>
 
       {!isAdminView ? (
-        <footer className="mt-16 border-t border-gray-100 bg-white py-12">
-          <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 px-4 md:grid-cols-4 lg:px-8">
+        <footer className="mt-20 border-t border-gray-200 bg-[#101010] text-white">
+          <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-10 px-4 py-6 md:grid-cols-[1.28fr_0.8fr_0.8fr_0.8fr_1.35fr] lg:px-8 lg:py-10">
             <div>
-              <h3 className="mb-4 text-lg font-extrabold uppercase tracking-[0.1em]">
-                FashionStore
-              </h3>
-              <p className="mb-4 text-sm leading-relaxed text-gray-500">
-                Thương hiệu thời trang nam nữ mang phong cách tối giản, hiện đại
-                và trẻ trung.
+              <NavLink to="/" className="inline-flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center bg-white text-2xl font-extrabold text-black">
+                  FS
+                </span>
+                <span className="text-xl font-extrabold tracking-tight">
+                  FashionStore
+                </span>
+              </NavLink>
+              <p className="mt-5 max-w-sm text-sm leading-6 text-white/60">
+                Thời trang nam nữ hiện đại với trải nghiệm mua sắm nhanh, gọn
+                và đáng tin cậy cho từng phong cách hằng ngày.
               </p>
+
+              <div className="mt-6 space-y-3 text-sm text-white/70">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white" />
+                  <span>123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh</span>
+                </div>
+                <a
+                  href="tel:0901234567"
+                  className="flex items-center gap-3 transition hover:text-white"
+                >
+                  <Phone className="h-4 w-4 shrink-0 text-white" />
+                  <span>0901 234 567</span>
+                </a>
+                <a
+                  href="mailto:support@fashionstore.vn"
+                  className="flex items-center gap-3 transition hover:text-white"
+                >
+                  <Mail className="h-4 w-4 shrink-0 text-white" />
+                  <span>support@fashionstore.vn</span>
+                </a>
+              </div>
             </div>
+
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
-                Về chúng tôi
+              <h4 className="mb-5 text-xs font-bold uppercase text-white">
+                Mua sắm
               </h4>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li>
-                  <a href="#" className="hover:text-black">
-                    Câu chuyện thương hiệu
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-black">
-                    Tuyển dụng
-                  </a>
-                </li>
-                <li>
-                  <NavLink to="/contact" className="hover:text-black">
-                    Liên hệ
-                  </NavLink>
-                </li>
+              <ul className="space-y-3 text-sm text-white/60">
+                {footerShopLinks.map((link) => (
+                  <li key={link.to}>
+                    <NavLink to={link.to} className="transition hover:text-white">
+                      {link.label}
+                    </NavLink>
+                  </li>
+                ))}
+                {rootCategories.slice(0, 3).map((category) => (
+                  <li key={category._id}>
+                    <NavLink
+                      to={`/products?categoryId=${category._id}`}
+                      className="transition hover:text-white"
+                    >
+                    </NavLink>
+                  </li>
+                ))}
               </ul>
             </div>
+
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
+              <h4 className="mb-5 text-xs font-bold uppercase text-white">
+                Hỗ trợ
+              </h4>
+              <ul className="space-y-3 text-sm text-white/60">
+                {footerSupportLinks.map((link) => (
+                  <li key={link.to}>
+                    <NavLink to={link.to} className="transition hover:text-white">
+                      {link.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-5 text-xs font-bold uppercase text-white">
                 Chính sách
               </h4>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li>
-                  <a href="#" className="hover:text-black">
-                    Chính sách đổi trả
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-black">
-                    Chính sách bảo mật
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-black">
-                    Hướng dẫn mua hàng
-                  </a>
-                </li>
+              <ul className="space-y-3 text-sm text-white/60">
+                {footerPolicyLinks.map((label) => (
+                  <li key={label}>
+                    <NavLink to="/contact" className="transition hover:text-white">
+                      {label}
+                    </NavLink>
+                  </li>
+                ))}
               </ul>
             </div>
+
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-widest">
+              <h4 className="mb-5 text-xs font-bold uppercase text-white">
                 Đăng ký nhận tin
               </h4>
-              <div className="flex border-b border-black pb-2">
+              <p className="text-sm leading-6 text-white/60">
+                Nhận thông tin bộ sưu tập mới, ưu đãi riêng và gợi ý phối đồ
+                từ FashionStore.
+              </p>
+              <form
+                className="mt-5 flex overflow-hidden border border-white/20 bg-white"
+                onSubmit={(event) => event.preventDefault()}
+              >
                 <input
                   type="email"
-                  placeholder="Nhập email của bạn"
-                  className="w-full bg-transparent text-sm outline-none"
+                  placeholder="Email của bạn"
+                  className="min-w-0 flex-1 bg-white px-4 py-3 text-sm text-black outline-none placeholder:text-gray-400"
                 />
-                <button className="text-xs font-bold uppercase hover:text-gray-500">
-                  Gửi
+                <button
+                  type="submit"
+                  className="grid w-12 place-items-center bg-black text-white transition hover:bg-red-600"
+                  aria-label="Đăng ký nhận tin"
+                >
+                  <Send className="h-4 w-4" />
                 </button>
+              </form>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["COD", "MoMo", "VNPay", "PayPal"].map((method) => (
+                  <span
+                    key={method}
+                    className="border border-white/15 px-3 py-1.5 text-[11px] font-bold uppercase text-white/70"
+                  >
+                    {method}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                {footerSocials.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="grid h-10 w-10 place-items-center rounded-full border border-white/15 text-white/70 transition hover:border-white hover:text-white"
+                    aria-label={item.label}
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </a>
+                ))}
               </div>
             </div>
           </div>
-          <div className="mx-auto mt-12 flex max-w-[1400px] flex-col items-center justify-between border-t border-gray-100 px-4 pt-8 text-xs text-gray-400 md:flex-row lg:px-8">
-            <p>© 2026 FashionStore. All rights reserved.</p>
-            <div className="mt-4 flex gap-4 md:mt-0">
-              <a href="#" className="hover:text-black">
-                Facebook
-              </a>
-              <a href="#" className="hover:text-black">
-                Instagram
-              </a>
-              <a href="#" className="hover:text-black">
-                Tiktok
-              </a>
+
+          <div className="border-t border-white/10">
+            <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-6 text-xs text-white/45 md:flex-row md:items-center md:justify-between lg:px-8">
+              <p>© 2026 FashionStore. All rights reserved.</p>
+              <p>Thiết kế cho trải nghiệm e-commerce nhanh, rõ ràng và an toàn.</p>
             </div>
           </div>
         </footer>

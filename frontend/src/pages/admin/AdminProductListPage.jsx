@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
@@ -37,9 +37,11 @@ const styleLabels = {
 export default function AdminProductListPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const globalSearch = searchParams.get("q") || "";
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(globalSearch);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [styleFilter, setStyleFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
@@ -74,6 +76,10 @@ export default function AdminProductListPage() {
   useEffect(() => {
     loadProducts();
   }, [token]);
+
+  useEffect(() => {
+    setSearch(globalSearch);
+  }, [globalSearch]);
 
   useEffect(() => {
     const handleProductsChanged = () => {
