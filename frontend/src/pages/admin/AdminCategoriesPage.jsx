@@ -609,7 +609,7 @@ export default function AdminCategoriesPage() {
                   />
                 </label>
                 <ImageUpload
-                  label="Hình danh mục (Tùy chọn)"
+                  label="Hình danh mục"
                   value={rootForm.imageUrl}
                   onChange={(url) =>
                     setRootForm((current) => ({ ...current, imageUrl: url }))

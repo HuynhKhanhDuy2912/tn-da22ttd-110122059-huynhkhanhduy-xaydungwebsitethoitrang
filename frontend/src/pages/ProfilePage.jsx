@@ -492,7 +492,7 @@ export default function ProfilePage() {
                   <h2 className="mb-3 text-xl font-bold">Phong cách thời trang yêu thích</h2>
                   <p className="mb-6 text-sm text-gray-500">(Chọn một hoặc nhiều)</p>
 
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     {STYLE_OPTIONS.map((style) => {
                       const isSelected = formData.favoriteStyles.includes(style.value);
                       return (

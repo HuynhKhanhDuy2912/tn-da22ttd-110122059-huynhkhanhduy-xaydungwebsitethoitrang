@@ -189,6 +189,10 @@ export default function Layout() {
   const isAdminView = location.pathname.startsWith("/admin");
   const isAdminUser = user?.role === "admin";
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname, location.search]);
+
   const searchHref = useMemo(
     () =>
       `/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ""}`,
@@ -371,6 +375,12 @@ export default function Layout() {
                   className="text-[15px] text-black hover:text-red-600"
                 >
                   Bộ sưu tập
+                </NavLink>
+                <NavLink
+                  to="/recommendations"
+                  className="text-[15px] text-black hover:text-red-600"
+                >
+                  Gợi ý
                 </NavLink>
                 <NavLink
                   to="/contact"

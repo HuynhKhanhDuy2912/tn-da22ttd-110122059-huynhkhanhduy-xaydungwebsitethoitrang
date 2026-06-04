@@ -10,6 +10,8 @@ import {
   SlidersHorizontal,
   SortAsc,
   X,
+  ChevronsRight,
+  ChevronsLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
@@ -1297,7 +1299,7 @@ export default function ProductsPage() {
                             <button
                               type="button"
                               onClick={() => toggleWishlist(product)}
-                              className={`inline-flex items-center gap-1.5 text-xs font-medium transition ${wishlistProductIds.has(product._id) ? "text-red-600" : "text-gray-500 hover:text-red-600"}`}
+                              className={`inline-flex items-center gap-1.5 text-xs font-medium transition text-red-600 hover:text-red-400`}
                             >
                               <Heart
                                 size={13}
@@ -1416,7 +1418,7 @@ export default function ProductsPage() {
                   disabled={normalizedCurrentPage === 1}
                   className="grid h-9 w-9 place-items-center border border-gray-300 bg-white text-sm font-medium text-black transition hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  &lt;
+                  <ChevronsLeft className="w-4 h-4"/>
                 </button>
 
                 {Array.from({ length: totalPages }, (_, index) => index + 1)
@@ -1451,7 +1453,7 @@ export default function ProductsPage() {
                   disabled={normalizedCurrentPage === totalPages}
                   className="grid h-9 w-9 place-items-center border border-gray-300 bg-white text-sm font-medium text-black transition hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  &gt;
+                  <ChevronsRight className="w-4 h-4"/>
                 </button>
               </div>
             ) : null}

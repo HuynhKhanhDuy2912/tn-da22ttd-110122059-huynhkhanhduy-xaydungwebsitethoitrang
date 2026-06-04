@@ -24,6 +24,7 @@ import AdminInventoryHistoryPage from "./pages/admin/AdminInventoryHistoryPage.j
 import AdminContactMessagesPage from "./pages/admin/AdminContactMessagesPage.jsx";
 import AdminProductQuestionsPage from "./pages/admin/AdminProductQuestionsPage.jsx";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage.jsx";
+import AdminAccountPage from "./pages/admin/AdminAccountPage.jsx";
 
 import CartPage from "./pages/CartPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
@@ -106,6 +107,7 @@ export default function App() {
               }
             >
               <Route index element={<AdminDashboardPage />} />
+              <Route path="account" element={<AdminAccountPage />} />
               <Route path="categories" element={<AdminCategoriesPage />} />
               <Route path="products" element={<AdminProductListPage />} />
               <Route path="products/list" element={<AdminProductListPage />} />

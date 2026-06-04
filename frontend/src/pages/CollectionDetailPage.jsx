@@ -155,11 +155,11 @@ export default function CollectionDetailPage() {
       </section>
 
       {collection.description ? (
-        <section className="mb-10 max-w-3xl">
+        <section className="mb-10">
           <h1 className="mb-3 text-2xl font-extrabold uppercase tracking-wide text-black md:text-3xl">
             {collection.name}
           </h1>
-          <p className="m-0 text-sm leading-7 text-gray-500">{collection.description}</p>
+          <p className="m-0 text-sm leading-7 text-gray-500 text-justify">{collection.description}</p>
         </section>
       ) : null}
 

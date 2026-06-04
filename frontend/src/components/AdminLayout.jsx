@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -24,6 +24,7 @@ import {
   Ruler,
   MessageCircleQuestion,
   Ticket,
+  UserCog,
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -176,6 +177,8 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [adminSearch, setAdminSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) === "true";
@@ -225,7 +228,22 @@ export default function AdminLayout() {
     const params = new URLSearchParams(location.search);
     setAdminSearch(params.get("q") || "");
     setIsSearchOpen(false);
+    setIsAccountMenuOpen(false);
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target)
+      ) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleMenu = (label) => {
     if (collapsed) return;
@@ -267,58 +285,7 @@ export default function AdminLayout() {
           style={{ width: sidebarWidth }}
           className="fixed inset-y-0 left-0 z-30 flex flex-col border-r border-gray-200 bg-white text-black transition-[width] duration-300 ease-in-out"
         >
-          <div className={`flex shrink-0 border-b border-gray-200 ${collapsed ? "flex-col items-center gap-2 py-3" : "items-center gap-2 px-4 py-5"}`}>
-            <NavLink to="/" title="Trở về trang chủ">
-              <span className="grid h-10 w-10 shrink-0 place-items-center text-sm font-extrabold border border-gray-400">
-                FS
-              </span>
-            </NavLink>
-            {!collapsed ? (
-              <div className="min-w-0 flex-1">
-                <span className="mb-0.5 block text-[11px] font-bold tracking-widest text-gray-500">
-                  Trang quản trị
-                </span>
-                <h2 className="m-0 truncate text-sm font-bold uppercase tracking-widest">
-                  FashionStore
-                </h2>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setCollapsed((value) => !value)}
-              className={`grid h-8 w-8 shrink-0 place-items-center border border-gray-300 text-gray-600 transition hover:border-black hover:text-black ${collapsed ? "" : "ml-auto"
-                }`}
-              title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-              aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-            >
-              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
-          </div>
-
-          {!collapsed ? (
-            <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-4">
-              <div className="grid h-8 w-8 shrink-0 place-items-center border border-gray-400 bg-gray-100 text-xs font-bold rounded-lg">
-                {getAvatarInitial(user, "A")}
-              </div>
-              <div className="min-w-0">
-                <strong className="block truncate text-xs uppercase">
-                  {getUserDisplayName(user, "Admin")}
-                </strong>
-                <span className="block truncate text-[11px] text-gray-500">
-                  {user?.email || "Quản trị viên"}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="mx-auto my-3 grid h-8 w-8 place-items-center border border-gray-300 bg-gray-100 text-xs font-bold uppercase"
-              title={getUserDisplayName(user, "Admin")}
-            >
-              {getAvatarInitial(user, "A")}
-            </div>
-          )}
-
-          <nav className="mt-1 flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
+          <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
             {adminNavItems.map((item) => {
               if (item.children) {
                 const isOpen = openMenus.includes(item.label);
@@ -434,9 +401,35 @@ export default function AdminLayout() {
             style={{ left: sidebarWidth }}
             className="fixed top-0 right-0 z-20 border-b border-gray-200 bg-white shadow-sm transition-[left] duration-300 ease-in-out"
           >
-            <div className="flex h-[80px] items-center justify-between gap-4 px-4 sm:px-6">
+            <div className="relative flex h-[61px] items-center px-4 sm:px-6">
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((value) => !value)}
+                  className="grid h-6 w-6 shrink-0 place-items-center border border-gray-100 bg-white text-gray-600 transition hover:border-black hover:text-black"
+                  title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+                  aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+                >
+                  {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </button>
+
+                <NavLink
+                  to="/admin"
+                  className="hidden items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-gray-50 lg:flex"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center border border-gray-300 bg-white text-sm font-extrabold text-black">
+                    FS
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-extrabold uppercase tracking-wider text-black">
+                      FashionStore
+                    </span>
+                  </span>
+                </NavLink>
+              </div>
+
               <form
-                className="relative w-full max-w-md"
+                className="absolute left-[72px] right-[92px] max-w-md lg:left-1/2 lg:right-auto lg:w-[min(560px,calc(100%-560px))] lg:min-w-[360px] lg:-translate-x-1/2"
                 onSubmit={(event) => {
                   event.preventDefault();
                   runAdminSearch();
@@ -523,32 +516,83 @@ export default function AdminLayout() {
                 ) : null}
               </form>
 
-              <div className="flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-2">
                 <AdminContactInboxButton />
 
                 <AdminNotificationBell />
 
-                <button
-                  type="button"
-                  className="ml-1 flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2 py-1.5 transition hover:border-black"
-                  aria-label="Hồ sơ"
-                  title="Hồ sơ"
-                >
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-black text-xs font-bold text-white uppercase">
-                    {getAvatarInitial(user, "A")}
-                  </div>
-                  <div className="hidden min-w-0 pr-1 text-left sm:block">
-                    <div className="truncate text-xs font-bold text-black">
-                      {getUserDisplayName(user, "Admin")}
+                <div className="relative ml-1" ref={accountMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountMenuOpen((current) => !current)}
+                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-2 py-1.5 transition hover:border-black"
+                    aria-label="Mở menu tài khoản admin"
+                    aria-expanded={isAccountMenuOpen}
+                  >
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-black text-xs font-bold uppercase text-white">
+                      {getAvatarInitial(user, "A")}
                     </div>
-                    <div className="truncate text-[11px] text-gray-500">Quản trị viên</div>
-                  </div>
-                </button>
+                    <div className="hidden min-w-0 pr-1 text-left sm:block">
+                      <div className="truncate text-xs font-bold text-black">
+                        {getUserDisplayName(user, "Admin")}
+                      </div>
+                      <div className="truncate text-[11px] text-gray-500">Quản trị viên</div>
+                    </div>
+                    <ChevronDown
+                      className={`hidden h-4 w-4 text-gray-400 transition-transform sm:block ${isAccountMenuOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isAccountMenuOpen ? (
+                    <div className="absolute right-0 top-12 z-50 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+                      <div className="border-b border-gray-100 bg-gray-50 px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-black text-sm font-bold uppercase text-white">
+                            {getAvatarInitial(user, "A")}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-black">
+                              {getUserDisplayName(user, "Admin")}
+                            </p>
+                            <p className="truncate text-xs text-gray-500">
+                              {user?.email || "Quản trị viên"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="py-2">
+                        <NavLink
+                          to="/admin/account"
+                          className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 hover:text-black"
+                        >
+                          <UserCog className="h-4 w-4" />
+                          Tài khoản quản trị
+                        </NavLink>
+                        <NavLink
+                          to="/"
+                          className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 hover:text-black"
+                        >
+                          <Home className="h-4 w-4" />
+                          Về cửa hàng
+                        </NavLink>
+                        <button
+                          type="button"
+                          onClick={logout}
+                          className="flex w-full items-center gap-3 border-t border-gray-100 px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </header>
 
-          <div className="pt-[73px]">
+          <div className="pt-[55px]">
             <Outlet />
           </div>
         </main>
