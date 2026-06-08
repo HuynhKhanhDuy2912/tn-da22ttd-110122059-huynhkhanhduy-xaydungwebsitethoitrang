@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
+import ProductVariant from "../models/ProductVariant.js";
 import OrderItem from "../models/OrderItem.js";
 import { createCrudControllers } from "./base.controller.js";
 import { clearRecommendationCache } from "../services/hybridRecommendation.service.js";
@@ -42,6 +43,17 @@ const buildFilters = (query = {}) => {
       filters[key] = value;
     }
   });
+
+  // Always filter out deleted items unless specifically requested (admin only)
+  if (filters.isDeleted === undefined) {
+    filters.isDeleted = { $ne: true };
+  } else if (filters.isDeleted === "true") {
+    filters.isDeleted = true;
+  } else if (filters.isDeleted === "false") {
+    filters.isDeleted = { $ne: true };
+  } else if (filters.isDeleted === "all") {
+    delete filters.isDeleted;
+  }
 
   return filters;
 };
@@ -189,9 +201,46 @@ const update = async (req, res) => {
   }
 };
 
+const remove = async (req, res) => {
+  try {
+    const item = await Product.findByIdAndUpdate(req.params.id, {
+      isDeleted: true,
+      isActive: false,
+      deletedAt: new Date()
+    }, { new: true });
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    // Also soft delete variants
+    await ProductVariant.updateMany(
+      { productId: item._id },
+      { isDeleted: true, isActive: false, deletedAt: new Date() }
+    );
+
+    clearRecommendationCache();
+
+    return res.status(200).json({
+      success: true,
+      message: "Product soft deleted successfully",
+      data: item
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
   ...baseProductController,
   list,
   getById,
-  update
+  update,
+  remove
 };

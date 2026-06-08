@@ -94,9 +94,13 @@ export default function CheckoutPage() {
       const response = await apiRequest("/carts/me", { token });
       const cart = response.data;
       if (cart?.items) {
+        const availableItems = cart.items.filter((item) => {
+          const isUnavailable = !item.productId || item.productId.isDeleted || !item.variantId || item.variantId.isDeleted || !item.variantId.isActive;
+          return !isUnavailable;
+        });
         const filtered = selectedItemIds.length > 0
-          ? cart.items.filter((item) => selectedItemIds.includes(item._id))
-          : cart.items;
+          ? availableItems.filter((item) => selectedItemIds.includes(item._id))
+          : availableItems;
         setCartItems(filtered);
       }
     } catch (err) {

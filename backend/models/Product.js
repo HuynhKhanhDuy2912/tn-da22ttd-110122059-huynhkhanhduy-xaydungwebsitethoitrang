@@ -115,6 +115,16 @@ const productSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }
@@ -125,6 +135,7 @@ productSchema.index({ style: 1 });
 productSchema.index({ season: 1 });
 productSchema.index({ occasion: 1 });
 productSchema.index({ slug: 1 });
+productSchema.index({ isDeleted: 1 });
 
 const createSlug = (value = "") =>
   String(value)

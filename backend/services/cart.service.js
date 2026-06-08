@@ -11,6 +11,27 @@ const populateCartItems = (query) =>
 
 const calculateCartTotals = (items) => {
   const normalizedItems = items.map((item) => {
+    const isUnavailable =
+      !item.productId ||
+      item.productId.isDeleted ||
+      !item.variantId ||
+      item.variantId.isDeleted ||
+      !item.variantId.isActive;
+
+    if (isUnavailable) {
+      return {
+        ...item.toObject(),
+        isUnavailable: true,
+        pricing: {
+          productPrice: 0,
+          discountPercent: 0,
+          variantAdjustment: 0,
+          unitPrice: 0,
+          lineTotal: 0
+        }
+      };
+    }
+
     const productPrice = item.productId?.price || 0;
     const productDiscount = item.productId?.discount || 0;
     const variantDiscount = item.variantId?.discount;
@@ -24,6 +45,7 @@ const calculateCartTotals = (items) => {
 
     return {
       ...item.toObject(),
+      isUnavailable: false,
       pricing: {
         productPrice,
         discountPercent,
@@ -34,8 +56,9 @@ const calculateCartTotals = (items) => {
     };
   });
 
-  const subTotal = normalizedItems.reduce((sum, i) => sum + i.pricing.lineTotal, 0);
-  const quantityCount = normalizedItems.reduce((sum, i) => sum + i.quantity, 0);
+  const availableItems = normalizedItems.filter((i) => !i.isUnavailable);
+  const subTotal = availableItems.reduce((sum, i) => sum + i.pricing.lineTotal, 0);
+  const quantityCount = availableItems.reduce((sum, i) => sum + i.quantity, 0);
   const itemCount = normalizedItems.length;
 
   return { items: normalizedItems, subTotal: Math.round(subTotal), itemCount, quantityCount };
@@ -55,9 +78,10 @@ export const getCartDetail = async (userId) => {
 export const addItemToCart = async (user, body) => {
   const { productId, variantId, quantity = 1, source = "product_page" } = body;
 
-  const variant = await ProductVariant.findById(variantId);
-  if (!variant) throw new Error("Variant not found");
+  const variant = await ProductVariant.findById(variantId).populate("productId");
+  if (!variant || variant.isDeleted) throw new Error("Variant not found");
   if (!variant.isActive) throw new Error("Variant is not available");
+  if (!variant.productId || variant.productId.isDeleted) throw new Error("Product is not available");
   if (variant.stock < quantity) throw new Error("Not enough stock");
 
   let cart = await Cart.findOne({ userId: user._id });
@@ -109,10 +133,11 @@ export const updateCartItemQuantity = async (userId, cartItemId, updates) => {
     return null;
   }
 
-  const variant = await ProductVariant.findById(nextVariantId);
-  if (!variant) throw new Error("Variant not found");
+  const variant = await ProductVariant.findById(nextVariantId).populate("productId");
+  if (!variant || variant.isDeleted) throw new Error("Variant not found");
   if (!variant.isActive) throw new Error("Variant is not available");
-  if (String(variant.productId) !== String(item.productId)) {
+  if (!variant.productId || variant.productId.isDeleted) throw new Error("Product is not available");
+  if (String(variant.productId._id) !== String(item.productId)) {
     throw new Error("Variant does not belong to this product");
   }
 

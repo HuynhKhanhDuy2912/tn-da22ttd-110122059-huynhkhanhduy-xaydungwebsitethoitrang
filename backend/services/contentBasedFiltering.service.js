@@ -305,7 +305,10 @@ export class DiversityHelper {
     factors++;
 
     // Similar price range (within 30%)
-    const priceDiff = Math.abs(productA.price - productB.price) / Math.max(productA.price, productB.price);
+    const maxPrice = Math.max(productA.price || 0, productB.price || 0);
+    const priceDiff = maxPrice > 0
+      ? Math.abs((productA.price || 0) - (productB.price || 0)) / maxPrice
+      : 0;
     if (priceDiff < 0.3) {
       similarity += 0.2;
     }

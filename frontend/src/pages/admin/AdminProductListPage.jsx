@@ -46,6 +46,7 @@ export default function AdminProductListPage() {
   const [styleFilter, setStyleFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
   const [discountFilter, setDiscountFilter] = useState("all");
+  const [deletedFilter, setDeletedFilter] = useState("active");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -55,7 +56,7 @@ export default function AdminProductListPage() {
   const loadProducts = async () => {
     try {
       const [prodRes, varRes, catRes] = await Promise.all([
-        apiRequest("/products?limit=1000", { token }),
+        apiRequest("/products?limit=1000&isDeleted=all", { token }),
         apiRequest("/product-variants?limit=5000", { token }),
         apiRequest("/categories?limit=1000", { token }),
       ]);
@@ -150,13 +151,18 @@ export default function AdminProductListPage() {
         discountFilter === "all" ||
         (discountFilter === "yes" && p.discount > 0) ||
         (discountFilter === "no" && (!p.discount || p.discount === 0));
+      const deletedMatch =
+        deletedFilter === "all" ||
+        (deletedFilter === "active" && !p.isDeleted) ||
+        (deletedFilter === "deleted" && p.isDeleted);
 
       return (
         searchMatch &&
         categoryMatch &&
         styleMatch &&
         genderMatch &&
-        discountMatch
+        discountMatch &&
+        deletedMatch
       );
     });
 
@@ -189,12 +195,13 @@ export default function AdminProductListPage() {
     styleFilter,
     genderFilter,
     discountFilter,
+    deletedFilter,
     sortBy,
   ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, categoryFilter, styleFilter, genderFilter, discountFilter, sortBy]);
+  }, [search, categoryFilter, styleFilter, genderFilter, discountFilter, deletedFilter, sortBy]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -224,8 +231,9 @@ export default function AdminProductListPage() {
     if (styleFilter !== "all") count++;
     if (genderFilter !== "all") count++;
     if (discountFilter !== "all") count++;
+    if (deletedFilter !== "active") count++;
     return count;
-  }, [search, categoryFilter, styleFilter, genderFilter, discountFilter]);
+  }, [search, categoryFilter, styleFilter, genderFilter, discountFilter, deletedFilter]);
 
   const clearAllFilters = () => {
     setSearch("");
@@ -233,6 +241,7 @@ export default function AdminProductListPage() {
     setStyleFilter("all");
     setGenderFilter("all");
     setDiscountFilter("all");
+    setDeletedFilter("active");
   };
 
   const inputClass =
@@ -433,6 +442,21 @@ export default function AdminProductListPage() {
               </select>
             </div>
 
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-gray-500">
+                Trạng thái xóa
+              </label>
+              <select
+                value={deletedFilter}
+                onChange={(e) => setDeletedFilter(e.target.value)}
+                className={selectClass}
+              >
+                <option value="active">Đang bán</option>
+                <option value="deleted">Đã ngừng kinh doanh</option>
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
+
             {activeFiltersCount > 0 && (
               <div className="flex items-end md:col-span-2 lg:col-span-3">
                 <button
@@ -516,7 +540,7 @@ export default function AdminProductListPage() {
                   return (
                     <div
                       key={product._id}
-                      className={`grid items-center grid-cols-[80px_1fr_200px_140px_120px_100px_200px] gap-4 px-5 py-4 transition hover:bg-gray-50 ${!product.isActive ? "bg-gray-50/50" : ""}`}
+                      className={`grid items-center grid-cols-[80px_1fr_200px_140px_120px_100px_200px] gap-4 px-5 py-4 transition hover:bg-gray-50 ${product.isDeleted ? "bg-red-50/30 opacity-75 grayscale" : !product.isActive ? "bg-gray-50/50" : ""}`}
                     >
                       <div className={`relative h-16 w-16 overflow-hidden rounded border border-gray-200 bg-gray-100 ${!product.isActive ? "opacity-50 grayscale" : ""}`}>
                         {product.images?.[0] ? (
@@ -540,10 +564,13 @@ export default function AdminProductListPage() {
                       </div>
 
                       <div className="flex flex-col justify-center">
-                        <strong className="mb-1 line-clamp-1 text-sm text-gray-900">
+                        <strong className="mb-1 line-clamp-1 text-sm text-gray-900 flex items-center flex-wrap gap-2">
                           {displayName}
-                          {!product.isActive && (
-                            <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-600">ĐÃ ẨN</span>
+                          {product.isDeleted && (
+                            <span className="rounded bg-red-200 px-1.5 py-0.5 text-[10px] font-bold text-red-700">ĐÃ XÓA</span>
+                          )}
+                          {!product.isActive && !product.isDeleted && (
+                            <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-600">ĐÃ ẨN</span>
                           )}
                         </strong>
                         <div className="flex flex-wrap gap-2">
@@ -634,36 +661,45 @@ export default function AdminProductListPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button
-                          title={product.isActive ? "Ẩn sản phẩm" : "Hiện sản phẩm"}
-                          className={`flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-semibold text-white transition ${product.isActive
-                            ? "bg-gray-500 border-gray-500 hover:bg-gray-600"
-                            : "bg-green-600 border-green-600 hover:bg-green-700"
-                            }`}
-                          onClick={() => handleToggleActive(product)}
-                        >
-                          {product.isActive ? (
-                            <><EyeOff size={12} /> Ẩn</>
-                          ) : (
-                            <><Eye size={12} /> Hiện</>
-                          )}
-                        </button>
-                        <button
-                          className="flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
-                          onClick={() =>
-                            navigate(`/admin/products/add?id=${product._id}`)
-                          }
-                        >
-                          <Edit2 size={12} />
-                          Sửa
-                        </button>
-                        <button
-                          className="flex items-center gap-1.5 rounded border border-red-600 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
-                          onClick={() => setDeleteConfirm(product)}
-                        >
-                          <Trash2 size={12} />
-                          Xóa
-                        </button>
+                        {!product.isDeleted && (
+                          <>
+                            <button
+                              title={product.isActive ? "Ẩn sản phẩm" : "Hiện sản phẩm"}
+                              className={`flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-semibold text-white transition ${product.isActive
+                                ? "bg-gray-500 border-gray-500 hover:bg-gray-600"
+                                : "bg-green-600 border-green-600 hover:bg-green-700"
+                                }`}
+                              onClick={() => handleToggleActive(product)}
+                            >
+                              {product.isActive ? (
+                                <><EyeOff size={12} /> Ẩn</>
+                              ) : (
+                                <><Eye size={12} /> Hiện</>
+                              )}
+                            </button>
+                            <button
+                              className="flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+                              onClick={() =>
+                                navigate(`/admin/products/add?id=${product._id}`)
+                              }
+                            >
+                              <Edit2 size={12} />
+                              Sửa
+                            </button>
+                            <button
+                              className="flex items-center gap-1.5 rounded border border-red-600 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                              onClick={() => setDeleteConfirm(product)}
+                            >
+                              <Trash2 size={12} />
+                              Xóa
+                            </button>
+                          </>
+                        )}
+                        {product.isDeleted && (
+                          <span className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded border border-red-200">
+                            Không thể thao tác
+                          </span>
+                        )}
                       </div>
                     </div>
                   );

@@ -394,20 +394,29 @@ export default function AdminOrderDetailPage() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {(order.items || []).map((item) => (
+              {(order.items || []).map((item) => {
+                const productSnapshot = item.productSnapshot;
+                const variantSnapshot = item.variantSnapshot;
+
+                const pName = formatProductName(item.productId?.name || productSnapshot?.name) || "Sản phẩm";
+                const pImage = item.variantId?.image || item.productId?.images?.[0] || variantSnapshot?.image || productSnapshot?.image;
+                const pColor = item.variantId?.color || variantSnapshot?.color || "-";
+                const pSize = item.variantId?.size || variantSnapshot?.size || "-";
+                const pSku = item.variantId?.sku || variantSnapshot?.sku;
+                const isDeleted = !item.productId || item.productId.isDeleted;
+
+                return (
                 <article
                   key={item._id}
-                  className="p-5 transition hover:bg-slate-50/70"
+                  className={`p-5 transition hover:bg-slate-50/70 ${isDeleted ? "opacity-75" : ""}`}
                 >
                   <div className="flex gap-4">
                     <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
-                      {item.variantId?.image || item.productId?.images?.[0] ? (
+                      {pImage ? (
                         <img
-                          src={
-                            item.variantId?.image || item.productId.images[0]
-                          }
-                          alt={formatProductName(item.productId?.name) || "Sản phẩm"}
-                          className="h-full w-full object-cover"
+                          src={pImage}
+                          alt={pName}
+                          className={`h-full w-full object-cover ${isDeleted ? "grayscale" : ""}`}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-slate-300">
@@ -419,19 +428,24 @@ export default function AdminOrderDetailPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                          <p className="truncate text-base font-bold text-slate-900">
-                            {formatProductName(item.productId?.name) || "Sản phẩm"}
+                          <p className="truncate text-base font-bold text-slate-900 flex items-center gap-2">
+                            {pName}
+                            {isDeleted && (
+                              <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
+                                Đã ngừng kinh doanh
+                              </span>
+                            )}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                             <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                              Màu: {item.variantId?.color || "-"}
+                              Màu: {pColor}
                             </span>
                             <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                              Size: {item.variantId?.size || "-"}
+                              Size: {pSize}
                             </span>
-                            {item.variantId?.sku && (
+                            {pSku && (
                               <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                                SKU: {item.variantId.sku}
+                                SKU: {pSku}
                               </span>
                             )}
                           </div>
@@ -459,7 +473,8 @@ export default function AdminOrderDetailPage() {
                     </div>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           </section>
 

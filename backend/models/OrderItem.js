@@ -20,7 +20,21 @@ const orderItemSchema = new mongoose.Schema({
   },
 
   quantity: { type: Number, required: true, min: 1 },
-  price: { type: Number, required: true, min: 0 }
+  price: { type: Number, required: true, min: 0 },
+
+  productSnapshot: {
+    name: { type: String },
+    image: { type: String },
+    price: { type: Number },
+    discount: { type: Number }
+  },
+
+  variantSnapshot: {
+    size: { type: String },
+    color: { type: String },
+    sku: { type: String },
+    image: { type: String }
+  }
 });
 
 export default mongoose.model("OrderItem", orderItemSchema);

@@ -63,6 +63,16 @@ const variantSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }
@@ -71,6 +81,7 @@ const variantSchema = new mongoose.Schema(
 variantSchema.index({ sku: 1 }, { unique: true });
 variantSchema.index({ productId: 1, color: 1, size: 1 }, { unique: true });
 variantSchema.index({ productId: 1, isActive: 1 });
+variantSchema.index({ isDeleted: 1 });
 
 const getUpdatedValue = (update = {}, field) => {
   if (Object.prototype.hasOwnProperty.call(update, field)) return update[field];

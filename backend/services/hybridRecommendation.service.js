@@ -8,10 +8,18 @@ import ProductVariant from "../models/ProductVariant.js";
 import { ProductFeatureExtractor, UserProfileBuilder } from "./featureExtraction.service.js";
 import { ContentBasedFilteringEngine, CategoryFilter, DiversityHelper } from "./contentBasedFiltering.service.js";
 import { RuleBasedEngine, BusinessRulesHelper } from "./ruleBasedRecommendation.service.js";
+import { ItemBasedCollaborativeEngine } from "./collaborativeFiltering.service.js";
 
 /**
- * Hybrid Recommendation Engine
- * Kết hợp Content-Based Filtering và Rule-Based Recommendation
+ * Hybrid Recommendation Engine v2.0
+ *
+ * Kết hợp 5 engines:
+ * 1. Content-Based Filtering (30%) — Cosine similarity giữa user profile và product vectors
+ * 2. Collaborative Filtering (20%) — Item co-occurrence từ hành vi TẤT CẢ users
+ * 3. Rule-Based Recommendation (20%) — 10 business rules
+ * 4. Behavior-Based Scoring (15%) — Category/style/occasion overlap
+ * 5. Popularity Scoring (10%) — Bayesian average rating
+ * + Category Boost (5%) + Diversity (MMR)
  */
 class HybridRecommendationEngine {
   constructor() {
@@ -21,13 +29,16 @@ class HybridRecommendationEngine {
     this.featureExtractor = new ProductFeatureExtractor();
     this.contentEngine = new ContentBasedFilteringEngine();
     this.userProfileBuilder = new UserProfileBuilder();
+    this.collaborativeEngine = new ItemBasedCollaborativeEngine();
 
-    // Weights for hybrid scoring
+    // Weights for hybrid scoring v2.0
     this.weights = {
-      content: 0.40,      // Content-based similarity
-      rule: 0.30,         // Rule-based score
-      behavior: 0.20,     // Behavior weight
-      popularity: 0.10    // Popularity boost
+      content: 0.30,        // Content-based similarity (giảm từ 0.40)
+      collaborative: 0.20,  // Collaborative filtering (MỚI)
+      rule: 0.20,           // Rule-based score (giảm từ 0.30)
+      behavior: 0.15,       // Behavior weight (giảm từ 0.20)
+      popularity: 0.10,     // Popularity boost (giữ nguyên)
+      category: 0.05        // Category boost (chính thức hóa)
     };
   }
 
@@ -66,35 +77,51 @@ class HybridRecommendationEngine {
         return [];
       }
 
+      // === COLD START: User mới (0 behaviors) → gợi ý demographic-aware ===
+      if (!behaviors || behaviors.length === 0) {
+        return this.getColdStartRecommendations(user, products, limit, filters);
+      }
+
       // 2. Apply hard filters
       let filteredProducts = RuleBasedEngine.applyHardFilters(products, {
         gender: user.gender,
         ...filters
       });
 
-      // 3. Build feature vectors
-      this.featureExtractor.buildTfIdfModel(filteredProducts);
-      const productVectors = filteredProducts.map((p, idx) =>
-        this.featureExtractor.getProductVector(p, idx)
+      // 3. Build TF-IDF trên TOÀN BỘ products (index ổn định cho mọi user)
+      this.featureExtractor.buildTfIdfModel(products);
+      // Tạo vectors chỉ cho filtered products, dùng index ổn định từ full list
+      const productVectors = filteredProducts.map((p) =>
+        this.featureExtractor.getProductVector(p)
       );
 
-      // 4. Build user profile
-      const userVector = this.userProfileBuilder.buildUserProfile(
+      // 4. Build user profile (temporal: ngắn hạn vs dài hạn)
+      const userVector = this.userProfileBuilder.buildTemporalProfile(
         behaviors,
         filteredProducts,
         this.featureExtractor
       );
 
       // 5. Extract user preferences
-      const preferredStyles = this.userProfileBuilder.extractStylePreferences(behaviors);
-      const preferredOccasions = this.userProfileBuilder.extractOccasionPreferences(behaviors, filteredProducts);
+      let preferredStyles = this.userProfileBuilder.extractStylePreferences(behaviors, filteredProducts);
+      let preferredOccasions = this.userProfileBuilder.extractOccasionPreferences(behaviors, filteredProducts);
       const preferredCategories = CategoryFilter.extractPreferredCategories(behaviors, filteredProducts);
+
+      // 5.5 Extract search intents và merge vào preferences
+      const searchIntents = this.userProfileBuilder.extractSearchIntents(behaviors);
+      if (searchIntents.styles.length > 0) {
+        preferredStyles = [...new Set([...preferredStyles, ...searchIntents.styles])];
+      }
+      if (searchIntents.occasions.length > 0) {
+        preferredOccasions = [...new Set([...preferredOccasions, ...searchIntents.occasions])];
+      }
 
       // 6. Get wishlist and interacted product IDs
       const wishlistProductIds = wishlistItems.map(w => w.productId.toString());
-      const interactedIds = excludeInteracted
-        ? [...new Set(behaviors.map(b => b.productId?.toString()).filter(Boolean))]
-        : [];
+      // allInteractedIds: luôn tính để dùng cho collaborative scoring
+      const allInteractedIds = [...new Set(behaviors.map(b => b.productId?.toString()).filter(Boolean))];
+      // excludeIds: chỉ dùng để loại sản phẩm đã tương tác khỏi kết quả
+      const excludeIds = excludeInteracted ? allInteractedIds : [];
 
       // 7. Calculate average purchase price
       const userAveragePurchasePrice = await BusinessRulesHelper.calculateAveragePurchasePrice(
@@ -110,12 +137,15 @@ class HybridRecommendationEngine {
         ProductVariant
       );
 
+      // 8.5 Build co-occurrence matrix cho Collaborative Filtering (cached 30 phút)
+      const coOccurrenceMatrix = await this.collaborativeEngine.getOrBuildMatrix(UserBehavior);
+
       // 9. Score all products
       const scoredProducts = filteredProducts.map((product, idx) => {
         const productId = product._id.toString();
 
         // Skip interacted products if enabled
-        if (excludeInteracted && interactedIds.includes(productId)) {
+        if (excludeInteracted && excludeIds.includes(productId)) {
           return null;
         }
 
@@ -123,6 +153,13 @@ class HybridRecommendationEngine {
         const contentScore = userVector
           ? this.contentEngine.calculateSimilarity(userVector, productVectors[idx])
           : 0.5;
+
+        // Collaborative filtering score — luôn dùng allInteractedIds
+        const collaborativeScore = this.collaborativeEngine.getCollaborativeScore(
+          productId,
+          allInteractedIds,
+          coOccurrenceMatrix
+        );
 
         // Rule-based score
         const ruleContext = {
@@ -144,18 +181,20 @@ class HybridRecommendationEngine {
         // Popularity score
         const popularityScore = RuleBasedEngine.calculatePopularityScore(product);
 
-        // Final hybrid score
+        // Final hybrid score v2.0
         const finalScore =
           contentScore * this.weights.content +
+          collaborativeScore * this.weights.collaborative +
           ruleScore * this.weights.rule +
           behaviorWeight * this.weights.behavior +
           popularityScore * this.weights.popularity +
-          categoryScore * 0.05; // Small category boost
+          categoryScore * this.weights.category;
 
         return {
           product,
           finalScore,
           contentScore,
+          collaborativeScore,
           ruleScore,
           behaviorWeight,
           popularityScore,
@@ -167,8 +206,10 @@ class HybridRecommendationEngine {
       // 10. Sort by final score
       scoredProducts.sort((a, b) => b.finalScore - a.finalScore);
 
-      // 11. Apply diversity
-      const diverseProducts = DiversityHelper.ensureDiversity(scoredProducts, 3, 4);
+      // 11. Apply diversity (MMR: cân bằng relevance vs diversity tốt hơn hard constraints)
+      const diverseProducts = DiversityHelper.maximalMarginalRelevance(
+        scoredProducts, 0.7, limit * 2
+      );
 
       // 12. Take top N
       const recommendations = diverseProducts.slice(0, limit).map(item => item.product);
@@ -396,7 +437,170 @@ class HybridRecommendationEngine {
   }
 
   /**
-   * Clear cache
+   * Cold Start Recommendations — cho user mới (0 behaviors)
+   *
+   * Chiến lược: Exploit (70%) + Explore (30%)
+   * - Exploit: Sản phẩm phổ biến trong nhóm users cùng gender
+   * - Explore: Đa dạng từ nhiều categories/styles khác nhau
+   * - Boost: Sản phẩm mới + đang sale + phù hợp mùa
+   *
+   * @param {Object} user - User object
+   * @param {Array} products - Tất cả products (chưa filter)
+   * @param {number} limit - Số lượng kết quả
+   * @param {Object} filters - Hard filters
+   * @returns {Array} Recommendations
+   */
+  async getColdStartRecommendations(user, products, limit, filters = {}) {
+    // Apply hard filters
+    let filteredProducts = RuleBasedEngine.applyHardFilters(products, {
+      gender: user.gender,
+      ...filters
+    });
+
+    if (filteredProducts.length === 0) {
+      filteredProducts = products;
+    }
+
+    const exploitCount = Math.ceil(limit * 0.7);  // 70% exploit
+    const exploreCount = limit - exploitCount;     // 30% explore
+
+    // --- EXPLOIT: Sản phẩm phổ biến trong demographic của user ---
+    // Tìm behaviors của users cùng gender trong 30 ngày gần đây
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    let demographicBehaviors = [];
+
+    try {
+      // Lấy danh sách productIds phổ biến từ users cùng gender
+      demographicBehaviors = await UserBehavior.aggregate([
+        {
+          $match: {
+            actionType: { $in: ["purchase", "add_to_cart", "favorite", "add_to_wishlist"] },
+            createdAt: { $gte: thirtyDaysAgo },
+            productId: { $ne: null }
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userInfo"
+          }
+        },
+        {
+          $match: user.gender ? { "userInfo.gender": user.gender } : {}
+        },
+        {
+          $group: {
+            _id: "$productId",
+            score: {
+              $sum: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: ["$actionType", "purchase"] }, then: 5 },
+                    { case: { $eq: ["$actionType", "add_to_cart"] }, then: 3 },
+                    { case: { $eq: ["$actionType", "favorite"] }, then: 2 },
+                    { case: { $eq: ["$actionType", "add_to_wishlist"] }, then: 2 }
+                  ],
+                  default: 1
+                }
+              }
+            }
+          }
+        },
+        { $sort: { score: -1 } },
+        { $limit: exploitCount * 3 } // Lấy dư để filter
+      ]);
+    } catch (err) {
+      console.error("Cold start demographic query error:", err);
+    }
+
+    // Map demographic product IDs và tìm trong filteredProducts
+    const demographicIds = new Set(
+      demographicBehaviors.map(d => d._id.toString())
+    );
+    const productMap = new Map(
+      filteredProducts.map(p => [p._id.toString(), p])
+    );
+
+    // Score tất cả filtered products cho cold start
+    const scoredProducts = filteredProducts.map(product => {
+      const pid = product._id.toString();
+      let score = 0;
+
+      // Demographic popularity boost
+      const demoBehavior = demographicBehaviors.find(d => d._id.toString() === pid);
+      if (demoBehavior) {
+        score += Math.log1p(demoBehavior.score) * 0.4;
+      }
+
+      // General popularity
+      score += RuleBasedEngine.calculatePopularityScore(product) * 0.2;
+
+      // Seasonal match
+      score += RuleBasedEngine.calculateSeasonalScore(product) * 0.15;
+
+      // Freshness (new arrivals boost)
+      score += RuleBasedEngine.calculateFreshnessScore(product) * 0.15;
+
+      // Discount attraction
+      score += RuleBasedEngine.calculateDiscountScore(product) * 0.1;
+
+      return { product, finalScore: score };
+    });
+
+    // Sort và lấy exploit products
+    scoredProducts.sort((a, b) => b.finalScore - a.finalScore);
+    const exploitProducts = scoredProducts.slice(0, exploitCount);
+
+    // --- EXPLORE: Đa dạng từ categories/styles khác nhau ---
+    const usedIds = new Set(exploitProducts.map(p => p.product._id.toString()));
+    const usedCategories = new Set(exploitProducts.map(p => p.product.categoryId?.toString()));
+    const usedStyles = new Set();
+    exploitProducts.forEach(p => {
+      const styles = Array.isArray(p.product.style) ? p.product.style : [p.product.style];
+      styles.forEach(s => usedStyles.add(s));
+    });
+
+    // Lấy products từ categories/styles CHƯA có trong exploit
+    const explorePool = scoredProducts.filter(p => {
+      const pid = p.product._id.toString();
+      const catId = p.product.categoryId?.toString();
+      const styles = Array.isArray(p.product.style) ? p.product.style : [p.product.style];
+      const hasNewStyle = styles.some(s => !usedStyles.has(s));
+      const hasNewCategory = !usedCategories.has(catId);
+
+      return !usedIds.has(pid) && (hasNewCategory || hasNewStyle);
+    });
+
+    const exploreProducts = explorePool.slice(0, exploreCount);
+
+    // Kết hợp và xen kẽ (interleave) để user không nhận ra pattern
+    const combined = [];
+    let ei = 0, xi = 0;
+    for (let i = 0; i < limit; i++) {
+      if (i % 3 === 2 && xi < exploreProducts.length) {
+        // Mỗi 3 products, chèn 1 explore
+        combined.push(exploreProducts[xi++]);
+      } else if (ei < exploitProducts.length) {
+        combined.push(exploitProducts[ei++]);
+      } else if (xi < exploreProducts.length) {
+        combined.push(exploreProducts[xi++]);
+      }
+    }
+
+    // Nếu chưa đủ limit, bổ sung từ remaining
+    if (combined.length < limit) {
+      const usedFinalIds = new Set(combined.map(p => p.product._id.toString()));
+      const remaining = scoredProducts.filter(p => !usedFinalIds.has(p.product._id.toString()));
+      combined.push(...remaining.slice(0, limit - combined.length));
+    }
+
+    return combined.slice(0, limit).map(item => item.product);
+  }
+
+  /**
+   * Clear cache (recommendation cache + collaborative matrix nếu cần)
    */
   clearCache(userId = null) {
     if (userId) {
@@ -406,8 +610,11 @@ class HybridRecommendationEngine {
           this.cache.del(key);
         }
       });
+      // Không invalidate co-occurrence matrix mỗi khi user có hành vi mới
+      // vì matrix tốn chi phí rebuild — chỉ invalidate khi clear toàn bộ
     } else {
       this.cache.flushAll();
+      this.collaborativeEngine.clearMatrixCache();
     }
   }
 }

@@ -94,10 +94,16 @@ export default function CartPage() {
     setSelectedIds((current) => {
       if (!initializedSelection.current) {
         initializedSelection.current = true;
-        return itemIds;
+        return itemIds.filter(id => {
+          const item = cart.items.find(i => i._id === id);
+          return item && !item.isUnavailable;
+        });
       }
 
-      return current.filter((id) => itemIds.includes(id));
+      return current.filter((id) => {
+        const item = cart.items.find(i => i._id === id);
+        return item && !item.isUnavailable && itemIds.includes(id);
+      });
     });
   }, [cart?.items]);
 
@@ -120,7 +126,8 @@ export default function CartPage() {
   const selectedTotal = selectedSubtotal;
   const totalCartCount = cart?.items?.length || 0;
   const hasItems = Boolean(cart?.items?.length);
-  const allSelected = hasItems && selectedIds.length === cart.items.length;
+  const availableItems = cart?.items?.filter(i => !i.isUnavailable) || [];
+  const allSelected = hasItems && availableItems.length > 0 && selectedIds.length === availableItems.length;
 
   const toggleItem = (itemId) => {
     setSelectedIds((current) =>
@@ -129,8 +136,8 @@ export default function CartPage() {
   };
 
   const toggleAll = () => {
-    if (!cart?.items?.length) return;
-    setSelectedIds(allSelected ? [] : cart.items.map((item) => item._id));
+    if (!availableItems.length) return;
+    setSelectedIds(allSelected ? [] : availableItems.map((item) => item._id));
   };
 
   const updateItem = async (cartItemId, quantity, extraBody = {}) => {
@@ -262,30 +269,45 @@ export default function CartPage() {
                 return (
                   <article
                     key={item._id}
-                    className={`grid gap-5 px-5 py-5 transition md:grid-cols-[auto_112px_minmax(0,1fr)_auto] md:items-center ${isSelected ? "bg-gray-50/70" : "bg-white"
-                      }`}
+                    className={`grid gap-5 px-5 py-5 transition md:grid-cols-[auto_112px_minmax(0,1fr)_auto] md:items-center ${
+                      item.isUnavailable ? "bg-gray-50 opacity-75" : isSelected ? "bg-gray-50/70" : "bg-white"
+                    }`}
                   >
                     <button
                       type="button"
-                      onClick={() => toggleItem(item._id)}
-                      className={`grid h-6 w-6 place-items-center border transition ${isSelected ? "border-black bg-black text-white" : "border-gray-300 bg-white text-transparent hover:border-black"
-                        }`}
+                      onClick={() => !item.isUnavailable && toggleItem(item._id)}
+                      disabled={item.isUnavailable}
+                      className={`grid h-6 w-6 place-items-center border transition ${
+                        item.isUnavailable
+                          ? "border-gray-200 bg-gray-100 text-transparent cursor-not-allowed"
+                          : isSelected
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 bg-white text-transparent hover:border-black"
+                      }`}
                       aria-label={isSelected ? "Bỏ chọn sản phẩm" : "Chọn sản phẩm để thanh toán"}
                     >
                       <Check className="h-4 w-4" strokeWidth={3} />
                     </button>
 
-                    <div className="h-36 w-28 overflow-hidden bg-gray-100 md:h-40">
+                    <div className="relative h-36 w-28 overflow-hidden bg-gray-100 md:h-40">
                       <img
                         src={imageUrl}
                         alt={displayName || "Sản phẩm"}
-                        className="h-full w-full object-cover"
+                        className={`h-full w-full object-cover ${item.isUnavailable ? "grayscale" : ""}`}
                       />
+                      {item.isUnavailable && (
+                        <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px]" />
+                      )}
                     </div>
 
                     <div className="min-w-0">
-                      <h3 className="mb-2 line-clamp-2 text-base font-bold uppercase tracking-wide text-black">
+                      <h3 className="mb-2 line-clamp-2 text-base font-bold uppercase tracking-wide text-black flex items-center gap-2">
                         {displayName}
+                        {item.isUnavailable && (
+                          <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
+                            Không khả dụng
+                          </span>
+                        )}
                       </h3>
                       <div className="mb-4 grid gap-3 sm:grid-cols-2">
                         <label className="grid gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
@@ -307,8 +329,8 @@ export default function CartPage() {
                                 productVariants.find((variant) => variant.color === nextColor);
                               updateVariant(item, nextVariant?._id);
                             }}
-                            className="h-10 border border-gray-300 bg-white px-3 text-sm font-bold uppercase tracking-wide text-black outline-none transition focus:border-black disabled:cursor-not-allowed disabled:bg-gray-50"
-                            disabled={!colors.length}
+                            className="h-10 border border-gray-300 bg-white px-3 text-sm font-bold uppercase tracking-wide text-black outline-none transition focus:border-black disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+                            disabled={!colors.length || item.isUnavailable}
                           >
                             {colors.length ? (
                               colors.map((color) => (
@@ -333,8 +355,8 @@ export default function CartPage() {
                               );
                               updateVariant(item, nextVariant?._id);
                             }}
-                            className="h-10 border border-gray-300 bg-white px-3 text-sm font-bold uppercase tracking-wide text-black outline-none transition focus:border-black disabled:cursor-not-allowed disabled:bg-gray-50"
-                            disabled={!sizesForColor.length}
+                            className="h-10 border border-gray-300 bg-white px-3 text-sm font-bold uppercase tracking-wide text-black outline-none transition focus:border-black disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+                            disabled={!sizesForColor.length || item.isUnavailable}
                           >
                             {sizesForColor.length ? (
                               sizesForColor.map((variant) => (
@@ -360,16 +382,17 @@ export default function CartPage() {
                           type="button"
                           className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
                           onClick={() => updateItem(item._id, Math.max(item.quantity - 1, 1))}
-                          disabled={item.quantity <= 1}
+                          disabled={item.quantity <= 1 || item.isUnavailable}
                           aria-label="Giảm số lượng"
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        <span className="w-11 text-center text-sm font-bold text-black">{item.quantity}</span>
+                        <span className={`w-11 text-center text-sm font-bold ${item.isUnavailable ? "text-gray-400" : "text-black"}`}>{item.quantity}</span>
                         <button
                           type="button"
-                          className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100"
+                          className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
                           onClick={() => updateItem(item._id, item.quantity + 1)}
+                          disabled={item.isUnavailable}
                           aria-label="Tăng số lượng"
                         >
                           <Plus className="h-4 w-4" />

@@ -371,32 +371,43 @@ export default function OrdersTab({ token }) {
                   <div className="space-y-3">
                     {order.items
                       ?.slice(0, isExpanded ? undefined : 2)
-                      .map((item) => (
-                        <div key={item._id} className="flex gap-4">
-                          <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                            {(item.variantId?.image ||
-                              item.productId?.images?.[0]) && (
+                      .map((item) => {
+                        const productSnapshot = item.productSnapshot;
+                        const variantSnapshot = item.variantSnapshot;
+
+                        const pName = formatProductName(item.productId?.name || productSnapshot?.name) || "Sản phẩm";
+                        const pImage = item.variantId?.image || item.productId?.images?.[0] || variantSnapshot?.image || productSnapshot?.image;
+                        const pColor = item.variantId?.color || variantSnapshot?.color || "N/A";
+                        const pSize = item.variantId?.size || variantSnapshot?.size || "N/A";
+                        const isDeleted = !item.productId || item.productId.isDeleted;
+
+                        return (
+                          <div key={item._id} className={`flex gap-4 ${isDeleted ? "opacity-75" : ""}`}>
+                            <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              {pImage && (
                                 <img
-                                  src={
-                                    item.variantId?.image ||
-                                    item.productId.images[0]
-                                  }
-                                  alt={formatProductName(item.productId?.name) || "Sản phẩm"}
-                                  className="w-full h-full object-cover"
+                                  src={pImage}
+                                  alt={pName}
+                                  className={`w-full h-full object-cover ${isDeleted ? "grayscale" : ""}`}
                                 />
                               )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">
-                              {formatProductName(item.productId?.name) || "Sản phẩm"}
-                            </h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                              <span>{item.variantId?.color || "N/A"}</span>
-                              <span>•</span>
-                              <span>Size {item.variantId?.size || "N/A"}</span>
-                              <span>•</span>
-                              <span>x{item.quantity}</span>
                             </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1 flex items-center gap-2">
+                                {pName}
+                                {isDeleted && (
+                                  <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
+                                    Đã ngừng kinh doanh
+                                  </span>
+                                )}
+                              </h4>
+                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                <span>{pColor}</span>
+                                <span>•</span>
+                                <span>Size {pSize}</span>
+                                <span>•</span>
+                                <span>x{item.quantity}</span>
+                              </div>
                             <div className="flex items-center justify-between">
                               <div className="text-sm font-semibold text-gray-900">
                                 {(item.price * item.quantity)?.toLocaleString(
@@ -404,35 +415,36 @@ export default function OrdersTab({ token }) {
                                 )}
                                 ₫
                               </div>
-                              {order.status === "completed" && item.productId?._id && (
-                                <div>
-                                  {item.isReviewed ? (
-                                    <Link
-                                      to={`/products/${item.productId._id}?color=${encodeURIComponent(
-                                        item.variantId?.color || "",
-                                      )}#reviews`}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
-                                    >
-                                      <Eye size={14} />
-                                      Xem đánh giá
-                                    </Link>
-                                  ) : (
-                                    <Link
-                                      to={`/products/${item.productId._id}?color=${encodeURIComponent(
-                                        item.variantId?.color || "",
-                                      )}&review=true&orderId=${order._id}`}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
-                                    >
-                                      <Star size={14} />
-                                      Đánh giá
-                                    </Link>
-                                  )}
-                                </div>
-                              )}
+                                {order.status === "completed" && item.productId?._id && !item.productId.isDeleted && (
+                                  <div>
+                                    {item.isReviewed ? (
+                                      <Link
+                                        to={`/products/${item.productId._id}?color=${encodeURIComponent(
+                                          pColor,
+                                        )}#reviews`}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
+                                      >
+                                        <Eye size={14} />
+                                        Xem đánh giá
+                                      </Link>
+                                    ) : (
+                                      <Link
+                                        to={`/products/${item.productId._id}?color=${encodeURIComponent(
+                                          pColor,
+                                        )}&review=true&orderId=${order._id}`}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
+                                      >
+                                        <Star size={14} />
+                                        Đánh giá
+                                      </Link>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                     {!isExpanded && order.items?.length > 2 && (
                       <div className="text-sm text-gray-500 text-center py-2 bg-gray-50 rounded">

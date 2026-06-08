@@ -51,10 +51,10 @@ export const createOrderFromCart = async (user, body) => {
     : { cartId: cart._id };
 
   const cartItems = await CartItem.find(cartItemQuery)
-    .populate("productId", "name price discount")
+    .populate("productId", "name price discount images isDeleted")
     .populate(
       "variantId",
-      "size color sku stock priceAdjustment discount isActive",
+      "size color sku stock priceAdjustment discount isActive image isDeleted",
     );
 
   if (cartItems.length === 0) throw new Error("Cart is empty");
@@ -64,12 +64,16 @@ export const createOrderFromCart = async (user, body) => {
 
   // Validate stock
   for (const item of cartItems) {
-    if (!item.variantId?.isActive)
+    if (!item.productId || item.productId.isDeleted) {
+      throw new Error(`Sản phẩm ${item.productId?.name || ""} không còn tồn tại`);
+    }
+    if (!item.variantId || item.variantId.isDeleted || !item.variantId.isActive) {
       throw new Error(
-        `Variant for ${item.productId?.name} is no longer available`,
+        `Phân loại cho sản phẩm ${item.productId?.name} không còn khả dụng`,
       );
+    }
     if (item.variantId.stock < item.quantity)
-      throw new Error(`Not enough stock for ${item.productId?.name}`);
+      throw new Error(`Không đủ hàng cho sản phẩm ${item.productId?.name}`);
   }
 
   // Calculate totals
@@ -92,6 +96,18 @@ export const createOrderFromCart = async (user, body) => {
       variantId: item.variantId._id,
       quantity: item.quantity,
       price: unitPrice,
+      productSnapshot: {
+        name: item.productId.name,
+        image: item.productId.images?.[0] || "",
+        price: item.productId.price,
+        discount: item.productId.discount
+      },
+      variantSnapshot: {
+        size: item.variantId.size,
+        color: item.variantId.color,
+        sku: item.variantId.sku,
+        image: item.variantId.image || ""
+      }
     };
   });
 
@@ -203,8 +219,8 @@ export const getMyOrders = async (userId) => {
   const ordersWithItems = await Promise.all(
     orders.map(async (order) => {
       const items = await OrderItem.find({ orderId: order._id })
-        .populate("productId", "name price discount images")
-        .populate("variantId", "size color sku image priceAdjustment discount");
+        .populate("productId", "name price discount images isDeleted")
+        .populate("variantId", "size color sku image priceAdjustment discount isDeleted");
 
       if (order.status !== "completed") {
         const itemsWithReviewFlag = items.map((item) => ({
@@ -247,10 +263,10 @@ export const getOrderDetail = async (userId, orderId) => {
   if (!order) throw new Error("Khôn tìm thấy đơn hàng!");
 
   const items = await OrderItem.find({ orderId })
-    .populate("productId", "name price discount images")
+    .populate("productId", "name price discount images isDeleted")
     .populate(
       "variantId",
-      "size color sku image stock priceAdjustment discount",
+      "size color sku image stock priceAdjustment discount isDeleted",
     );
 
   return { ...order.toObject(), items };
@@ -311,8 +327,8 @@ export const getAdminOrderDetail = async (orderId) => {
   if (!order) throw new Error("Khôn tìm thấy đơn hàng!");
 
   const items = await OrderItem.find({ orderId })
-    .populate("productId", "name price images")
-    .populate("variantId", "size color sku image");
+    .populate("productId", "name price images isDeleted")
+    .populate("variantId", "size color sku image isDeleted");
 
   return { ...order.toObject(), items };
 };
