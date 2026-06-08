@@ -109,6 +109,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    savedCoupons: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon",
+      },
+    ],
+
     lastLoginAt: {
       type: Date,
       default: null,

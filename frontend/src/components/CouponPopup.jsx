@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
-import { Gift, X, Copy, Check, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { X, Copy, Check, ArrowRight, BadgePercent, Tag, Truck } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/api.js";
-
-const RECEIVED_KEY = "fs-received-coupons";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const formatCurrency = (v = 0) => `${Number(v).toLocaleString("vi-VN")}đ`;
+
+const TYPE_ICONS = {
+  percentage: BadgePercent,
+  fixed_amount: Tag,
+  free_shipping: Truck
+};
 
 const getDiscountLabel = (coupon) => {
   switch (coupon.discountType) {
@@ -23,10 +28,22 @@ const getDiscountLabel = (coupon) => {
   }
 };
 
+const getSubLabel = (coupon) => {
+  if (coupon.minOrderAmount > 0) {
+    return `Đơn từ ${formatCurrency(coupon.minOrderAmount)}`;
+  }
+  return "Áp dụng mọi đơn";
+};
+
 export default function CouponPopup() {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [show, setShow] = useState(false);
   const [coupons, setCoupons] = useState([]);
+  const [receivedCodes, setReceivedCodes] = useState([]);
   const [copiedCode, setCopiedCode] = useState(null);
+  const isAuthenticated = Boolean(token);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -34,22 +51,32 @@ export default function CouponPopup() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [token]);
 
   const loadAndShow = async () => {
     try {
-      const res = await apiRequest("/coupons/public");
+      const [publicResponse, savedResponse] = await Promise.all([
+        apiRequest("/coupons/public"),
+        token
+          ? apiRequest("/coupons/saved", { token })
+          : Promise.resolve({ data: [] })
+      ]);
+
+      const savedCodes = (savedResponse.data || []).map((coupon) => coupon.code);
+      setReceivedCodes(savedCodes);
+
+      const res = publicResponse;
       let data = res.data || [];
 
       // Filter out received coupons
-      const receivedCouponsStr = localStorage.getItem(RECEIVED_KEY);
-      const receivedCoupons = receivedCouponsStr ? JSON.parse(receivedCouponsStr) : [];
-      
-      data = data.filter(c => !receivedCoupons.includes(c.code));
+      data = data.filter(c => !savedCodes.includes(c.code));
 
       if (data.length > 0) {
         setCoupons(data.slice(0, 4));
         setShow(true);
+      } else {
+        setCoupons([]);
+        setShow(false);
       }
     } catch (err) {
       console.error("Failed to load popup coupons:", err);
@@ -61,30 +88,35 @@ export default function CouponPopup() {
   };
 
   const handleCopy = async (code) => {
-    const markAsReceived = () => {
-      const receivedCouponsStr = localStorage.getItem(RECEIVED_KEY);
-      const receivedCoupons = receivedCouponsStr ? JSON.parse(receivedCouponsStr) : [];
-      if (!receivedCoupons.includes(code)) {
-        receivedCoupons.push(code);
-        localStorage.setItem(RECEIVED_KEY, JSON.stringify(receivedCoupons));
-      }
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
-    };
+    if (!isAuthenticated) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` }
+      });
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(code);
-      markAsReceived();
     } catch {
-      // Fallback
       const input = document.createElement("input");
       input.value = code;
       document.body.appendChild(input);
       input.select();
       document.execCommand("copy");
       document.body.removeChild(input);
-      markAsReceived();
     }
+
+    await apiRequest("/coupons/save", {
+      method: "POST",
+      token,
+      body: { code }
+    });
+
+    setReceivedCodes((current) =>
+      current.includes(code) ? current : [...current, code]
+    );
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
   };
 
   if (!show || coupons.length === 0) return null;
@@ -95,84 +127,109 @@ export default function CouponPopup() {
       onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="relative w-full max-w-lg overflow-hidden bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: "fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
         }}
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-br from-rose-500 via-orange-500 to-amber-500 px-6 pb-8 pt-10 text-center text-white">
+        <div className="relative border-b border-white/10 bg-black px-6 py-6 text-white">
           <button
             type="button"
             onClick={handleClose}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/10 text-white backdrop-blur-sm transition hover:bg-black/20"
+            className="absolute right-4 top-4 grid h-9 w-9 place-items-center border border-white/20 text-white transition hover:bg-white hover:text-black"
             aria-label="Đóng"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
 
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20 shadow-inner backdrop-blur-md">
-            <Gift className="h-8 w-8 text-white" strokeWidth={2} />
-          </div>
-          <h2 className="text-2xl font-black tracking-tight">ƯU ĐÃI DÀNH CHO BẠN</h2>
-          <p className="mt-2 text-sm font-medium text-white/90">
-            Lưu ngay mã giảm giá để mua sắm tiết kiệm hơn!
+          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.28em] text-white/60">
+            <Tag className="h-4 w-4" strokeWidth={1.5} />
+            FashionStore
+          </p>
+          <h2 className="mt-3 pr-10 text-2xl font-light tracking-tight">
+            Ưu đãi dành cho bạn
+          </h2>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/70">
+            Lưu mã vào ví voucher và dùng khi thanh toán.
           </p>
         </div>
 
         {/* Coupons */}
-        <div className="max-h-[45vh] space-y-3 overflow-y-auto bg-slate-50 p-6">
-          {coupons.map((coupon) => (
-            <div
-              key={coupon._id}
-              className="relative flex items-center justify-between overflow-hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md"
-            >
-              {/* Decorative left accent */}
-              <div className="absolute bottom-0 left-0 top-0 w-1.5 bg-gradient-to-b from-rose-400 to-orange-400" />
-              
-              <div className="min-w-0 flex-1 pl-3">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-rose-50 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-rose-600 ring-1 ring-inset ring-rose-100">
-                    {coupon.code}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-bold text-slate-800">{getDiscountLabel(coupon)}</p>
-                {coupon.minOrderAmount > 0 && (
-                  <p className="mt-1 text-xs font-medium text-slate-500">
-                    Đơn từ {formatCurrency(coupon.minOrderAmount)}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleCopy(coupon.code)}
-                className={`ml-4 shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition ${
-                  copiedCode === coupon.code
-                    ? "bg-emerald-500 text-white shadow-sm shadow-emerald-200"
-                    : "bg-rose-500 text-white shadow-sm shadow-rose-200 hover:bg-rose-600 hover:shadow-md hover:shadow-rose-200"
-                }`}
+        <div className="max-h-[50vh] space-y-3 overflow-y-auto bg-white p-4 sm:p-5">
+          {coupons.map((coupon) => {
+            const Icon = TYPE_ICONS[coupon.discountType] || Tag;
+            const isSaved = receivedCodes.includes(coupon.code);
+            const isFreeShipping = coupon.discountType === "free_shipping";
+            const toneClass = isFreeShipping
+              ? "bg-blue-50 text-blue-700"
+              : "bg-emerald-50 text-emerald-700";
+
+            return (
+              <div
+                key={coupon._id}
+                className={`relative flex overflow-hidden border border-gray-200 ${isFreeShipping ? "bg-blue-50/60" : "bg-emerald-50/60"}`}
               >
-                {copiedCode === coupon.code ? (
-                  <span className="flex items-center gap-1.5">
-                    <Check className="h-3.5 w-3.5" /> Đã lưu
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <Copy className="h-3.5 w-3.5" /> Lưu mã
-                  </span>
-                )}
-              </button>
-            </div>
-          ))}
+                <div className="flex min-w-0 flex-1 items-start gap-3 p-4">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center ${toneClass}`}>
+                    <Icon className="h-5 w-5" strokeWidth={1.5} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-base font-black tracking-tight text-gray-950">
+                      {coupon.code}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">
+                      {getDiscountLabel(coupon)}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">{getSubLabel(coupon)}</p>
+                  </div>
+                </div>
+
+                <div className="relative flex w-0 flex-col items-center justify-center border-l-2 border-dashed border-white">
+                  <div className="absolute -top-3 h-6 w-6 rounded-full bg-white shadow-inner" />
+                  <div className="absolute -bottom-3 h-6 w-6 rounded-full bg-white shadow-inner" />
+                </div>
+
+                <div className="flex w-[112px] shrink-0 items-center justify-center p-3">
+                  <button
+                    type="button"
+                    disabled={isSaved}
+                    onClick={() => handleCopy(coupon.code)}
+                    className={`inline-flex h-10 w-full items-center justify-center gap-2 border px-3 text-[11px] font-bold uppercase tracking-wider transition ${
+                      isSaved
+                        ? "cursor-not-allowed border-gray-200 bg-white text-gray-400"
+                        : "border-black bg-black text-white hover:bg-white hover:text-black"
+                    }`}
+                  >
+                    {isSaved || copiedCode === coupon.code ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        Đã lưu
+                      </>
+                    ) : !isAuthenticated ? (
+                      "Lưu mã"
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        Lưu mã
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Footer */}
-        <div className="bg-white p-5 text-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="border-t border-gray-200 bg-white p-5 text-center">
           <Link
-            to="/profile?tab=coupons"
+            to={isAuthenticated ? "/profile?tab=coupons" : "/login"}
+            state={isAuthenticated ? undefined : { from: "/profile?tab=coupons" }}
             onClick={handleClose}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-800 transition hover:text-rose-600"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-black transition hover:gap-3"
           >
             Xem tất cả trong Ví Voucher
             <ArrowRight className="h-4 w-4" />

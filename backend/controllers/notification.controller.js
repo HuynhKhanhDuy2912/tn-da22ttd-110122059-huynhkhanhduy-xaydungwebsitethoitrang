@@ -1,6 +1,7 @@
 import {
   getNotifications,
   getUnreadCount,
+  deleteNotification,
   markAsRead,
   markAllAsRead,
 } from "../services/notification.service.js";
@@ -90,9 +91,34 @@ export const markAllNotificationsAsRead = async (req, res) => {
   }
 };
 
+export const deleteMyNotification = async (req, res) => {
+  try {
+    const notification = await deleteNotification(req.params.id, req.user._id);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification deleted",
+      data: notification,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export default {
   getMyNotifications,
   getMyUnreadCount,
+  deleteMyNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
 };

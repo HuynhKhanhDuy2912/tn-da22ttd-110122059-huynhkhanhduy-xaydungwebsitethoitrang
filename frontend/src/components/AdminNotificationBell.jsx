@@ -1,4 +1,4 @@
-import { Bell, MessageCircleQuestion, ShoppingCart, Star } from "lucide-react";
+import { Bell, MessageCircleQuestion, ShoppingCart, Star, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext.jsx";
@@ -23,13 +23,20 @@ function formatTimeAgo(value) {
 
 export default function AdminNotificationBell() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, markNotificationAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, deleteNotification, markNotificationAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const sortedNotifications = useMemo(
     () => [...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [notifications]
   );
+
+  const closeNotifications = () => {
+    setIsOpen(false);
+    setPendingDelete(null);
+  };
 
   const handleNavigate = async (item) => {
     if (!item) return;
@@ -46,14 +53,42 @@ export default function AdminNotificationBell() {
       navigate("/admin/product-questions");
     }
 
-    setIsOpen(false);
+    closeNotifications();
+  };
+
+  const handleDelete = async (item) => {
+    if (!item || isDeleting) return;
+
+    if (!item.isRead) {
+      setPendingDelete(item);
+      return;
+    }
+
+    setIsDeleting(true);
+    await deleteNotification(item._id);
+    setIsDeleting(false);
+  };
+
+  const confirmDeleteUnread = async () => {
+    if (!pendingDelete || isDeleting) return;
+
+    setIsDeleting(true);
+    const deleted = await deleteNotification(pendingDelete._id);
+    setIsDeleting(false);
+
+    if (deleted) {
+      setPendingDelete(null);
+    }
   };
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          setPendingDelete(null);
+          setIsOpen((current) => !current);
+        }}
         className="relative grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-black hover:text-black"
         aria-label="Thông báo"
         title="Thông báo"
@@ -72,7 +107,7 @@ export default function AdminNotificationBell() {
             type="button"
             aria-label="Đóng thông báo"
             className="fixed inset-0 z-30 cursor-default bg-transparent"
-            onClick={() => setIsOpen(false)}
+            onClick={closeNotifications}
           />
 
           <div className="absolute right-0 top-12 z-40 w-[360px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
@@ -98,45 +133,94 @@ export default function AdminNotificationBell() {
                 sortedNotifications.map((item) => {
                   const isOrder = item.type === "order";
                   return (
-                    <button
+                    <div
                       key={item._id}
-                      type="button"
-                      onClick={() => handleNavigate(item)}
                       className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
                         item.isRead ? "bg-white" : "bg-blue-50/50"
                       }`}
                     >
-                      <span
-                        className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${
-                          isOrder
-                            ? "bg-emerald-100 text-emerald-700"
-                            : item.type === "question"
-                              ? "bg-purple-100 text-purple-700"
-                              : "bg-amber-100 text-amber-700"
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => handleNavigate(item)}
+                        className="flex min-w-0 flex-1 items-start gap-3 text-left"
                       >
-                        {isOrder
-                          ? <ShoppingCart className="h-4 w-4" />
-                          : item.type === "question"
-                            ? <MessageCircleQuestion className="h-4 w-4" />
-                            : <Star className="h-4 w-4" />}
-                      </span>
-
-                      <span className="min-w-0 flex-1">
-                        <span className="mb-0.5 block text-xs font-semibold text-black">
-                          {item.title || (isOrder ? "Đơn hàng mới" : "Bình luận mới")}
+                        <span
+                          className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${
+                            isOrder
+                              ? "bg-emerald-100 text-emerald-700"
+                              : item.type === "question"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {isOrder
+                            ? <ShoppingCart className="h-4 w-4" />
+                            : item.type === "question"
+                              ? <MessageCircleQuestion className="h-4 w-4" />
+                              : <Star className="h-4 w-4" />}
                         </span>
-                        <span className="line-clamp-2 block text-xs text-gray-600">{item.message}</span>
-                        <span className="mt-1 block text-[11px] text-gray-400">{formatTimeAgo(item.createdAt)}</span>
-                      </span>
 
-                      {!item.isRead ? <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" /> : null}
-                    </button>
+                        <span className="min-w-0 flex-1">
+                          <span className="mb-0.5 block text-xs font-semibold text-black">
+                            {item.title || (isOrder ? "Đơn hàng mới" : "Bình luận mới")}
+                          </span>
+                          <span className="line-clamp-2 block text-xs text-gray-600">{item.message}</span>
+                          <span className="mt-1 block text-[11px] text-gray-400">{formatTimeAgo(item.createdAt)}</span>
+                        </span>
+                      </button>
+
+                      <div className="flex shrink-0 items-start gap-2">
+                        {!item.isRead ? <span className="mt-2 h-2 w-2 rounded-full bg-blue-600" /> : null}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item)}
+                          disabled={isDeleting}
+                          className="grid h-8 w-8 place-items-center rounded-full text-gray-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label="Xóa thông báo"
+                          title="Xóa thông báo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   );
                 })
               )}
             </div>
           </div>
+
+          {pendingDelete ? (
+            <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4">
+              <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-2xl">
+                <h4 className="text-sm font-bold text-black">Xóa thông báo chưa đọc?</h4>
+                <p className="mt-2 text-sm text-gray-600">
+                  Bạn có muốn xóa thông báo này không?
+                </p>
+                <p className="mt-3 line-clamp-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                  {pendingDelete.message}
+                </p>
+
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(null)}
+                    disabled={isDeleting}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteUnread}
+                    disabled={isDeleting}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isDeleting ? "Đang xóa..." : "Xóa"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
     </div>

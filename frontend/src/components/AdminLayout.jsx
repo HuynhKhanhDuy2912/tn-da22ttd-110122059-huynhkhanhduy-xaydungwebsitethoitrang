@@ -390,7 +390,7 @@ export default function AdminLayout() {
               type="button"
               title="Đăng xuất"
               onClick={logout}
-              className={`flex items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase text-gray-500 transition hover:bg-gray-50 hover:text-red-600 ${collapsed ? "justify-center px-2" : ""
+              className={`flex items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase text-red-600 transition hover:bg-gray-50 hover:text-red-500 ${collapsed ? "justify-center px-2" : ""
                 }`}
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center">

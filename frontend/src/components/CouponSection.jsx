@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, ArrowLeft, Copy, Check, Tag, Truck, BadgePercent } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const formatCurrency = (v = 0) => `${Number(v).toLocaleString("vi-VN")}đ`;
-
-const RECEIVED_KEY = "fs-received-coupons";
 
 const TYPE_ICONS = {
   percentage: BadgePercent,
@@ -40,33 +39,41 @@ const getSubLabel = (coupon) => {
 };
 
 export default function CouponSection() {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [coupons, setCoupons] = useState([]);
   const [receivedCodes, setReceivedCodes] = useState([]);
   const [page, setPage] = useState(0);
+  const isAuthenticated = Boolean(token);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await apiRequest("/coupons/public");
-        setCoupons(res.data || []);
+        const [publicResponse, savedResponse] = await Promise.all([
+          apiRequest("/coupons/public"),
+          token
+            ? apiRequest("/coupons/saved", { token })
+            : Promise.resolve({ data: [] })
+        ]);
+        setCoupons(publicResponse.data || []);
+        setReceivedCodes((savedResponse.data || []).map((coupon) => coupon.code));
       } catch (err) {
         console.error("Failed to load coupons:", err);
       }
     };
     load();
-
-    const stored = localStorage.getItem(RECEIVED_KEY);
-    if (stored) {
-      setReceivedCodes(JSON.parse(stored));
-    }
-  }, []);
+  }, [token]);
 
   const handleCopy = async (code) => {
-    if (receivedCodes.includes(code)) return; // Already received
+    if (!isAuthenticated) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` }
+      });
+      return;
+    }
 
-    const newReceived = [...receivedCodes, code];
-    setReceivedCodes(newReceived);
-    localStorage.setItem(RECEIVED_KEY, JSON.stringify(newReceived));
+    if (receivedCodes.includes(code)) return; // Already received
 
     try {
       await navigator.clipboard.writeText(code);
@@ -78,6 +85,16 @@ export default function CouponSection() {
       document.execCommand("copy");
       document.body.removeChild(input);
     }
+
+    await apiRequest("/coupons/save", {
+      method: "POST",
+      token,
+      body: { code }
+    });
+
+    setReceivedCodes((current) =>
+      current.includes(code) ? current : [...current, code]
+    );
   };
 
   if (coupons.length === 0) return null;
@@ -100,7 +117,8 @@ export default function CouponSection() {
           </p>
         </div>
         <Link
-          to="/profile?tab=coupons"
+          to={isAuthenticated ? "/profile?tab=coupons" : "/login"}
+          state={isAuthenticated ? undefined : { from: "/profile?tab=coupons" }}
           className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-black transition hover:gap-3"
         >
           Xem tất cả
@@ -211,9 +229,11 @@ export default function CouponSection() {
                       <>
                         <Check className="h-4 w-4" /> ĐÃ NHẬN
                       </>
+                    ) : !isAuthenticated ? (
+                      "LƯU MÃ"
                     ) : (
                       <>
-                        <Copy className="h-4 w-4" /> SAO CHÉP MÃ
+                        <Copy className="h-4 w-4" /> LƯU MÃ
                       </>
                     )}
                   </button>

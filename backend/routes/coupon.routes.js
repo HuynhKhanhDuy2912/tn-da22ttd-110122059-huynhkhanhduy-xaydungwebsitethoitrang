@@ -9,6 +9,8 @@ router.get("/public", couponController.listPublicCoupons);
 
 // User (auth required)
 router.get("/available", protect, couponController.listAvailableCoupons);
+router.get("/saved", protect, couponController.listSavedCoupons);
+router.post("/save", protect, couponController.saveCoupon);
 router.post("/apply", protect, couponController.applyCouponPreview);
 
 // Admin

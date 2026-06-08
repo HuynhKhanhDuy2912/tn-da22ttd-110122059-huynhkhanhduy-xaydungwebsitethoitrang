@@ -62,7 +62,7 @@ export default function CouponPickerModal({
     setLoading(true);
     try {
       const res = await apiRequest(
-        `/coupons/available?subtotal=${subtotal}`,
+        `/coupons/saved?subtotal=${subtotal}`,
         { token }
       );
       setCoupons(res.data || []);
@@ -92,6 +92,12 @@ export default function CouponPickerModal({
 
       const { coupon, discountAmount } = res.data;
       const couponData = { ...coupon, potentialDiscount: discountAmount, isEligible: true };
+
+      await apiRequest("/coupons/save", {
+        method: "POST",
+        token,
+        body: { code: coupon.code }
+      });
 
       if (coupon.discountType === "free_shipping") {
         setPickedShippingCoupon(couponData);
@@ -179,7 +185,7 @@ export default function CouponPickerModal({
             </div>
           ) : coupons.length === 0 ? (
             <div className="py-12 text-center text-sm text-gray-500">
-              Không có mã giảm giá khả dụng
+              Bạn chưa lưu mã giảm giá nào
             </div>
           ) : (
             <div className="space-y-6">

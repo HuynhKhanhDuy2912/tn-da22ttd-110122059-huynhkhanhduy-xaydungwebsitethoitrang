@@ -115,6 +115,29 @@ export function NotificationProvider({ children }) {
     }
   }, [token]);
 
+  const deleteNotification = useCallback(async (notificationId) => {
+    if (!notificationId || !token) return false;
+
+    const target = notifications.find((item) => item._id === notificationId);
+
+    try {
+      await apiRequest(`/notifications/${notificationId}`, {
+        method: "DELETE",
+        token,
+      });
+
+      setNotifications((current) => current.filter((item) => item._id !== notificationId));
+
+      if (target && !target.isRead) {
+        setUnreadCount((current) => Math.max(current - 1, 0));
+      }
+
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }, [notifications, token]);
+
   useEffect(() => {
     if (!isAuthenticated || !token || user?.role !== "admin") {
       resetNotifications();
@@ -148,9 +171,10 @@ export function NotificationProvider({ children }) {
     unreadCount,
     loading,
     fetchNotifications,
+    deleteNotification,
     markNotificationAsRead,
     markAllAsRead,
-  }), [fetchNotifications, loading, markAllAsRead, markNotificationAsRead, notifications, unreadCount]);
+  }), [deleteNotification, fetchNotifications, loading, markAllAsRead, markNotificationAsRead, notifications, unreadCount]);
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

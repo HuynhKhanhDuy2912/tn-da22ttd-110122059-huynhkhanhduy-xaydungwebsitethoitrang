@@ -1,6 +1,7 @@
 import Coupon from "../models/Coupon.js";
 import CouponUsage from "../models/CouponUsage.js";
 import Order from "../models/Order.js";
+import User from "../models/User.js";
 
 /**
  * Validate a coupon code for a specific user and order subtotal.
@@ -224,6 +225,75 @@ export const getAvailableCoupons = async (userId, subtotal = 0) => {
   }
 
   return results;
+};
+
+export const saveCouponForUser = async (userId, code) => {
+  const normalizedCode = code?.toUpperCase().trim();
+  if (!normalizedCode) {
+    throw new Error("Vui lòng nhập mã giảm giá");
+  }
+
+  const now = new Date();
+  const coupon = await Coupon.findOne({
+    code: normalizedCode,
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    $or: [
+      { maxUsage: null },
+      { $expr: { $lt: ["$currentUsage", "$maxUsage"] } }
+    ]
+  }).lean();
+
+  if (!coupon) {
+    throw new Error("Mã giảm giá không khả dụng");
+  }
+
+  const userUsageCount = await CouponUsage.countDocuments({
+    couponId: coupon._id,
+    userId
+  });
+
+  if (userUsageCount >= coupon.maxUsagePerUser) {
+    throw new Error("Bạn đã sử dụng mã giảm giá này đủ số lần cho phép");
+  }
+
+  if (coupon.isFirstOrderOnly) {
+    const completedOrderCount = await Order.countDocuments({
+      userId,
+      status: { $ne: "cancelled" }
+    });
+
+    if (completedOrderCount > 0) {
+      throw new Error("Mã giảm giá này chỉ dành cho đơn hàng đầu tiên");
+    }
+  }
+
+  await User.findByIdAndUpdate(userId, {
+    $addToSet: { savedCoupons: coupon._id }
+  });
+
+  return coupon;
+};
+
+export const getSavedCoupons = async (userId, subtotal = 0) => {
+  const user = await User.findById(userId).select("savedCoupons").lean();
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng");
+  }
+
+  const savedCouponIds = new Set(
+    (user.savedCoupons || []).map((couponId) => couponId.toString())
+  );
+
+  if (savedCouponIds.size === 0) {
+    return [];
+  }
+
+  const availableCoupons = await getAvailableCoupons(userId, subtotal);
+  return availableCoupons.filter((coupon) =>
+    savedCouponIds.has(coupon._id.toString())
+  );
 };
 
 /**

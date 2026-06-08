@@ -8,5 +8,6 @@ router.get("/", protect, authorize("admin"), notificationController.getMyNotific
 router.get("/unread-count", protect, authorize("admin"), notificationController.getMyUnreadCount);
 router.patch("/:id/read", protect, authorize("admin"), notificationController.markNotificationAsRead);
 router.patch("/read-all", protect, authorize("admin"), notificationController.markAllNotificationsAsRead);
+router.delete("/:id", protect, authorize("admin"), notificationController.deleteMyNotification);
 
 export default router;

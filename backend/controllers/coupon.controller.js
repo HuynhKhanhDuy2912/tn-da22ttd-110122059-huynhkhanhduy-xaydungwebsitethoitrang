@@ -7,7 +7,9 @@ import {
   deleteCoupon,
   validateAndCalculateCoupon,
   getAvailableCoupons,
-  getPublicCoupons
+  getPublicCoupons,
+  saveCouponForUser,
+  getSavedCoupons
 } from "../services/coupon.service.js";
 
 // ─── Admin ───────────────────────────────────────────────
@@ -180,6 +182,42 @@ export const listAvailableCoupons = async (req, res) => {
   }
 };
 
+export const saveCoupon = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const coupon = await saveCouponForUser(req.user._id, code);
+
+    return res.status(200).json({
+      success: true,
+      message: "Đã lưu mã giảm giá",
+      data: coupon
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const listSavedCoupons = async (req, res) => {
+  try {
+    const subtotal = Number(req.query.subtotal) || 0;
+    const coupons = await getSavedCoupons(req.user._id, subtotal);
+
+    return res.status(200).json({
+      success: true,
+      message: "Saved coupons fetched successfully",
+      data: coupons
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export const listPublicCoupons = async (_req, res) => {
   try {
     const coupons = await getPublicCoupons();
@@ -206,5 +244,7 @@ export default {
   adminToggleCoupon,
   applyCouponPreview,
   listAvailableCoupons,
+  saveCoupon,
+  listSavedCoupons,
   listPublicCoupons
 };

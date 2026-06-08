@@ -59,6 +59,7 @@ export default function AdminAccountPage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
@@ -102,9 +103,27 @@ export default function AdminAccountPage() {
     setProfileForm((current) => ({ ...current, [name]: value }));
   };
 
+  const resetPasswordForm = () => {
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setShowPassword({
+      current: false,
+      next: false,
+      confirm: false,
+    });
+  };
+
   const handlePasswordChange = (event) => {
     const { name, value } = event.target;
     setPasswordForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleCancelPasswordChange = () => {
+    resetPasswordForm();
+    setIsPasswordFormOpen(false);
   };
 
   const handleProfileSubmit = async (event) => {
@@ -162,11 +181,8 @@ export default function AdminAccountPage() {
           newPassword: passwordForm.newPassword,
         },
       });
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      resetPasswordForm();
+      setIsPasswordFormOpen(false);
       setSuccess("Đổi mật khẩu quản trị thành công.");
     } catch (requestError) {
       setError(requestError.message || "Không thể đổi mật khẩu.");
@@ -331,7 +347,23 @@ export default function AdminAccountPage() {
                 </label>
               </div>
 
-              <div className="flex justify-end border-t border-slate-100 pt-5">
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  {canChangePassword && !isPasswordFormOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError("");
+                        setSuccess("");
+                        setIsPasswordFormOpen(true);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      Đổi mật khẩu
+                    </button>
+                  ) : null}
+                </div>
                 <button
                   type="submit"
                   disabled={savingProfile}
@@ -342,110 +374,120 @@ export default function AdminAccountPage() {
                 </button>
               </div>
             </form>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-start gap-3 border-b border-slate-100 pb-5">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-950 text-white">
-                <KeyRound className="h-5 w-5" />
-              </span>
-              <div>
-                <h2 className="text-xl font-bold text-slate-950">Bảo mật đăng nhập</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Đổi mật khẩu định kỳ cho tài khoản vận hành đơn hàng, kho và dữ liệu khách hàng.
-                </p>
-              </div>
-            </div>
 
             {canChangePassword ? (
-              <form onSubmit={handlePasswordSubmit} className="space-y-5">
-                <div className="grid gap-5 md:grid-cols-3">
-                  {[
-                    {
-                      key: "current",
-                      name: "currentPassword",
-                      label: "Mật khẩu hiện tại",
-                      value: passwordForm.currentPassword,
-                      visible: showPassword.current,
-                    },
-                    {
-                      key: "next",
-                      name: "newPassword",
-                      label: "Mật khẩu mới",
-                      value: passwordForm.newPassword,
-                      visible: showPassword.next,
-                    },
-                    {
-                      key: "confirm",
-                      name: "confirmPassword",
-                      label: "Xác nhận mật khẩu",
-                      value: passwordForm.confirmPassword,
-                      visible: showPassword.confirm,
-                    },
-                  ].map((field) => (
-                    <label key={field.name} className="block">
-                      <span className="mb-2 block text-sm font-semibold text-slate-700">
-                        {field.label}
+              isPasswordFormOpen ? (
+                <form onSubmit={handlePasswordSubmit} className="space-y-5">
+                  <div className="mt-6 border-t border-slate-100 pt-6">
+                    <div className="mb-5 flex items-start gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-950 text-white">
+                        <KeyRound className="h-4 w-4" />
                       </span>
-                      <span className="relative block">
-                        <input
-                          type={field.visible ? "text" : "password"}
-                          name={field.name}
-                          value={field.value}
-                          onChange={handlePasswordChange}
-                          className="h-11 w-full rounded-lg border border-slate-200 px-4 pr-11 text-sm outline-none transition focus:border-slate-950"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowPassword((current) => ({
-                              ...current,
-                              [field.key]: !current[field.key],
-                            }))
-                          }
-                          className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                          aria-label={field.visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                        >
-                          {field.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-950">Đổi mật khẩu</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Cập nhật mật khẩu đăng nhập cho tài khoản quản trị.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-3">
+                    {[
+                      {
+                        key: "current",
+                        name: "currentPassword",
+                        label: "Mật khẩu hiện tại",
+                        value: passwordForm.currentPassword,
+                        visible: showPassword.current,
+                      },
+                      {
+                        key: "next",
+                        name: "newPassword",
+                        label: "Mật khẩu mới",
+                        value: passwordForm.newPassword,
+                        visible: showPassword.next,
+                      },
+                      {
+                        key: "confirm",
+                        name: "confirmPassword",
+                        label: "Xác nhận mật khẩu",
+                        value: passwordForm.confirmPassword,
+                        visible: showPassword.confirm,
+                      },
+                    ].map((field) => (
+                      <label key={field.name} className="block">
+                        <span className="mb-2 block text-sm font-semibold text-slate-700">
+                          {field.label}
+                        </span>
+                        <span className="relative block">
+                          <input
+                            type={field.visible ? "text" : "password"}
+                            name={field.name}
+                            value={field.value}
+                            onChange={handlePasswordChange}
+                            className="h-11 w-full rounded-lg border border-slate-200 px-4 pr-11 text-sm outline-none transition focus:border-slate-950"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((current) => ({
+                                ...current,
+                                [field.key]: !current[field.key],
+                              }))
+                            }
+                            className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                            aria-label={field.visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                          >
+                            {field.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex items-center justify-between text-xs">
+                      <span className="font-semibold uppercase tracking-wide text-slate-500">
+                        Độ mạnh mật khẩu
                       </span>
-                    </label>
-                  ))}
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="font-semibold uppercase tracking-wide text-slate-500">
-                      Độ mạnh mật khẩu
-                    </span>
-                    <span className="font-semibold text-slate-700">{passwordStrength.label}</span>
+                      <span className="font-semibold text-slate-700">{passwordStrength.label}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full transition-all ${passwordStrength.tone}`}
+                        style={{ width: passwordStrength.width }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full transition-all ${passwordStrength.tone}`}
-                      style={{ width: passwordStrength.width }}
-                    />
-                  </div>
-                </div>
 
-                <div className="flex justify-end border-t border-slate-100 pt-5">
-                  <button
-                    type="submit"
-                    disabled={
-                      savingPassword ||
-                      !passwordForm.currentPassword ||
-                      !passwordForm.newPassword ||
-                      !passwordForm.confirmPassword
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {savingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Đổi mật khẩu
-                  </button>
-                </div>
-              </form>
+                  <div className="flex flex-col justify-end gap-2 border-t border-slate-100 pt-5 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handleCancelPasswordChange}
+                      disabled={savingPassword}
+                      className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={
+                        savingPassword ||
+                        !passwordForm.currentPassword ||
+                        !passwordForm.newPassword ||
+                        !passwordForm.confirmPassword
+                      }
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {savingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Đổi mật khẩu
+                    </button>
+                  </div>
+                </form>
+              ) : null
             ) : (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
                 Tài khoản admin này không đăng nhập bằng email/mật khẩu nên không thể đổi mật khẩu tại đây.
               </div>
             )}

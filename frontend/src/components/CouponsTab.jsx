@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Copy, Check, Loader2, Tag, Truck, BadgePercent, Frown, X } from "lucide-react";
 import { apiRequest } from "../lib/api.js";
 
-const RECEIVED_KEY = "fs-received-coupons";
-
 const formatCurrency = (v = 0) => `${Number(v).toLocaleString("vi-VN")}đ`;
 
 const formatDate = (d) => {
@@ -50,14 +48,8 @@ export default function CouponsTab({ token }) {
   const loadCoupons = async () => {
     setLoading(true);
     try {
-      const res = await apiRequest("/coupons/available", { token });
-      
-      const receivedCouponsStr = localStorage.getItem(RECEIVED_KEY);
-      const receivedCodes = receivedCouponsStr ? JSON.parse(receivedCouponsStr) : [];
-      
-      // Only show coupons that the user has received (saved)
-      const myCoupons = (res.data || []).filter(c => receivedCodes.includes(c.code));
-      setCoupons(myCoupons);
+      const res = await apiRequest("/coupons/saved", { token });
+      setCoupons(res.data || []);
     } catch (err) {
       console.error("Failed to load coupons:", err);
     } finally {

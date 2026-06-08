@@ -95,3 +95,17 @@ export const markAllAsRead = async (userId) => {
     return false;
   }
 };
+
+export const deleteNotification = async (notificationId, userId) => {
+  try {
+    const notification = await Notification.findOneAndDelete({
+      _id: notificationId,
+      userId,
+    });
+
+    return notification;
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    return null;
+  }
+};
