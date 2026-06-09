@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, ChevronRight, CreditCard, Loader2, MapPin, Plus, Tag, Truck, Wallet, X } from "lucide-react";
+import toast from "react-hot-toast";
 import CouponPickerModal from "../components/CouponPickerModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -204,6 +205,14 @@ export default function CheckoutPage() {
 
       const orderId = orderResponse.data._id;
       const orderTotal = orderResponse.data.totalPrice;
+      const awardedCoupons = orderResponse.data.awardedCoupons;
+
+      if (awardedCoupons && awardedCoupons.length > 0) {
+        toast.success(
+          "Chúc mừng! Bạn đã nhận được mã giảm giá phần thưởng. Vui lòng kiểm tra mục Mã giảm giá.",
+          { duration: 5000 }
+        );
+      }
 
       // Xử lý thanh toán theo phương thức
       if (paymentMethod === "vnpay") {
@@ -213,13 +222,7 @@ export default function CheckoutPage() {
           body: { orderId, amount: orderTotal }
         });
         window.location.href = paymentResponse.data.paymentUrl;
-      } else if (paymentMethod === "momo") {
-        const paymentResponse = await apiRequest("/payment/momo/create", {
-          method: "POST",
-          token,
-          body: { orderId, amount: orderTotal }
-        });
-        window.location.href = paymentResponse.data.paymentUrl;
+
       } else if (paymentMethod === "paypal") {
         const paymentResponse = await apiRequest("/payment/paypal/create", {
           method: "POST",
@@ -478,22 +481,6 @@ export default function CheckoutPage() {
                     <div className="flex-1">
                       <div className="text-sm font-medium">VNPay</div>
                       <div className="text-xs text-gray-500">Thẻ ATM, Visa, MasterCard</div>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-center gap-3 border border-gray-200 p-4 transition hover:border-black">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="momo"
-                      checked={paymentMethod === "momo"}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="h-4 w-4"
-                    />
-                    <Wallet className="h-5 w-5 text-gray-600" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">Ví MoMo</div>
-                      <div className="text-xs text-gray-500">Thanh toán qua ví điện tử MoMo</div>
                     </div>
                   </label>
 

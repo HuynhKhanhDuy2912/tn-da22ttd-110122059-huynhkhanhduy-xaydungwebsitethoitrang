@@ -17,7 +17,7 @@ const paymentSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     trim: true,
-    enum: ["cod", "vnpay", "momo", "paypal"],
+    enum: ["cod", "vnpay", "paypal"],
     default: "cod"
   },
   paymentStatus: {

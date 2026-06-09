@@ -77,6 +77,11 @@ const couponSchema = new mongoose.Schema(
       default: true
     },
 
+    isReward: {
+      type: Boolean,
+      default: false
+    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"

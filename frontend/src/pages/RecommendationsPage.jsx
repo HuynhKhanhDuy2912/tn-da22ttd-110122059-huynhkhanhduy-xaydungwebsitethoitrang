@@ -25,6 +25,26 @@ export default function RecommendationsPage() {
     [items, variants],
   );
 
+  const groupedRecommendations = useMemo(() => {
+    const groups = {
+      style_match: { title: "Phong cách của bạn", items: [] },
+      similar_users: { title: "Người mua tương tự cũng thích", items: [] },
+      browsing_history: { title: "Dựa trên lịch sử xem", items: [] },
+      new_arrivals: { title: "Sản phẩm mới phù hợp", items: [] },
+      deals: { title: "Ưu đãi dành cho bạn", items: [] },
+      popular: { title: "Được quan tâm nhiều", items: [] },
+      for_you: { title: "Gợi ý khác", items: [] },
+    };
+
+    itemsWithVariants.forEach(item => {
+      const g = item.recommendationGroup || "for_you";
+      if (groups[g]) groups[g].items.push(item);
+      else groups.for_you.items.push(item);
+    });
+
+    return Object.values(groups).filter(g => g.items.length > 0);
+  }, [itemsWithVariants]);
+
   const loadRecommendations = async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
@@ -188,7 +208,7 @@ export default function RecommendationsPage() {
       </section>
 
       {/* Main recommendations */}
-      <section className="mx-auto max-w-[1440px] px-4 py-12 md:px-8 md:pb-16">
+      <section className="mx-auto max-w-[1440px] px-4 py-6 md:px-8 md:pb-6">
         {loading ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
@@ -211,26 +231,37 @@ export default function RecommendationsPage() {
           </div>
         ) : (
           <>
-            <div className="mb-8 flex items-center justify-between border-b border-gray-200 pb-6">
+            <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-black">
-                  {itemsWithVariants.length} sản phẩm được gợi ý
+                  {itemsWithVariants.length} sản phẩm được phân nhóm
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  Được cập nhật dựa trên hoạt động gần đây của bạn
+                  Được cập nhật và sắp xếp theo lý do gợi ý phù hợp nhất
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-              {itemsWithVariants.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  onAddToWishlist={handleWishlist}
-                  isWishlisted={wishlistProductIds.has(product._id)}
-                  onAddToCart={handleAddToCart}
-                />
+            <div className="flex flex-col gap-12">
+              {groupedRecommendations.map((group, idx) => (
+                <div key={idx} className="group-section">
+                  <h3 className="mb-4 text-xl font-bold tracking-tight text-black flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-gray-400" />
+                    {group.title}
+                    <span className="text-[16px] font-normal text-gray-500 ml-2">({group.items.length})</span>
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+                    {group.items.map((product) => (
+                      <ProductCard
+                        key={product._id}
+                        product={product}
+                        onAddToWishlist={handleWishlist}
+                        isWishlisted={wishlistProductIds.has(product._id)}
+                        onAddToCart={handleAddToCart}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </>
@@ -242,10 +273,11 @@ export default function RecommendationsPage() {
         <div className="mx-auto max-w-[1440px] px-4 py-12 md:px-8 md:pb-16">
           <RecommendationSection
             type="trending"
-            limit={8}
+            limit={12}
             onAddToWishlist={handleWishlist}
             onAddToCart={handleAddToCart}
             wishlistProductIds={wishlistProductIds}
+            excludeIds={itemsWithVariants.map(p => p._id)}
           />
         </div>
       </section>

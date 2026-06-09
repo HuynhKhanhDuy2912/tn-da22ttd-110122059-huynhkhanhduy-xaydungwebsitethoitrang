@@ -20,7 +20,8 @@ export default function RecommendationSection({
   onAddToCart,
   wishlistProductIds = new Set(),
   className = "",
-  showAIBadge = false // Show AI badge for personalized recommendations
+  showAIBadge = false, // Show AI badge for personalized recommendations
+  excludeIds = [] // Array of product IDs to exclude
 }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,15 @@ export default function RecommendationSection({
         }
 
         const response = await apiRequest(endpoint, options);
-        setProducts(response.data || []);
+        let fetchedProducts = response.data || [];
+
+        if (excludeIds && excludeIds.length > 0) {
+          fetchedProducts = fetchedProducts.filter(
+            p => !excludeIds.includes(p._id)
+          );
+        }
+
+        setProducts(fetchedProducts);
       } catch (err) {
         console.error("Recommendation error:", err);
         setError(err.message);
@@ -134,9 +143,11 @@ export default function RecommendationSection({
         <div>
           <div className="mb-2 flex items-center gap-2">
             <Icon className="h-4 w-4 text-gray-400" strokeWidth={2} />
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-400">
-              {finalEyebrow}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-400">
+                {finalEyebrow}
+              </p>
+            </div>
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-black md:text-3xl">
             {finalTitle}
@@ -186,7 +197,7 @@ export default function RecommendationSection({
                       prev === 0 ? pageCount - 1 : prev - 1
                     )
                   }
-                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 grid h-10 w-10 place-items-center border border-gray-300 bg-white/90 text-black shadow-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:border-black md:-left-5"
+                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 grid h-10 w-10 place-items-center border border-gray-300 bg-white/90 text-black shadow-sm transition-opacity duration-200 hover:border-black opacity-100 md:opacity-0 md:group-hover:opacity-100 md:-left-5"
                   aria-label="Xem sản phẩm trước"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -198,7 +209,7 @@ export default function RecommendationSection({
                       prev === pageCount - 1 ? 0 : prev + 1
                     )
                   }
-                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 grid h-10 w-10 place-items-center border border-gray-300 bg-white/90 text-black shadow-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:border-black md:-right-5"
+                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 grid h-10 w-10 place-items-center border border-gray-300 bg-white/90 text-black shadow-sm transition-opacity duration-200 hover:border-black opacity-100 md:opacity-0 md:group-hover:opacity-100 md:-right-5"
                   aria-label="Xem sản phẩm tiếp theo"
                 >
                   <ArrowRight className="h-4 w-4" />

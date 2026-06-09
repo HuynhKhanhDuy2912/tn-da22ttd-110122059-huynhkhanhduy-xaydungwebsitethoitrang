@@ -6,8 +6,8 @@ import UserBehavior from "../models/UserBehavior.js";
 const populateCartItems = (query) =>
   query
     .populate("cartId", "userId")
-    .populate("productId", "name price discount images style")
-    .populate("variantId", "size color sku stock priceAdjustment discount image");
+    .populate("productId", "name price discount images style isDeleted")
+    .populate("variantId", "size color sku stock priceAdjustment discount image isDeleted isActive");
 
 const calculateCartTotals = (items) => {
   const normalizedItems = items.map((item) => {

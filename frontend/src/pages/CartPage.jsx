@@ -121,7 +121,7 @@ export default function CartPage() {
 
   const isFreeShipping = selectedSubtotal >= 999000;
   const shippingFeeDisplay = selectedSubtotal === 0 ? "0 đ" : isFreeShipping ? "Miễn phí" : "Tính khi thanh toán";
-  
+
   // Tổng cộng ở giỏ hàng sẽ chỉ là tạm tính nếu chưa biết phí ship
   const selectedTotal = selectedSubtotal;
   const totalCartCount = cart?.items?.length || 0;
@@ -269,21 +269,19 @@ export default function CartPage() {
                 return (
                   <article
                     key={item._id}
-                    className={`grid gap-5 px-5 py-5 transition md:grid-cols-[auto_112px_minmax(0,1fr)_auto] md:items-center ${
-                      item.isUnavailable ? "bg-gray-50 opacity-75" : isSelected ? "bg-gray-50/70" : "bg-white"
-                    }`}
+                    className={`grid gap-5 px-5 py-5 transition md:grid-cols-[auto_112px_minmax(0,1fr)] md:items-center ${item.isUnavailable ? "bg-gray-50 opacity-75" : isSelected ? "bg-gray-50/70" : "bg-white"
+                      }`}
                   >
                     <button
                       type="button"
                       onClick={() => !item.isUnavailable && toggleItem(item._id)}
                       disabled={item.isUnavailable}
-                      className={`grid h-6 w-6 place-items-center border transition ${
-                        item.isUnavailable
-                          ? "border-gray-200 bg-gray-100 text-transparent cursor-not-allowed"
-                          : isSelected
-                            ? "border-black bg-black text-white"
-                            : "border-gray-300 bg-white text-transparent hover:border-black"
-                      }`}
+                      className={`grid h-6 w-6 place-items-center border transition ${item.isUnavailable
+                        ? "border-gray-200 bg-gray-100 text-transparent cursor-not-allowed"
+                        : isSelected
+                          ? "border-black bg-black text-white"
+                          : "border-gray-300 bg-white text-transparent hover:border-black"
+                        }`}
                       aria-label={isSelected ? "Bỏ chọn sản phẩm" : "Chọn sản phẩm để thanh toán"}
                     >
                       <Check className="h-4 w-4" strokeWidth={3} />
@@ -300,16 +298,27 @@ export default function CartPage() {
                       )}
                     </div>
 
-                    <div className="min-w-0">
-                      <h3 className="mb-2 line-clamp-2 text-base font-bold uppercase tracking-wide text-black flex items-center gap-2">
-                        {displayName}
-                        {item.isUnavailable && (
-                          <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
-                            Không khả dụng
-                          </span>
-                        )}
-                      </h3>
-                      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 flex flex-col justify-between h-full py-1">
+                      <div className="flex items-start justify-between gap-4">
+                        <h3 className="mb-2 line-clamp-2 text-base font-bold text-black flex items-center gap-2">
+                          {displayName}
+                          {item.isUnavailable && (
+                            <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
+                              Không khả dụng
+                            </span>
+                          )}
+                        </h3>
+                        <button
+                          type="button"
+                          className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-bold text-gray-400 transition hover:text-red-600"
+                          onClick={() => removeItem(item._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Xóa
+                        </button>
+                      </div>
+
+                      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
                         <label className="grid gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
                           Màu
                           <select
@@ -369,48 +378,43 @@ export default function CartPage() {
                             )}
                           </select>
                         </label>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Đơn giá:{" "}
-                        <span className="font-bold text-black">{formatCurrency(item.pricing?.unitPrice)}</span>
-                      </p>
-                    </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-4 md:flex-col md:items-end">
-                      <div className="flex items-center border border-gray-300 bg-white">
-                        <button
-                          type="button"
-                          className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
-                          onClick={() => updateItem(item._id, Math.max(item.quantity - 1, 1))}
-                          disabled={item.quantity <= 1 || item.isUnavailable}
-                          aria-label="Giảm số lượng"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className={`w-11 text-center text-sm font-bold ${item.isUnavailable ? "text-gray-400" : "text-black"}`}>{item.quantity}</span>
-                        <button
-                          type="button"
-                          className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
-                          onClick={() => updateItem(item._id, item.quantity + 1)}
-                          disabled={item.isUnavailable}
-                          aria-label="Tăng số lượng"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
+                        <label className="grid gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                          Số lượng
+                          <div className="flex items-center border border-gray-300 bg-white">
+                            <button
+                              type="button"
+                              className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+                              onClick={() => updateItem(item._id, Math.max(item.quantity - 1, 1))}
+                              disabled={item.quantity <= 1 || item.isUnavailable}
+                              aria-label="Giảm số lượng"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className={`w-11 text-center text-sm font-bold ${item.isUnavailable ? "text-gray-400" : "text-black"}`}>{item.quantity}</span>
+                            <button
+                              type="button"
+                              className="grid h-10 w-10 place-items-center text-black transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+                              onClick={() => updateItem(item._id, item.quantity + 1)}
+                              disabled={item.isUnavailable}
+                              aria-label="Tăng số lượng"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </label>
                       </div>
 
-                      <p className="text-right text-lg font-bold text-black">
-                        {formatCurrency(item.pricing?.lineTotal)}
-                      </p>
+                      <div className="flex items-center justify-between text-sm text-gray-500 mt-auto pt-2">
+                        <p>
+                          Đơn giá:{" "}
+                          <span className="font-bold text-black">{formatCurrency(item.pricing?.unitPrice)} x {item.quantity}</span>
 
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 transition hover:text-red-600"
-                        onClick={() => removeItem(item._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Xóa
-                      </button>
+                        </p>
+                        <p className="text-right text-lg font-bold text-black">
+                          {formatCurrency(item.pricing?.lineTotal)}
+                        </p>
+                      </div>
                     </div>
                   </article>
                 );

@@ -211,8 +211,15 @@ class HybridRecommendationEngine {
         scoredProducts, 0.7, limit * 2
       );
 
-      // 12. Take top N
-      const recommendations = diverseProducts.slice(0, limit).map(item => item.product);
+      // 12. Take top N — enrich products with recommendation metadata
+      const topItems = diverseProducts.slice(0, limit);
+
+      const recommendations = topItems.map(item => ({
+        ...item.product,
+        matchScore: Math.round(Math.min(item.finalScore * 100, 100)),
+        recommendationReasons: this.generateRecommendationReasons(item),
+        recommendationGroup: this.classifyRecommendationGroup(item)
+      }));
 
       // Cache results
       if (enableCache) {
@@ -225,11 +232,121 @@ class HybridRecommendationEngine {
       console.error("Recommendation error:", error);
 
       // Fallback: return popular products
-      return Product.find({ isActive: true })
+      const popularProducts = await Product.find({ isActive: true })
         .sort({ averageRating: -1, totalReviews: -1 })
         .limit(limit)
         .lean();
+
+      return popularProducts.map(p => ({
+        ...p,
+        matchScore: 0,
+        recommendationReasons: ["Sản phẩm phổ biến"],
+        recommendationGroup: "popular"
+      }));
     }
+  }
+
+  /**
+   * Generate human-readable recommendation reasons from scoring data
+   */
+  generateRecommendationReasons(scoredItem) {
+    const reasons = [];
+    const bd = scoredItem.ruleBreakdown || {};
+
+    // Content-based (style/features similarity)
+    if (scoredItem.contentScore >= 0.6) {
+      reasons.push("Phù hợp phong cách của bạn");
+    }
+
+    // Collaborative filtering
+    if (scoredItem.collaborativeScore >= 0.4) {
+      reasons.push("Người mua tương tự cũng thích");
+    }
+
+    // Style match
+    if (bd.style >= 0.8) {
+      reasons.push("Đúng phong cách bạn yêu thích");
+    }
+
+    // Occasion match
+    if (bd.occasion >= 0.7) {
+      reasons.push("Phù hợp dịp bạn quan tâm");
+    }
+
+    // Category preference
+    if (scoredItem.categoryScore >= 0.7) {
+      reasons.push("Danh mục bạn hay xem");
+    }
+
+    // Behavior weight (interaction similarity)
+    if (scoredItem.behaviorWeight >= 0.6) {
+      reasons.push("Dựa trên sản phẩm bạn đã xem");
+    }
+
+    // Price range
+    if (bd.priceRange >= 0.8) {
+      reasons.push("Phù hợp tầm giá của bạn");
+    }
+
+    // Seasonal
+    if (bd.seasonal >= 0.9) {
+      reasons.push("Phù hợp mùa hiện tại");
+    }
+
+    // Trending / popular
+    if (scoredItem.popularityScore >= 0.75) {
+      reasons.push("Được nhiều người yêu thích");
+    }
+
+    // Freshness
+    if (bd.freshness >= 0.9) {
+      reasons.push("Sản phẩm mới về");
+    }
+
+    // Discount
+    if (bd.discount >= 0.8) {
+      reasons.push("Đang có ưu đãi tốt");
+    }
+
+    // Wishlist
+    if (bd.wishlist >= 0.9) {
+      reasons.push("Trong danh sách yêu thích");
+    }
+
+    // Ensure at least 1 reason
+    if (reasons.length === 0) {
+      reasons.push("Gợi ý dành cho bạn");
+    }
+
+    return reasons.slice(0, 3); // Max 3 reasons
+  }
+
+  /**
+   * Classify product into a recommendation group for UI grouping
+   */
+  classifyRecommendationGroup(scoredItem) {
+    const bd = scoredItem.ruleBreakdown || {};
+
+    // Priority order for group classification
+    if (scoredItem.contentScore >= 0.6 || bd.style >= 0.8) {
+      return "style_match";
+    }
+    if (scoredItem.collaborativeScore >= 0.4) {
+      return "similar_users";
+    }
+    if (scoredItem.behaviorWeight >= 0.6 || scoredItem.categoryScore >= 0.7) {
+      return "browsing_history";
+    }
+    if (scoredItem.popularityScore >= 0.75) {
+      return "popular";
+    }
+    if (bd.freshness >= 0.9) {
+      return "new_arrivals";
+    }
+    if (bd.discount >= 0.8) {
+      return "deals";
+    }
+    return "for_you";
   }
 
   /**
@@ -322,13 +439,20 @@ class HybridRecommendationEngine {
 
         return {
           product,
-          score: similarity * boost
+          score: similarity * boost,
+          rawSimilarity: similarity
         };
       });
 
       // Sort and take top N
       similarities.sort((a, b) => b.score - a.score);
-      const recommendations = similarities.slice(0, limit).map(item => item.product);
+      const topItems = similarities.slice(0, limit);
+      const recommendations = topItems.map(item => ({
+        ...item.product,
+        matchScore: Math.round(Math.min(item.rawSimilarity * 100, 100)),
+        recommendationReasons: ["Sản phẩm tương tự"],
+        recommendationGroup: "similar_products"
+      }));
 
       // Cache results
       if (enableCache) {
@@ -344,7 +468,7 @@ class HybridRecommendationEngine {
       const targetProduct = await Product.findById(productId).lean();
       if (!targetProduct) return [];
 
-      return Product.find({
+      const popularProducts = await Product.find({
         isActive: true,
         categoryId: targetProduct.categoryId,
         _id: { $ne: productId }
@@ -352,6 +476,13 @@ class HybridRecommendationEngine {
         .sort({ averageRating: -1 })
         .limit(limit)
         .lean();
+
+      return popularProducts.map(p => ({
+        ...p,
+        matchScore: 0,
+        recommendationReasons: ["Sản phẩm cùng danh mục"],
+        recommendationGroup: "similar_products"
+      }));
     }
   }
 
@@ -395,10 +526,17 @@ class HybridRecommendationEngine {
 
       if (trendingIds.length === 0) {
         // Fallback to popular products
-        const popular = await Product.find({ isActive: true })
+        const popularProducts = await Product.find({ isActive: true })
           .sort({ averageRating: -1, totalReviews: -1 })
           .limit(limit)
           .lean();
+
+        const popular = popularProducts.map(p => ({
+          ...p,
+          matchScore: 0,
+          recommendationReasons: ["Sản phẩm phổ biến"],
+          recommendationGroup: "trending"
+        }));
 
         if (enableCache) {
           this.cache.set(cacheKey, popular);
@@ -412,14 +550,20 @@ class HybridRecommendationEngine {
         isActive: true
       }).lean();
 
-      const sorted = products
+      const topItems = products
         .map(p => ({
           product: p,
           score: productInteractions[p._id.toString()] || 0
         }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit)
-        .map(item => item.product);
+        .slice(0, limit);
+
+      const sorted = topItems.map(item => ({
+        ...item.product,
+        matchScore: Math.round(Math.min(Math.log1p(item.score) / Math.log1p(50) * 100, 100)),
+        recommendationReasons: ["Đang thịnh hành"],
+        recommendationGroup: "trending"
+      }));
 
       if (enableCache) {
         this.cache.set(cacheKey, sorted);
@@ -429,10 +573,17 @@ class HybridRecommendationEngine {
 
     } catch (error) {
       console.error("Trending products error:", error);
-      return Product.find({ isActive: true })
+      const popularProducts = await Product.find({ isActive: true })
         .sort({ averageRating: -1 })
         .limit(limit)
         .lean();
+
+      return popularProducts.map(p => ({
+        ...p,
+        matchScore: 0,
+        recommendationReasons: ["Sản phẩm phổ biến"],
+        recommendationGroup: "trending"
+      }));
     }
   }
 
@@ -531,7 +682,7 @@ class HybridRecommendationEngine {
       // Demographic popularity boost
       const demoBehavior = demographicBehaviors.find(d => d._id.toString() === pid);
       if (demoBehavior) {
-        score += Math.log1p(demoBehavior.score) * 0.4;
+        score += Math.min(Math.log1p(demoBehavior.score) / Math.log1p(50), 1.0) * 0.4;
       }
 
       // General popularity
@@ -596,7 +747,12 @@ class HybridRecommendationEngine {
       combined.push(...remaining.slice(0, limit - combined.length));
     }
 
-    return combined.slice(0, limit).map(item => item.product);
+    return combined.slice(0, limit).map(item => ({
+      ...item.product,
+      matchScore: Math.round(Math.min(item.finalScore * 100, 100)),
+      recommendationReasons: ["Phổ biến trong nhóm của bạn"],
+      recommendationGroup: "popular"
+    }));
   }
 
   /**

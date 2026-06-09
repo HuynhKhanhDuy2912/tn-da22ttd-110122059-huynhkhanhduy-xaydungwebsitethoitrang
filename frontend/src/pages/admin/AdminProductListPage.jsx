@@ -375,7 +375,7 @@ export default function AdminProductListPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2 lg:grid-cols-5">
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-gray-500">
                 Danh mục
@@ -444,7 +444,7 @@ export default function AdminProductListPage() {
 
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-gray-500">
-                Trạng thái xóa
+                Trạng thái
               </label>
               <select
                 value={deletedFilter}

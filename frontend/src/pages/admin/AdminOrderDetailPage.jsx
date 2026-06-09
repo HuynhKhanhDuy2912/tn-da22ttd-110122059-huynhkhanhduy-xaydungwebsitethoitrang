@@ -78,7 +78,6 @@ const paymentStatusText = {
 const paymentMethodText = {
   cod: "Thanh toán khi nhận hàng (COD)",
   vnpay: "VNPay",
-  momo: "MoMo",
   paypal: "PayPal",
 };
 

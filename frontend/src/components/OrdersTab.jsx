@@ -179,7 +179,6 @@ export default function OrdersTab({ token }) {
     const map = {
       cod: "COD",
       vnpay: "VNPay",
-      momo: "MoMo",
       paypal: "PayPal",
     };
     return map[method] || method;

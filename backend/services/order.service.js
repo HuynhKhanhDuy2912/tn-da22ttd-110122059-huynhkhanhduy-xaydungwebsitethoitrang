@@ -7,10 +7,12 @@ import ProductVariant from "../models/ProductVariant.js";
 import Review from "../models/Review.js";
 import { createNotificationForAdmins } from "./notification.service.js";
 import { createTransaction } from "./inventory.service.js";
+import User from "../models/User.js";
 import {
   validateAndCalculateCoupon,
   applyCoupon,
-  revokeCoupon
+  revokeCoupon,
+  generateDynamicRewardCoupon
 } from "./coupon.service.js";
 
 const ORDER_POPULATE = [{ path: "userId", select: "username email fullname" }];
@@ -208,7 +210,36 @@ export const createOrderFromCart = async (user, body) => {
     userName: user.fullname || user.username || "Khách hàng",
   });
 
-  return populateOrder(Order.findById(order._id));
+  const awardedCoupons = [];
+  if (subTotal >= 599000) {
+    const reward10 = await generateDynamicRewardCoupon(
+      "G10",
+      "percentage",
+      10,
+      "Giảm 10% cho đơn hàng đặc quyền"
+    );
+    awardedCoupons.push(reward10);
+  }
+  
+  if (subTotal >= 999000) {
+    const rewardFree = await generateDynamicRewardCoupon(
+      "F20K",
+      "free_shipping",
+      20000,
+      "Miễn phí vận chuyển 20k cho đơn hàng đặc quyền"
+    );
+    awardedCoupons.push(rewardFree);
+  }
+
+  if (awardedCoupons.length > 0) {
+    const couponIds = awardedCoupons.map((c) => c._id);
+    await User.findByIdAndUpdate(user._id, {
+      $addToSet: { savedCoupons: { $each: couponIds } }
+    });
+  }
+
+  const populatedOrder = await populateOrder(Order.findById(order._id)).lean();
+  return { ...populatedOrder, awardedCoupons };
 };
 
 export const getMyOrders = async (userId) => {

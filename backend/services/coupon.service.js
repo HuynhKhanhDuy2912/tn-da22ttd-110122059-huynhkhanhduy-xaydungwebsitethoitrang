@@ -61,6 +61,19 @@ export const validateCoupon = async (code, userId, subtotal) => {
     }
   }
 
+  // Check reward coupon
+  if (coupon.isReward) {
+    const user = await User.findById(userId).select("savedCoupons").lean();
+    const savedCoupons = user?.savedCoupons || [];
+    const hasCoupon = savedCoupons.some(
+      (savedId) => savedId.toString() === coupon._id.toString()
+    );
+
+    if (!hasCoupon) {
+      throw new Error("Mã giảm giá này là phần thưởng đặc quyền, bạn chưa đủ điều kiện sử dụng");
+    }
+  }
+
   return coupon;
 };
 
@@ -157,6 +170,11 @@ export const revokeCoupon = async (orderId) => {
 export const getAvailableCoupons = async (userId, subtotal = 0) => {
   const now = new Date();
 
+  const user = await User.findById(userId).select("savedCoupons").lean();
+  const savedCouponIds = new Set(
+    (user?.savedCoupons || []).map((id) => id.toString())
+  );
+
   const coupons = await Coupon.find({
     isActive: true,
     startDate: { $lte: now },
@@ -182,6 +200,11 @@ export const getAvailableCoupons = async (userId, subtotal = 0) => {
 
   for (const coupon of coupons) {
     const couponIdStr = coupon._id.toString();
+
+    // Check if it's a reward coupon and user doesn't have it
+    if (coupon.isReward && !savedCouponIds.has(couponIdStr)) {
+      continue;
+    }
 
     // Check total usage
     if (coupon.maxUsage !== null && coupon.currentUsage >= coupon.maxUsage) {
@@ -249,6 +272,10 @@ export const saveCouponForUser = async (userId, code) => {
     throw new Error("Mã giảm giá không khả dụng");
   }
 
+  if (coupon.isReward) {
+    throw new Error("Mã giảm giá này là phần thưởng đặc quyền, không thể tự lưu");
+  }
+
   const userUsageCount = await CouponUsage.countDocuments({
     couponId: coupon._id,
     userId
@@ -304,6 +331,7 @@ export const getPublicCoupons = async () => {
 
   return Coupon.find({
     isActive: true,
+    isReward: { $ne: true },
     startDate: { $lte: now },
     endDate: { $gte: now },
     $or: [
@@ -470,6 +498,46 @@ export const deleteCoupon = async (couponId) => {
 
   // Also remove usage records
   await CouponUsage.deleteMany({ couponId });
+
+  return coupon;
+};
+
+/**
+ * Generate a dynamic reward coupon for a user.
+ */
+export const generateDynamicRewardCoupon = async (
+  prefix,
+  discountType,
+  discountValue,
+  description
+) => {
+  const admin = await User.findOne({ role: "admin" }).select("_id").lean();
+  
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const ddmm = `${day}${month}`;
+  
+  // Random 4 chars to ensure uniqueness
+  const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const code = `${prefix}-GG${ddmm}-${randomStr}`;
+
+  const endDate = new Date(now);
+  endDate.setDate(endDate.getDate() + 15); // Hết hạn sau 15 ngày
+  
+  const coupon = await Coupon.create({
+    code,
+    discountType,
+    discountValue,
+    description,
+    startDate: now,
+    endDate,
+    maxUsage: null,
+    maxUsagePerUser: 1,
+    isReward: true,
+    isActive: true,
+    createdBy: admin?._id || null
+  });
 
   return coupon;
 };

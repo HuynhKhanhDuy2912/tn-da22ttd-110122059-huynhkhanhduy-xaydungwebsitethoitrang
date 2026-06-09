@@ -16,7 +16,6 @@ const STATUS_LABELS = {
 const PAYMENT_LABELS = {
   cod: "COD",
   vnpay: "VNPay",
-  momo: "MoMo",
   paypal: "PayPal",
 };
 

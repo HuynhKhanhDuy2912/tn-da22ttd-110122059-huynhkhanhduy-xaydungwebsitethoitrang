@@ -90,7 +90,7 @@ const footerServiceItems = [
   {
     icon: ShieldCheck,
     title: "Thanh toán an toàn",
-    copy: "MoMo, VNPay, PayPal",
+    copy: "COD, VNPay, PayPal",
   },
   {
     icon: MessageCircle,
@@ -726,7 +726,7 @@ export default function Layout() {
               </form>
 
               <div className="mt-6 flex flex-wrap gap-2">
-                {["COD", "MoMo", "VNPay", "PayPal"].map((method) => (
+                {["COD", "VNPay", "PayPal"].map((method) => (
                   <span
                     key={method}
                     className="border border-white/15 px-3 py-1.5 text-[11px] font-bold uppercase text-white/70"

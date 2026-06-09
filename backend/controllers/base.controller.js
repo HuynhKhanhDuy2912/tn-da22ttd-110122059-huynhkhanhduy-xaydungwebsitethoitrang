@@ -102,9 +102,20 @@ export const createCrudControllers = (
         data: await createdItemQuery
       });
     } catch (error) {
+      let message = error.message;
+      if (error.code === 11000) {
+        if (message.includes("productId_1_color_1_size_1")) {
+          message = `Biến thể với màu "${error.keyValue?.color}" và size "${error.keyValue?.size}" đã tồn tại.`;
+        } else if (message.includes("sku_1")) {
+          message = `Mã SKU "${error.keyValue?.sku}" đã tồn tại. Vui lòng chọn mã khác.`;
+        } else {
+          const field = Object.keys(error.keyValue || {})[0];
+          message = `Dữ liệu bị trùng lặp ở trường: ${field}`;
+        }
+      }
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: message
       });
     }
   };
@@ -132,9 +143,20 @@ export const createCrudControllers = (
         data: item
       });
     } catch (error) {
+      let message = error.message;
+      if (error.code === 11000) {
+        if (message.includes("productId_1_color_1_size_1")) {
+          message = `Biến thể với màu "${error.keyValue?.color}" và size "${error.keyValue?.size}" đã tồn tại.`;
+        } else if (message.includes("sku_1")) {
+          message = `Mã SKU "${error.keyValue?.sku}" đã tồn tại. Vui lòng chọn mã khác.`;
+        } else {
+          const field = Object.keys(error.keyValue || {})[0];
+          message = `Dữ liệu bị trùng lặp ở trường: ${field}`;
+        }
+      }
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: message
       });
     }
   };

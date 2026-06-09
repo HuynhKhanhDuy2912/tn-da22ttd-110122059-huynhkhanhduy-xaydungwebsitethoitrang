@@ -105,11 +105,13 @@ export default function ProductCard({
             src={primaryImage}
             alt={displayName}
             className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/900x1200/F5F5F5/222?text=Fashion"; }}
           />
           <img
             src={secondaryImage}
             alt={displayName}
             className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/900x1200/F5F5F5/222?text=Fashion"; }}
           />
         </Link>
 
@@ -183,9 +185,16 @@ export default function ProductCard({
 
       <div className="bg-white px-3 py-3">
         {product.recommendationReasons?.length ? (
-          <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-widest text-gray-500">
-            {product.recommendationReasons[0]}
-          </span>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="inline-flex items-center bg-red-50 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-red-600 border border-red-100">
+              {product.recommendationReasons[0]}
+            </span>
+            {product.matchScore > 0 ? (
+              <span className="text-[10px] font-bold text-gray-500">
+                {product.matchScore}% MATCH
+              </span>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="mt-1 flex items-center gap-2">
@@ -202,7 +211,7 @@ export default function ProductCard({
                 }`}
             >
               {group.previewImage ? (
-                <img src={group.previewImage} alt={group.color} className="h-full w-full object-cover" />
+                <img src={group.previewImage} alt={group.color} className="h-full w-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/40x50/F5F5F5/222?text=X"; }} />
               ) : (
                 <span className="flex h-full w-full items-center justify-center px-0.5 text-center text-[8px] font-bold uppercase leading-tight tracking-widest">
                   {group.color}

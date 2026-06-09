@@ -499,13 +499,14 @@ export default function AdminProductAddPage() {
 
         // Fix 3: đồng bộ gallery khi update biến thể có ảnh mới
         // tránh tạo ảnh trùng lặp trong gallery
-        if (baseBody.image) {
+        if (variantForm.images.length > 0) {
           const sameColorImgs = galleryImages.filter(
             (img) => img.color === variantForm.color.trim(),
           );
           const existingRecord = sameColorImgs[0]; // lấy bản ghi đầu tiên cùng màu
-          if (existingRecord) {
-            // cập nhật bản ghi đã có thay vì tạo mới
+
+          if (existingRecord && baseBody.image) {
+            // cập nhật bản ghi đã có thay vì tạo mới (cập nhật ảnh chính)
             const updatedImg = await apiRequest(
               `/product-images/${existingRecord._id}`,
               {
@@ -524,8 +525,8 @@ export default function AdminProductAddPage() {
                   : img,
               ),
             );
-          } else {
-            // chưa có bản ghi nào cùng màu → tạo mới
+          } else if (!existingRecord && baseBody.image) {
+            // chưa có bản ghi nào cùng màu → tạo mới ảnh chính
             const newImg = await apiRequest("/product-images", {
               method: "POST",
               token,
@@ -537,6 +538,34 @@ export default function AdminProductAddPage() {
               },
             });
             setGalleryImages((prev) => [...prev, newImg.data]);
+          }
+
+          // Đẩy thêm các ảnh phụ (nếu có)
+          const otherImages = variantForm.images.filter(
+            (url) => url !== baseBody.image,
+          );
+          if (otherImages.length > 0) {
+            const existingUrls = new Set(
+              galleryImages.map((i) => i.imageUrl),
+            );
+            const newImages = otherImages.filter((url) => !existingUrls.has(url));
+            
+            if (newImages.length > 0) {
+              await Promise.all(
+                newImages.map((url) =>
+                  apiRequest("/product-images", {
+                    method: "POST",
+                    token,
+                    body: {
+                      productId: editId,
+                      imageUrl: url,
+                      isMain: false,
+                      color: variantForm.color.trim(),
+                    },
+                  }),
+                ),
+              );
+            }
           }
         }
       } else {
@@ -573,6 +602,27 @@ export default function AdminProductAddPage() {
                 color: newColor,
               },
             });
+            
+            // THÊM: Cũng đẩy luôn các ảnh phụ còn lại của biến thể này lên
+            const otherImages = variantForm.images.filter(
+              (url) => url !== baseBody.image,
+            );
+            if (otherImages.length > 0) {
+              await Promise.all(
+                otherImages.map((url) =>
+                  apiRequest("/product-images", {
+                    method: "POST",
+                    token,
+                    body: {
+                      productId: editId,
+                      imageUrl: url,
+                      isMain: false,
+                      color: newColor,
+                    },
+                  }),
+                ),
+              );
+            }
           } else {
             // Đã có ảnh cho màu này → push các ảnh phụ còn lại (bỏ ảnh main đã tồn tại)
             const otherImages = variantForm.images.filter(
@@ -1247,7 +1297,7 @@ export default function AdminProductAddPage() {
               form="product-form"
               type="submit"
               disabled={loading}
-              className="w-full py-4 text-xs font-bold uppercase tracking-widest rounded-md text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-4 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 "ĐANG LƯU..."

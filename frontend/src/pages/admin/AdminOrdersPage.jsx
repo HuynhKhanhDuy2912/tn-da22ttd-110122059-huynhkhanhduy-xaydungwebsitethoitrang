@@ -29,7 +29,6 @@ const paymentMethods = [
   { value: "all", label: "Tất cả" },
   { value: "cod", label: "COD" },
   { value: "vnpay", label: "VNPay" },
-  { value: "momo", label: "MoMo" },
   { value: "paypal", label: "PayPal" },
 ];
 
