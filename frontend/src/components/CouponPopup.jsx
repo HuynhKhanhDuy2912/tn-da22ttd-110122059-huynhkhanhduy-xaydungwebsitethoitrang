@@ -55,21 +55,28 @@ export default function CouponPopup() {
 
   const loadAndShow = async () => {
     try {
-      const [publicResponse, savedResponse] = await Promise.all([
-        apiRequest("/coupons/public"),
-        token
-          ? apiRequest("/coupons/saved", { token })
-          : Promise.resolve({ data: [] })
-      ]);
+      let data = [];
 
-      const savedCodes = (savedResponse.data || []).map((coupon) => coupon.code);
-      setReceivedCodes(savedCodes);
+      if (token) {
+        // Authenticated: fetch available coupons (already excludes fully-used)
+        // and the user's saved coupon IDs (includes used-up ones still in wallet)
+        const [availableResponse, savedResponse] = await Promise.all([
+          apiRequest("/coupons/available", { token }),
+          apiRequest("/coupons/saved", { token })
+        ]);
 
-      const res = publicResponse;
-      let data = res.data || [];
+        const availableCoupons = availableResponse.data || [];
+        const savedCodes = (savedResponse.data || []).map((c) => c.code);
+        setReceivedCodes(savedCodes);
 
-      // Filter out received coupons
-      data = data.filter(c => !savedCodes.includes(c.code));
+        // Filter out coupons user already saved (they're already in their wallet)
+        data = availableCoupons.filter((c) => !savedCodes.includes(c.code));
+      } else {
+        // Not authenticated: show all public coupons
+        const publicResponse = await apiRequest("/coupons/public");
+        data = publicResponse.data || [];
+        setReceivedCodes([]);
+      }
 
       if (data.length > 0) {
         setCoupons(data.slice(0, 4));

@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, Package, ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const awardedCoupons = searchParams.get("awardedCoupons") === "true";
   const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (awardedCoupons) {
+      toast.success(
+        "Chúc mừng! Bạn đã nhận được mã giảm giá phần thưởng. Vui lòng kiểm tra mục Mã giảm giá.",
+        { id: "reward-coupon-toast", duration: 5000 }
+      );
+    }
+  }, [awardedCoupons]);
 
   useEffect(() => {
     const timer = setInterval(() => {

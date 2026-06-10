@@ -186,7 +186,7 @@ export default function ProductCard({
       <div className="bg-white px-3 py-3">
         {product.recommendationReasons?.length ? (
           <div className="mb-2 flex items-center justify-between">
-            <span className="inline-flex items-center bg-red-50 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-red-600 border border-red-100">
+            <span className="inline-flex items-center bg-red-50 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-red-600 border border-red-100 rounded-sm">
               {product.recommendationReasons[0]}
             </span>
             {product.matchScore > 0 ? (

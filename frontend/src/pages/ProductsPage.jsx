@@ -939,7 +939,7 @@ export default function ProductsPage() {
         ) : null}
 
         <div
-          className={`mt-6 ${useNewAllProductsLayout ? "grid gap-4 lg:grid-cols-[210px_1fr]" : ""}`}
+          className={`mt-6 ${useNewAllProductsLayout ? "grid gap-4 lg:grid-cols-[115px_1fr]" : ""}`}
         >
           {useNewAllProductsLayout ? (
             <aside className="hidden lg:block border border-gray-200 bg-white p-4 h-fit sticky top-6">
@@ -1418,7 +1418,7 @@ export default function ProductsPage() {
                   disabled={normalizedCurrentPage === 1}
                   className="grid h-9 w-9 place-items-center border border-gray-300 bg-white text-sm font-medium text-black transition hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ChevronsLeft className="w-4 h-4"/>
+                  <ChevronsLeft className="w-4 h-4" />
                 </button>
 
                 {Array.from({ length: totalPages }, (_, index) => index + 1)
@@ -1453,7 +1453,7 @@ export default function ProductsPage() {
                   disabled={normalizedCurrentPage === totalPages}
                   className="grid h-9 w-9 place-items-center border border-gray-300 bg-white text-sm font-medium text-black transition hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ChevronsRight className="w-4 h-4"/>
+                  <ChevronsRight className="w-4 h-4" />
                 </button>
               </div>
             ) : null}

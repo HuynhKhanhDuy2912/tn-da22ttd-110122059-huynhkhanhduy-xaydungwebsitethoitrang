@@ -405,73 +405,78 @@ export default function AdminOrderDetailPage() {
                 const isDeleted = !item.productId || item.productId.isDeleted;
 
                 return (
-                <article
-                  key={item._id}
-                  className={`p-5 transition hover:bg-slate-50/70 ${isDeleted ? "opacity-75" : ""}`}
-                >
-                  <div className="flex gap-4">
-                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
-                      {pImage ? (
-                        <img
-                          src={pImage}
-                          alt={pName}
-                          className={`h-full w-full object-cover ${isDeleted ? "grayscale" : ""}`}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate-300">
-                          <Package className="h-7 w-7" />
-                        </div>
-                      )}
-                    </div>
+                  <article
+                    key={item._id}
+                    className={`p-5 transition hover:bg-slate-50/70 ${isDeleted ? "opacity-75" : ""}`}
+                  >
+                    <div className="flex gap-4">
+                      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+                        {pImage ? (
+                          <img
+                            src={pImage}
+                            alt={pName}
+                            className={`h-full w-full object-cover ${isDeleted ? "grayscale" : ""}`}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-300">
+                            <Package className="h-7 w-7" />
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-bold text-slate-900 flex items-center gap-2">
-                            {pName}
-                            {isDeleted && (
-                              <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
-                                Đã ngừng kinh doanh
-                              </span>
-                            )}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                              Màu: {pColor}
-                            </span>
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                              Size: {pSize}
-                            </span>
-                            {pSku && (
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-bold text-slate-900 flex items-center gap-2">
+                              {pName}
+                              {isDeleted && (
+                                <span className="inline-block shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold tracking-widest text-red-600">
+                                  Đã ngừng kinh doanh
+                                </span>
+                              )}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                               <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                                SKU: {pSku}
+                                Màu: {pColor}
                               </span>
-                            )}
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                                Size: {pSize}
+                              </span>
+                              {pSku && (
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                                  SKU: {pSku}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-left sm:text-right">
+                            <p className="text-sm text-slate-500">
+                              <span className="mr-2">
+                                Số lượng:
+                              </span>
+                              x{item.quantity}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-900">
+                              <span className="mr-2">
+                                Đơn giá:
+                              </span>
+                              {formatCurrency(item.price)}
+                            </p>
                           </div>
                         </div>
 
-                        <div className="text-left sm:text-right">
-                          <p className="text-sm text-slate-500">
-                            {formatCurrency(item.price)} x {item.quantity}
-                          </p>
-                          <p className="mt-1 text-base font-bold text-slate-900">
-                            Thành tiền:{" "}
+                        <div className="mt-4 flex items-center justify-end rounded-2xl bg-slate-50 px-4 py-3 text-md">
+                          <span className="font-bold text-slate-600">
+                            Thành tiền:
+                          </span>
+                          <span className="text-base font-bold text-slate-900 ml-2">
                             {formatCurrency(item.price * item.quantity)}
-                          </p>
+                          </span>
                         </div>
                       </div>
-
-                      <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
-                        <span className="font-medium text-slate-600">
-                          Số lượng
-                        </span>
-                        <span className="font-bold text-slate-900">
-                          {item.quantity}
-                        </span>
-                      </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
                 );
               })}
             </div>

@@ -107,12 +107,21 @@ export const deleteMediaFromCloudinaryIfUnused = async (mediaUrl) => {
 
   try {
     const referenceCount = await countMediaReferences(mediaUrl);
+    // SAFETY: Chỉ log thay vì xóa tự động để tránh xóa nhầm ảnh
+    // Bug trước đó: middleware tự động xóa ảnh khỏi Cloudinary khi update record,
+    // gây mất ảnh sản phẩm ngẫu nhiên
     if (referenceCount === 0) {
-      await deleteImageFromCloudinary(mediaUrl);
+      console.log(`[Cloudinary] Skipped auto-delete (safety): ${mediaUrl} (0 refs)`);
     }
   } catch (error) {
-    console.error("Error deleting unused file from Cloudinary:", error);
+    console.error("Error checking media references:", error);
   }
+};
+
+// Dùng hàm này khi CHẮC CHẮN muốn xóa ảnh khỏi Cloudinary
+export const forceDeleteFromCloudinary = async (mediaUrl) => {
+  if (!mediaUrl) return;
+  await deleteImageFromCloudinary(mediaUrl);
 };
 
 export { cloudinary };

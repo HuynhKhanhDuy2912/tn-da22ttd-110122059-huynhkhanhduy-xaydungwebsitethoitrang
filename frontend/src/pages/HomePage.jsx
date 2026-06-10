@@ -419,8 +419,8 @@ export default function HomePage() {
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className={`fixed bottom-6 right-4 z-40 grid h-12 w-12 place-items-center rounded-full border border-gray-200 bg-white text-black shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-black md:bottom-8 md:right-8 ${showBackToTop
-            ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-4 opacity-0"
+          ? "pointer-events-auto translate-y-0 opacity-100"
+          : "pointer-events-none translate-y-4 opacity-0"
           }`}
         aria-label="Trở về đầu trang"
       >
@@ -569,8 +569,9 @@ export default function HomePage() {
       </section>
 
       {/* Personalized Recommendations */}
-      <section className="mx-auto max-w-[1440px] px-4 py-12 md:px-8 md:pb-16">
-        {token ? (
+      {token ? (
+        <section className="mx-auto max-w-[1440px] px-4 py-12 md:px-8 md:pb-16">
+
           <RecommendationSection
             type="personalized"
             token={token}
@@ -582,8 +583,14 @@ export default function HomePage() {
             wishlistProductIds={wishlistProductIds}
             showAIBadge={true}
           />
-        ) : null}
-      </section>
+        </section>
+      ) :
+        (
+          <section className="mt-12">
+
+          </section>
+        )}
+
 
       {/* Category cards */}
       <section className="mx-auto max-w-[1440px] px-4 pb-12 md:px-8 md:pb-16">

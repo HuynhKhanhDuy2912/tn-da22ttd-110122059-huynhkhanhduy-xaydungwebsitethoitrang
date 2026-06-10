@@ -495,6 +495,23 @@ export default function AdminProductAddPage() {
           token,
           body: { ...baseBody, size: sizes[0] },
         });
+        
+        // THÊM MỚI: Tự động đồng bộ ảnh vừa up cho tất cả các size khác cùng màu
+        if (baseBody.image) {
+          const otherVariantsSameColor = variants.filter(
+            v => v.color === variantForm.color.trim() && v._id !== editingVariantId
+          );
+          if (otherVariantsSameColor.length > 0) {
+            await Promise.all(otherVariantsSameColor.map(v => 
+              apiRequest(`/product-variants/${v._id}`, {
+                method: "PUT",
+                token,
+                body: { image: baseBody.image }
+              }).catch(err => console.error("Sync variant image error:", err))
+            ));
+          }
+        }
+        
         toast.success("Đã cập nhật biến thể thành công!");
 
         // Fix 3: đồng bộ gallery khi update biến thể có ảnh mới

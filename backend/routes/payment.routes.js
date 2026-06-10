@@ -11,6 +11,7 @@ import {
   getPayPalOrderDetails,
 } from "../utils/paypal.js";
 import { protect } from "../middlewares/auth.middleware.js";
+import { grantRewardCoupons } from "../services/order.service.js";
 
 const router = express.Router();
 
@@ -131,8 +132,14 @@ router.get("/vnpay/callback", async (req, res) => {
       order.transactionId = vnpParams.vnp_TransactionNo;
       await order.save();
 
+      const awardedCoupons = await grantRewardCoupons(order.userId, order.subTotal);
+      const queryParams = new URLSearchParams({ orderId });
+      if (awardedCoupons && awardedCoupons.length > 0) {
+        queryParams.append("awardedCoupons", "true");
+      }
+
       return res.redirect(
-        `${process.env.CLIENT_URL}/payment/success?orderId=${orderId}`,
+        `${process.env.CLIENT_URL}/payment/success?${queryParams.toString()}`
       );
     } else {
       const restoredIds = await handlePaymentFailure(orderId);
@@ -230,8 +237,14 @@ router.get("/paypal/callback", async (req, res) => {
       order.transactionId = captureResult.id;
       await order.save();
 
+      const awardedCoupons = await grantRewardCoupons(order.userId, order.subTotal);
+      const queryParams = new URLSearchParams({ orderId });
+      if (awardedCoupons && awardedCoupons.length > 0) {
+        queryParams.append("awardedCoupons", "true");
+      }
+
       return res.redirect(
-        `${process.env.CLIENT_URL}/payment/success?orderId=${orderId}`,
+        `${process.env.CLIENT_URL}/payment/success?${queryParams.toString()}`
       );
     } else {
       const restoredIds = await handlePaymentFailure(orderId);

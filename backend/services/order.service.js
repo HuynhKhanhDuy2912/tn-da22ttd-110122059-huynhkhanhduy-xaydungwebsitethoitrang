@@ -210,6 +210,16 @@ export const createOrderFromCart = async (user, body) => {
     userName: user.fullname || user.username || "Khách hàng",
   });
 
+  let awardedCoupons = [];
+  if (paymentMethod === "cod") {
+    awardedCoupons = await grantRewardCoupons(user._id, subTotal);
+  }
+
+  const populatedOrder = await populateOrder(Order.findById(order._id)).lean();
+  return { ...populatedOrder, awardedCoupons };
+};
+
+export const grantRewardCoupons = async (userId, subTotal) => {
   const awardedCoupons = [];
   if (subTotal >= 599000) {
     const reward10 = await generateDynamicRewardCoupon(
@@ -233,13 +243,11 @@ export const createOrderFromCart = async (user, body) => {
 
   if (awardedCoupons.length > 0) {
     const couponIds = awardedCoupons.map((c) => c._id);
-    await User.findByIdAndUpdate(user._id, {
+    await User.findByIdAndUpdate(userId, {
       $addToSet: { savedCoupons: { $each: couponIds } }
     });
   }
-
-  const populatedOrder = await populateOrder(Order.findById(order._id)).lean();
-  return { ...populatedOrder, awardedCoupons };
+  return awardedCoupons;
 };
 
 export const getMyOrders = async (userId) => {

@@ -210,7 +210,7 @@ export default function CheckoutPage() {
       if (awardedCoupons && awardedCoupons.length > 0) {
         toast.success(
           "Chúc mừng! Bạn đã nhận được mã giảm giá phần thưởng. Vui lòng kiểm tra mục Mã giảm giá.",
-          { duration: 5000 }
+          { id: "reward-coupon-toast", duration: 5000 }
         );
       }
 

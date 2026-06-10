@@ -50,14 +50,22 @@ export default function CouponSection() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [publicResponse, savedResponse] = await Promise.all([
-          apiRequest("/coupons/public"),
-          token
-            ? apiRequest("/coupons/saved", { token })
-            : Promise.resolve({ data: [] })
-        ]);
-        setCoupons(publicResponse.data || []);
-        setReceivedCodes((savedResponse.data || []).map((coupon) => coupon.code));
+        if (token) {
+          // Authenticated: use /available (excludes fully-used) + filter saved
+          const [availableResponse, savedResponse] = await Promise.all([
+            apiRequest("/coupons/available", { token }),
+            apiRequest("/coupons/saved", { token })
+          ]);
+          const savedCodes = (savedResponse.data || []).map((c) => c.code);
+          const availableCoupons = availableResponse.data || [];
+          setReceivedCodes(savedCodes);
+          setCoupons(availableCoupons);
+        } else {
+          // Not authenticated: show all public coupons
+          const publicResponse = await apiRequest("/coupons/public");
+          setCoupons(publicResponse.data || []);
+          setReceivedCodes([]);
+        }
       } catch (err) {
         console.error("Failed to load coupons:", err);
       }

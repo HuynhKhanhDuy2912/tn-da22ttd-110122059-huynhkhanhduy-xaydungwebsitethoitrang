@@ -201,6 +201,7 @@ export default function Layout() {
 
   useEffect(() => {
     setActiveMegaMenu(null);
+    setSearch("");
   }, [location.pathname, location.search]);
 
   const loadCategories = useCallback(() => {
