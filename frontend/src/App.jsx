@@ -9,9 +9,9 @@ import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage.jsx";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage.jsx";
 import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage.jsx";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast, resolveValue } from "react-hot-toast";
+import { X } from "lucide-react";
 
-import AdminProductsPage from "./pages/admin/AdminProductsPage.jsx";
 import AdminProductAddPage from "./pages/admin/AdminProductAddPage.jsx";
 import AdminProductListPage from "./pages/admin/AdminProductListPage.jsx";
 import AdminCollectionsPage from "./pages/admin/AdminCollectionsPage.jsx";
@@ -47,7 +47,34 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <Toaster position="top-right" />
+        <Toaster position="top-right">
+          {(t) => (
+            <div
+              role="alert"
+              style={{
+                opacity: t.visible ? 1 : 0,
+                transform: t.visible ? "translateY(0) scale(1)" : "translateY(10px) scale(0.95)",
+                transition: "all 0.2s ease-in-out"
+              }}
+              className={`pointer-events-auto flex max-w-sm w-[350px] items-start gap-3 border px-4 py-3 shadow-lg ${t.type === "error"
+                ? "border-red-200 bg-red-50 text-red-800"
+                : "border-green-200 bg-green-50 text-green-800"
+                }`}
+            >
+              <div className="flex-1 text-sm font-medium">
+                {resolveValue(t.message, t)}
+              </div>
+              <button
+                type="button"
+                onClick={() => toast.dismiss(t.id)}
+                className="shrink-0 text-gray-400 transition hover:text-black mt-0.5"
+                aria-label="Đóng thông báo"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </Toaster>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<HomePage />} />

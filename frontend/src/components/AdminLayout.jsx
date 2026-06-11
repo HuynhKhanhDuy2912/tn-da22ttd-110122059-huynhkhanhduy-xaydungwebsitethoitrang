@@ -32,6 +32,7 @@ import { NotificationProvider } from "../context/NotificationContext.jsx";
 import AdminContactInboxButton from "./AdminContactInboxButton.jsx";
 import AdminNotificationBell from "./AdminNotificationBell.jsx";
 import { getAvatarInitial, getUserDisplayName } from "../lib/avatar.js";
+import ConfirmModal from "./ConfirmModal.jsx";
 
 const SIDEBAR_EXPANDED = 260;
 const SIDEBAR_COLLAPSED = 76;
@@ -178,6 +179,7 @@ export default function AdminLayout() {
   const [adminSearch, setAdminSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const searchFormRef = useRef(null);
   const accountMenuRef = useRef(null);
   const [collapsed, setCollapsed] = useState(() => {
@@ -389,7 +391,7 @@ export default function AdminLayout() {
             <button
               type="button"
               title="Đăng xuất"
-              onClick={logout}
+              onClick={() => setIsLogoutModalOpen(true)}
               className={`flex items-center gap-2 px-4 py-3.5 text-left text-xs font-bold uppercase text-red-600 transition hover:bg-gray-50 hover:text-red-500 ${collapsed ? "justify-center px-2" : ""
                 }`}
             >
@@ -587,7 +589,10 @@ export default function AdminLayout() {
                         </NavLink>
                         <button
                           type="button"
-                          onClick={logout}
+                          onClick={() => {
+                            setIsAccountMenuOpen(false);
+                            setIsLogoutModalOpen(true);
+                          }}
                           className="flex w-full items-center gap-3 border-t border-gray-100 px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
                         >
                           <LogOut className="h-4 w-4" />
@@ -606,6 +611,15 @@ export default function AdminLayout() {
           </div>
         </main>
       </section>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={logout}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất không?"
+        confirmText="Đăng xuất"
+      />
     </NotificationProvider>
   );
 }

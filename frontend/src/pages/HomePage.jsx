@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -133,7 +133,7 @@ function Toast({ message, error, onClose }) {
       role="alert"
       className={`fixed bottom-6 right-4 z-50 flex max-w-sm items-start gap-3 border px-4 py-3 shadow-lg md:right-8 ${error
         ? "border-red-200 bg-red-50 text-red-800"
-        : "border-gray-200 bg-white text-black"
+        : "border-green-200 bg-green-50 text-green-800"
         }`}
     >
       <p className="flex-1 text-sm font-medium">{error || message}</p>
@@ -151,7 +151,6 @@ function Toast({ message, error, onClose }) {
 
 export default function HomePage() {
   const { token } = useAuth();
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [variants, setVariants] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -274,7 +273,7 @@ export default function HomePage() {
 
   const handleWishlist = async (product, addedFrom = "home") => {
     if (!token) {
-      navigate("/login");
+      setError("Vui lòng đăng nhập để thêm sản phẩm vào yêu thích.");
       return;
     }
 
@@ -320,13 +319,15 @@ export default function HomePage() {
 
         // Track favorite behavior
         const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
         trackBehavior(token, {
           actionType: "favorite",
           productId,
           source: addedFrom,
           metadata: {
             categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
-            style: styleToTrack || ""
+            style: styleToTrack || "",
+            occasion: occasionToTrack
           }
         });
       }
@@ -337,7 +338,7 @@ export default function HomePage() {
 
   const handleAddToCart = async (product, variant) => {
     if (!token) {
-      navigate("/login");
+      setError("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
       return;
     }
 
@@ -738,8 +739,8 @@ export default function HomePage() {
 
         {/* BestSellers Section */}
         <BestSellersSection
-          onAddToWishlist={token ? (item) => handleWishlist(item, "home_bestseller") : null}
-          onAddToCart={token ? handleAddToCart : null}
+          onAddToWishlist={(item) => handleWishlist(item, "home_bestseller")}
+          onAddToCart={handleAddToCart}
           wishlistProductIds={wishlistProductIds}
         />
 
@@ -750,10 +751,8 @@ export default function HomePage() {
         <RecommendationSection
           type="trending"
           limit={12}
-          onAddToWishlist={
-            token ? (item) => handleWishlist(item, "home_trending") : null
-          }
-          onAddToCart={token ? handleAddToCart : null}
+          onAddToWishlist={(item) => handleWishlist(item, "home_trending")}
+          onAddToCart={handleAddToCart}
           wishlistProductIds={wishlistProductIds}
         />
 

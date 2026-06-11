@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Plus, X } from "lucide-react";
+import { useAuth } from "../context/AuthContext.jsx";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 import { formatProductName } from "../lib/productName.js";
@@ -52,6 +53,8 @@ export default function ProductCard({
   actionLabel = "THÊM VÀO GIỎ",
   isWishlisted = false
 }) {
+  const auth = useAuth();
+  const token = auth?.token;
   const colorGroups = useMemo(() => getColorGroups(product), [product]);
   const [activeColorName, setActiveColorName] = useState(colorGroups[0]?.color || "");
   const [quickAdd, setQuickAdd] = useState(null);
@@ -189,7 +192,7 @@ export default function ProductCard({
             <span className="inline-flex items-center bg-red-50 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-red-600 border border-red-100 rounded-sm">
               {product.recommendationReasons[0]}
             </span>
-            {product.matchScore > 0 ? (
+            {token && product.matchScore > 0 ? (
               <span className="text-[10px] font-bold text-gray-500">
                 {product.matchScore}% MATCH
               </span>

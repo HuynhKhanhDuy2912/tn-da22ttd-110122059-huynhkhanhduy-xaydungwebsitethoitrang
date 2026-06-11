@@ -182,6 +182,7 @@ export default function BestSellersSection({
                 onAddToWishlist={onAddToWishlist}
                 onAddToCart={onAddToCart}
                 isWishlisted={wishlistProductIds.has(product._id)}
+                showGuestActions
               />
             ))}
           </div>

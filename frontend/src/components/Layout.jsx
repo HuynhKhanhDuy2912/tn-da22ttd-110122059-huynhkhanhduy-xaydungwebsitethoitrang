@@ -24,6 +24,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { getAvatarInitial, getUserDisplayName } from "../lib/avatar.js";
+import ConfirmModal from "./ConfirmModal.jsx";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
@@ -185,6 +186,7 @@ export default function Layout() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [activeMegaMenu, setActiveMegaMenu] = useState(null);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const isAdminView = location.pathname.startsWith("/admin");
   const isAdminUser = user?.role === "admin";
@@ -467,7 +469,7 @@ export default function Layout() {
                           className="flex w-full items-center gap-3 border-none bg-white px-4 py-4 text-[15px] font-normal tracking-wide text-red-500 transition hover:bg-gray-50"
                           onClick={() => {
                             setIsAccountOpen(false);
-                            logout();
+                            setIsLogoutModalOpen(true);
                           }}
                         >
                           <LogOut className="h-5 w-5" />
@@ -762,6 +764,15 @@ export default function Layout() {
           </div>
         </footer>
       ) : null}
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={logout}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất không?"
+        confirmText="Đăng xuất"
+      />
     </div>
   );
 }

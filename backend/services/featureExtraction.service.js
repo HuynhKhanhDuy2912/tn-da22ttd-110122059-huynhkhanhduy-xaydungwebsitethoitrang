@@ -472,21 +472,32 @@ export class UserProfileBuilder {
 
   /**
    * Extract occasion preferences từ behaviors
+   * Kết hợp 2 nguồn:
+   * 1. behavior.metadata.occasion — intent trực tiếp (bộ lọc, từ khóa) → trọng số cao hơn
+   * 2. product.occasion — occasion của sản phẩm đã tương tác → fallback
    */
   extractOccasionPreferences(behaviors, products) {
     const occasionCounts = {};
     const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
     behaviors.forEach((behavior) => {
-      const productId = behavior.productId?.toString();
-      if (!productId || !productMap.has(productId)) return;
-
-      const product = productMap.get(productId);
       const weight = this.actionWeights[behavior.actionType] || 1;
 
-      (product.occasion || []).forEach((occ) => {
-        occasionCounts[occ] = (occasionCounts[occ] || 0) + weight;
-      });
+      // Nguồn 1: metadata.occasion (intent trực tiếp từ filter/search)
+      if (behavior.metadata?.occasion) {
+        const metaOccasion = behavior.metadata.occasion;
+        // Trọng số 1.5x vì đây là intent rõ ràng từ user
+        occasionCounts[metaOccasion] = (occasionCounts[metaOccasion] || 0) + weight * 1.5;
+      }
+
+      // Nguồn 2: product data (occasion của sản phẩm đã tương tác)
+      const productId = behavior.productId?.toString();
+      if (productId && productMap.has(productId)) {
+        const product = productMap.get(productId);
+        (product.occasion || []).forEach((occ) => {
+          occasionCounts[occ] = (occasionCounts[occ] || 0) + weight;
+        });
+      }
     });
 
     return Object.entries(occasionCounts)

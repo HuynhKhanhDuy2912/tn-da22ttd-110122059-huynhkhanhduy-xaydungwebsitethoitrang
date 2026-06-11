@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Check,
   ChevronRight,
@@ -168,8 +169,10 @@ export default function CartPage() {
       setSelectedIds((current) => current.filter((id) => id !== cartItemId));
       await loadCart();
       await refreshCartCount();
+      toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
     } catch (requestError) {
       setError(requestError.message);
+      toast.error(requestError.message);
     }
   };
 

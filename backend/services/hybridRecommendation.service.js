@@ -213,10 +213,11 @@ class HybridRecommendationEngine {
 
       // 12. Take top N — enrich products with recommendation metadata
       const topItems = diverseProducts.slice(0, limit);
+      const maxScore = topItems.length > 0 ? topItems[0].finalScore : 1;
 
       const recommendations = topItems.map(item => ({
         ...item.product,
-        matchScore: Math.round(Math.min(item.finalScore * 100, 100)),
+        matchScore: Math.round(Math.min((item.finalScore / Math.max(maxScore, 0.01)) * 100, 100)),
         recommendationReasons: this.generateRecommendationReasons(item),
         recommendationGroup: this.classifyRecommendationGroup(item)
       }));
@@ -447,9 +448,10 @@ class HybridRecommendationEngine {
       // Sort and take top N
       similarities.sort((a, b) => b.score - a.score);
       const topItems = similarities.slice(0, limit);
+      const maxScore = topItems.length > 0 ? topItems[0].score : 1;
       const recommendations = topItems.map(item => ({
         ...item.product,
-        matchScore: Math.round(Math.min(item.rawSimilarity * 100, 100)),
+        matchScore: Math.round(Math.min((item.score / Math.max(maxScore, 0.01)) * 100, 100)),
         recommendationReasons: ["Sản phẩm tương tự"],
         recommendationGroup: "similar_products"
       }));
@@ -558,9 +560,10 @@ class HybridRecommendationEngine {
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 
+      const maxTrendScore = topItems.length > 0 ? topItems[0].score : 1;
       const sorted = topItems.map(item => ({
         ...item.product,
-        matchScore: Math.round(Math.min(Math.log1p(item.score) / Math.log1p(50) * 100, 100)),
+        matchScore: Math.round(Math.min((item.score / Math.max(maxTrendScore, 0.01)) * 100, 100)),
         recommendationReasons: ["Đang thịnh hành"],
         recommendationGroup: "trending"
       }));

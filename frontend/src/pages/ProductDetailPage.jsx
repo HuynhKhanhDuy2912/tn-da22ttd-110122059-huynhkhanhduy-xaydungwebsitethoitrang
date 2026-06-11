@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
-import ProductCard from "../components/ProductCard.jsx";
 import ReviewModal from "../components/ReviewModal.jsx";
 import ReviewsModal from "../components/ReviewsModal.jsx";
 import ProductInfoModal from "../components/ProductInfoModal.jsx";
@@ -12,7 +11,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
-import { trackBehavior } from "../lib/tracking.js";
+import { trackBehavior, trackBehaviorBeacon } from "../lib/tracking.js";
 import { formatProductName } from "../lib/productName.js";
 import { ChevronLeft, ChevronsRight, ChevronRight, Star, ZoomIn, ZoomOut, Plus, Ruler, ArrowLeft, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
@@ -23,6 +22,15 @@ function isVideoMedia(url = "") {
   return /\/video\/upload\/|\.mp4($|\?)|\.webm($|\?)|\.mov($|\?)/i.test(url);
 }
 
+function createTrackingSessionId(productId) {
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2, 10);
+
+  return `${productId}-${Date.now()}-${randomPart}`;
+}
+
 export default function ProductDetailPage() {
   const { productId: rawProductId } = useParams();
   const navigate = useNavigate();
@@ -30,7 +38,6 @@ export default function ProductDetailPage() {
   const selectedColorParam = searchParams.get("color") || "";
   const { token } = useAuth();
 
-  // Extract actual ObjectId from slug-id format
   const productId = rawProductId.includes('-')
     ? rawProductId.split('-').pop()
     : rawProductId;
@@ -91,20 +98,6 @@ export default function ProductDetailPage() {
             .catch(() => setSizeGuide(null));
         }
 
-        // Track view_product behavior
-        if (token) {
-          const styleToTrack = Array.isArray(currentProduct.style) ? currentProduct.style[0] : currentProduct.style;
-          trackBehavior(token, {
-            actionType: "view_product",
-            productId: currentProduct._id,
-            source: "product_page",
-            metadata: {
-              categoryId: typeof currentProduct.categoryId === "object" ? currentProduct.categoryId?._id : currentProduct.categoryId,
-              style: styleToTrack || ""
-            }
-          });
-        }
-
         setProduct(currentProduct);
         setVariants(currentVariants);
         setProductImages(pImages);
@@ -149,6 +142,103 @@ export default function ProductDetailPage() {
     window.scrollTo(0, 0);
   }, [navigate, productId, selectedColorParam]);
 
+  // ── Tracking: ghi nhận view_product ngay khi vào trang ──
+  const trackingSessionIdRef = useRef("");
+  const visibleStartedAtRef = useRef(null);
+  const accumulatedVisibleMsRef = useRef(0);
+  const lastSentDurationRef = useRef(null);
+
+  // Gửi view_product ngay lập tức khi product load (đảm bảo lưu vào DB)
+  useEffect(() => {
+    if (!product || !token) return;
+
+    const trackingSessionId = createTrackingSessionId(product._id);
+    trackingSessionIdRef.current = trackingSessionId;
+    accumulatedVisibleMsRef.current = 0;
+    lastSentDurationRef.current = null;
+    visibleStartedAtRef.current = document.visibilityState === "visible" ? performance.now() : null;
+
+    const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+    const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
+
+    // Gửi ngay qua fetch API — đảm bảo lưu vào database
+    trackBehavior(token, {
+      actionType: "view_product",
+      productId: product._id,
+      source: "product_page",
+      duration: 0,
+      trackingSessionId,
+      metadata: {
+        categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+        style: styleToTrack || "",
+        occasion: occasionToTrack
+      }
+    });
+  }, [product, token]);
+
+  // Gửi duration tracking khi user rời trang (beacon)
+  const sendDurationTracking = useCallback(() => {
+    if (!token || !product || !trackingSessionIdRef.current) return;
+
+    const currentVisibleMs = visibleStartedAtRef.current != null
+      ? performance.now() - visibleStartedAtRef.current
+      : 0;
+    const totalVisibleMs = accumulatedVisibleMsRef.current + currentVisibleMs;
+    const duration = Number((Math.max(0, totalVisibleMs) / 1000).toFixed(3));
+
+    // Không gửi nếu duration = 0 (tránh overwrite record ban đầu) hoặc trùng lần trước
+    if (duration === 0 || duration === lastSentDurationRef.current) return;
+    lastSentDurationRef.current = duration;
+
+    const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+    const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
+
+    trackBehaviorBeacon(token, {
+      actionType: "view_product",
+      productId: product._id,
+      source: "product_page",
+      duration,
+      trackingSessionId: trackingSessionIdRef.current,
+      metadata: {
+        categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+        style: styleToTrack || "",
+        occasion: occasionToTrack
+      }
+    });
+  }, [token, product]);
+
+  useEffect(() => {
+    if (!product || !token) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        if (visibleStartedAtRef.current != null) {
+          accumulatedVisibleMsRef.current += performance.now() - visibleStartedAtRef.current;
+          visibleStartedAtRef.current = null;
+        }
+        sendDurationTracking();
+      } else if (visibleStartedAtRef.current == null) {
+        visibleStartedAtRef.current = performance.now();
+      }
+    };
+
+    // Cập nhật duration định kỳ mỗi 30s để đảm bảo DB luôn có giá trị gần đúng
+    // ngay cả khi beacon thất bại khi đóng tab
+    const periodicInterval = setInterval(sendDurationTracking, 30_000);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(periodicInterval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (visibleStartedAtRef.current != null) {
+        accumulatedVisibleMsRef.current += performance.now() - visibleStartedAtRef.current;
+        visibleStartedAtRef.current = null;
+      }
+      sendDurationTracking();
+    };
+  }, [product, token, sendDurationTracking]);
+
   useEffect(() => {
     if (!product || searchParams.get("review") !== "true" || !token) return;
 
@@ -170,15 +260,10 @@ export default function ProductDetailPage() {
   );
 
   const galleryImages = useMemo(() => {
-    // Lấy ảnh gallery: chỉ ảnh có màu đúng với selectedColor, HOẶC ảnh không có màu (!i.color)
     const imgsForColor = productImages
       .filter(i => i.color === selectedColor)
       .map(i => i.imageUrl);
-
-    // Lấy ảnh của biến thể màu hiện tại
     const variantImage = variants.find(v => v.color === selectedColor && v.image)?.image;
-
-    // Lấy ảnh chung (không có màu)
     const uncoloredImages = productImages
       .filter(i => !i.color)
       .map(i => i.imageUrl);
@@ -190,7 +275,6 @@ export default function ProductDetailPage() {
       ...(product?.videos || []),
     ].filter(Boolean);
 
-    // Chỉ dùng ảnh gốc của sản phẩm (thường là mảng rỗng hoặc ảnh chính) nếu không có ảnh nào khác
     if (all.length > 0) return [...new Set(all)];
     return [...new Set(product?.images || [])].filter(Boolean);
   }, [product, variants, productImages, selectedColor]);
@@ -233,6 +317,18 @@ export default function ProductDetailPage() {
         duration: 3000
       });
 
+      const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+      const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
+      trackBehavior(token, {
+        actionType: "add_to_cart",
+        productId: product._id,
+        source: "product_page",
+        metadata: {
+          categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+          style: styleToTrack || "",
+          occasion: occasionToTrack
+        }
+      });
     } catch (e) {
       toast.error(e.message);
     }
@@ -257,6 +353,19 @@ export default function ProductDetailPage() {
           body: { productId: product._id, variantId: selectedVariant._id, quantity, source: "buy_now" }
         });
 
+      const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+      const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
+      trackBehavior(token, {
+        actionType: "add_to_cart",
+        productId: product._id,
+        source: "product_page",
+        metadata: {
+          categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
+          style: styleToTrack || "",
+          occasion: occasionToTrack
+        }
+      });
+
       const cartItemId = response.data?._id;
       if (cartItemId) {
         const selectedItemIds = [cartItemId];
@@ -275,7 +384,7 @@ export default function ProductDetailPage() {
 
   const handleWishlist = async (product, addedFrom = "product_detail") => {
     if (!token) {
-      navigate("/login");
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào yêu thích.");
       return;
     }
 
@@ -321,18 +430,45 @@ export default function ProductDetailPage() {
 
         // Track favorite behavior
         const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
         trackBehavior(token, {
           actionType: "favorite",
           productId,
           source: addedFrom,
           metadata: {
             categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
-            style: styleToTrack || ""
+            style: styleToTrack || "",
+            occasion: occasionToTrack
           }
         });
       }
     } catch (requestError) {
       toast.error(requestError.message);
+    }
+  };
+
+  const handleProductCardAddToCart = async (product, variant, source) => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!product?._id || !variant?._id) return;
+
+    try {
+      await apiRequest("/carts/me/items", {
+        method: "POST",
+        token,
+        body: {
+          productId: product._id,
+          variantId: variant._id,
+          quantity: 1,
+          source
+        }
+      });
+      toast.success(`Đã thêm ${formatProductName(product.name)} vào giỏ hàng`);
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
@@ -466,7 +602,6 @@ export default function ProductDetailPage() {
         <span className="text-black truncate max-w-auto">{displayName}</span>
       </nav>
 
-      {/* ══ 3-COLUMN LAYOUT ══ */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_420px] gap-0 min-h-[80vh]">
 
         {/* ── Cột 1: Sidebar trái ── */}
@@ -646,7 +781,6 @@ export default function ProductDetailPage() {
               <div className="w-full h-full flex items-center justify-center text-gray-300">Chưa có ảnh</div>
             )}
 
-            {/* Zoom icon hint */}
             {!activeMediaIsVideo && (
               <button
                 onClick={() => setIsZoomed(z => !z)}
@@ -656,7 +790,6 @@ export default function ProductDetailPage() {
               </button>
             )}
 
-            {/* Arrows */}
             {galleryImages.length > 1 && (
               <>
                 <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none shadow-md">
@@ -668,7 +801,6 @@ export default function ProductDetailPage() {
               </>
             )}
 
-            {/* Dots mobile */}
             {galleryImages.length > 1 && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 lg:hidden">
                 {galleryImages.map((img, idx) => (
@@ -896,8 +1028,13 @@ export default function ProductDetailPage() {
           productId={productId}
           token={token}
           limit={12}
-          onAddToWishlist={token ? (item) => handleWishlist(item, "product_detail_similar") : null}
-          onAddToCart={token ? async (product, variant) => {
+          onAddToWishlist={(item) => handleWishlist(item, "product_detail_similar")}
+          onAddToCart={async (product, variant) => {
+            if (!token) {
+              toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+              return;
+            }
+
             try {
               await apiRequest("/carts/me/items", {
                 method: "POST",
@@ -913,8 +1050,8 @@ export default function ProductDetailPage() {
             } catch (err) {
               toast.error(err.message);
             }
-          } : null}
-          wishlistProductIds={wishlistProductIds}
+          }}
+        wishlistProductIds={wishlistProductIds}
         />
       </div>
 
@@ -923,8 +1060,13 @@ export default function ProductDetailPage() {
       <BestSellersSection
         excludeProductId={productId}
         className="mx-auto max-w-[1440px] px-4 pb-12 md:px-8 md:pb-16"
-        onAddToWishlist={token ? (item) => handleWishlist(item, "product_detail_bestseller") : null}
-        onAddToCart={token ? async (prod, variant) => {
+        onAddToWishlist={(item) => handleWishlist(item, "product_detail_bestseller")}
+        onAddToCart={async (prod, variant) => {
+          if (!token) {
+            toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+            return;
+          }
+
           try {
             await apiRequest("/carts/me/items", {
               method: "POST",
@@ -940,8 +1082,8 @@ export default function ProductDetailPage() {
           } catch (err) {
             toast.error(err.message);
           }
-        } : null}
-        wishlistProductIds={wishlistProductIds}
+        }}
+      wishlistProductIds={wishlistProductIds}
       />
 
       <ProductInfoModal

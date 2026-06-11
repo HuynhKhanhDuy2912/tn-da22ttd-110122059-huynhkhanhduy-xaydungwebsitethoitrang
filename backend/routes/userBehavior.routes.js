@@ -11,6 +11,7 @@ import {
 const router = express.Router();
 
 router.post("/track", protect, userBehaviorController.trackBehavior);
+router.post("/track/beacon", userBehaviorController.trackBehaviorBeacon);
 router.get("/summary/me", protect, userBehaviorController.getBehaviorSummary);
 
 router.get("/", protect, scopeToOwner("userId"), userBehaviorController.list);

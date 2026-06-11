@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowRight,
   ChevronDown,
   Heart,
   LayoutGrid,
@@ -289,13 +288,15 @@ export default function ProductsPage() {
 
         // Track favorite behavior
         const styleToTrack = Array.isArray(product.style) ? product.style[0] : product.style;
+        const occasionToTrack = Array.isArray(product.occasion) ? product.occasion[0] : (product.occasion || "");
         trackBehavior(token, {
           actionType: "favorite",
           productId: product._id,
           source: "category",
           metadata: {
             categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId,
-            style: styleToTrack || ""
+            style: styleToTrack || "",
+            occasion: occasionToTrack
           }
         });
       }
@@ -320,43 +321,45 @@ export default function ProductsPage() {
     }
   }, [searchParams]);
 
-  // Track search behavior with debounce
   useEffect(() => {
     if (!token) return;
+    const searchFromUrl = searchParams.get("search")?.trim() || "";
+    const searchFromFilter = filters.search.trim();
+    const actualSearch = searchFromUrl || searchFromFilter;
 
-    // Only track if at least one filter is active
-    const hasSearch = filters.search.trim().length > 0;
+    const hasSearch = actualSearch.length > 0;
     const hasFilters = filters.style || filters.gender || filters.occasion || selectedCategoryId;
 
     if (!hasSearch && !hasFilters) return;
 
     const timer = setTimeout(() => {
-      // Build a descriptive keyword for DB logging if user is just filtering
-      let keyword = filters.search.trim();
+      let keyword = actualSearch;
       if (!keyword && hasFilters) {
         const filterParts = [];
-        if (selectedCategoryId) filterParts.push(`Category`);
+        if (selectedCategoryId) {
+          const catName = categories.find(c => c._id === selectedCategoryId)?.name || "";
+          filterParts.push(`Danh mục: ${catName || selectedCategoryId}`);
+        }
         if (filters.style) filterParts.push(`Style: ${getStyleLabel(filters.style)}`);
-        if (filters.gender) filterParts.push(`Gender: ${filters.gender}`);
-        if (filters.occasion) filterParts.push(`Occasion: ${getOccasionLabel(filters.occasion)}`);
+        if (filters.gender) filterParts.push(`Giới tính: ${filters.gender === "male" ? "Nam" : "Nữ"}`);
+        if (filters.occasion) filterParts.push(`Dịp: ${getOccasionLabel(filters.occasion)}`);
         keyword = `[Bộ lọc] ${filterParts.join(" | ")}`;
       }
 
       trackBehavior(token, {
         actionType: "search",
-        source: "category",
+        source: hasSearch ? "search" : "category",
         searchKeyword: keyword,
         metadata: {
           categoryId: selectedCategoryId || null,
           style: filters.style || "",
-          gender: filters.gender || "",
           occasion: filters.occasion || ""
         }
       });
-    }, 1500); // 1.5s debounce
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [filters, selectedCategoryId, token]);
+  }, [filters, selectedCategoryId, token, categories, searchParams]);
 
   const productsWithVariants = useMemo(
     () => attachVariantsToProducts(products, variants),

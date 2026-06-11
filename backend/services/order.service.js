@@ -5,6 +5,7 @@ import OrderItem from "../models/OrderItem.js";
 import Payment from "../models/Payment.js";
 import ProductVariant from "../models/ProductVariant.js";
 import Review from "../models/Review.js";
+import UserBehavior from "../models/UserBehavior.js";
 import { createNotificationForAdmins } from "./notification.service.js";
 import { createTransaction } from "./inventory.service.js";
 import User from "../models/User.js";
@@ -53,7 +54,7 @@ export const createOrderFromCart = async (user, body) => {
     : { cartId: cart._id };
 
   const cartItems = await CartItem.find(cartItemQuery)
-    .populate("productId", "name price discount images isDeleted")
+    .populate("productId", "name price discount images isDeleted categoryId style occasion")
     .populate(
       "variantId",
       "size color sku stock priceAdjustment discount isActive image isDeleted",
@@ -201,6 +202,20 @@ export const createOrderFromCart = async (user, body) => {
       ? { cartId: cart._id, _id: { $in: selectedItemIds } }
       : { cartId: cart._id },
   );
+
+  // Track purchase behavior for each product
+  const purchaseBehaviors = cartItems.map((item) => ({
+    userId: user._id,
+    productId: item.productId._id,
+    actionType: "purchase",
+    source: "cart",
+    metadata: {
+      categoryId: item.productId.categoryId || null,
+      style: item.productId.style || "",
+      occasion: item.productId.occasion || ""
+    }
+  }));
+  UserBehavior.insertMany(purchaseBehaviors).catch(() => {});
 
   await createNotificationForAdmins("order", {
     orderId: order._id,

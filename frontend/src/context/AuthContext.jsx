@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { apiRequest } from "../lib/api.js";
 
 const AuthContext = createContext(null);
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
     });
 
     setAuth(response.data);
+    toast.success("Đăng nhập thành công");
     return response.data;
   };
 
@@ -55,6 +57,7 @@ export function AuthProvider({ children }) {
     });
 
     setAuth(response.data);
+    toast.success("Đăng nhập bằng Google thành công");
     return response.data;
   };
 
@@ -65,6 +68,7 @@ export function AuthProvider({ children }) {
     });
 
     setAuth(response.data);
+    toast.success("Đăng nhập bằng số điện thoại thành công");
     return response.data;
   };
 
@@ -97,6 +101,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     setAuth({ token: "", user: null });
+    toast.success("Đăng xuất thành công");
   };
 
   const value = useMemo(

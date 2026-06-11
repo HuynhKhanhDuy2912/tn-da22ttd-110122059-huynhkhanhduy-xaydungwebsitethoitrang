@@ -54,6 +54,11 @@ const behaviorSchema = new mongoose.Schema(
       default: 0
     },
 
+    trackingSessionId: {
+      type: String,
+      trim: true
+    },
+
     searchKeyword: {
       type: String,
       trim: true,
@@ -71,11 +76,6 @@ const behaviorSchema = new mongoose.Schema(
         trim: true,
         default: ""
       },
-      gender: {
-        type: String,
-        trim: true,
-        default: ""
-      },
       occasion: {
         type: String,
         trim: true,
@@ -89,5 +89,14 @@ const behaviorSchema = new mongoose.Schema(
 behaviorSchema.index({ userId: 1, createdAt: -1 });
 behaviorSchema.index({ userId: 1, actionType: 1, createdAt: -1 });
 behaviorSchema.index({ productId: 1, actionType: 1 });
+behaviorSchema.index(
+  { userId: 1, trackingSessionId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      trackingSessionId: { $exists: true, $type: "string" }
+    }
+  }
+);
 
 export default mongoose.model("UserBehavior", behaviorSchema);
