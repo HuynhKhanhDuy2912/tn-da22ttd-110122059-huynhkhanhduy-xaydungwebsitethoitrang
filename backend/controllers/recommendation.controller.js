@@ -6,6 +6,7 @@ import {
 } from "../services/hybridRecommendation.service.js";
 import ProductVariant from "../models/ProductVariant.js";
 import Collection from "../models/Collection.js";
+import { attachGalleryImagesToProducts } from "../services/productImage.service.js";
 
 /**
  * Enrich a list of products with availableVariants and collectionName
@@ -49,8 +50,10 @@ export async function enrichProducts(products) {
     variantsByProduct.get(key).push(v);
   });
 
+  const productsWithGalleryImages = await attachGalleryImagesToProducts(products);
+
   // Attach to each product
-  return products.map((product) => {
+  return productsWithGalleryImages.map((product) => {
     const key = product._id.toString();
     return {
       ...product,

@@ -21,7 +21,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
           <button
             type="button"
             onClick={onClose}
-            className="border border-gray-300 bg-white px-4 py-2 text-sm font-bold uppercase tracking-widest text-black transition hover:bg-black hover:text-white"
+            className="border border-gray-300 bg-white px-4 py-2 text-[12px] font-bold uppercase rounded-md text-black transition hover:bg-black hover:text-white"
           >
             {cancelText}
           </button>
@@ -31,7 +31,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
               onConfirm();
               onClose();
             }}
-            className="bg-red-600 px-4 py-2 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-red-800"
+            className="bg-red-600 px-4 py-2 text-[12px] font-bold uppercase rounded-md text-white transition hover:bg-red-800"
           >
             {confirmText}
           </button>

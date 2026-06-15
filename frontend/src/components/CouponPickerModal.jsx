@@ -223,23 +223,28 @@ export default function CouponPickerModal({
                     Miễn phí vận chuyển
                   </h4>
                   <div className="space-y-2">
-                    {shippingCoupons.map((coupon) => (
-                      <CouponCard
-                        key={coupon._id}
-                        coupon={coupon}
-                        isSelected={pickedShippingCoupon?._id === coupon._id || pickedShippingCoupon?.code === coupon.code}
-                        onSelect={() => {
-                          if (!coupon.isEligible) return;
-                          setPickedShippingCoupon(
-                            pickedShippingCoupon?._id === coupon._id
-                              ? null
-                              : coupon
-                          );
-                        }}
-                        subtotal={subtotal}
-                        shippingFee={shippingFee}
-                      />
-                    ))}
+                    {shippingCoupons.map((coupon) => {
+                      const freeShippingAlready = shippingFee <= 0;
+                      return (
+                        <CouponCard
+                          key={coupon._id}
+                          coupon={coupon}
+                          isSelected={pickedShippingCoupon?._id === coupon._id || pickedShippingCoupon?.code === coupon.code}
+                          onSelect={() => {
+                            if (!coupon.isEligible || freeShippingAlready) return;
+                            setPickedShippingCoupon(
+                              pickedShippingCoupon?._id === coupon._id
+                                ? null
+                                : coupon
+                            );
+                          }}
+                          subtotal={subtotal}
+                          shippingFee={shippingFee}
+                          forceDisabled={freeShippingAlready}
+                          forceDisabledReason="Đơn đã được miễn phí vận chuyển"
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -275,9 +280,9 @@ export default function CouponPickerModal({
   );
 }
 
-function CouponCard({ coupon, isSelected, onSelect, subtotal, shippingFee = 0 }) {
+function CouponCard({ coupon, isSelected, onSelect, subtotal, shippingFee = 0, forceDisabled = false, forceDisabledReason = "" }) {
   const isShipping = coupon.discountType === "free_shipping";
-  const disabled = !coupon.isEligible;
+  const disabled = !coupon.isEligible || forceDisabled;
 
   return (
     <button
@@ -321,13 +326,17 @@ function CouponCard({ coupon, isSelected, onSelect, subtotal, shippingFee = 0 })
           )}
         </div>
 
-        {coupon.isEligible && (isShipping ? (coupon.discountValue > 0 ? Math.min(coupon.discountValue, shippingFee) : shippingFee) : coupon.potentialDiscount) > 0 && (
+        {!disabled && (isShipping ? (coupon.discountValue > 0 ? Math.min(coupon.discountValue, shippingFee) : shippingFee) : coupon.potentialDiscount) > 0 && (
           <div className="flex gap-1 mt-1.5 text-[13px] font-medium text-green-600">
             <CircleDollarSign className="h-4 w-4 mt-0.5" /> Tiết kiệm: {formatCurrency(isShipping ? (coupon.discountValue > 0 ? Math.min(coupon.discountValue, shippingFee) : shippingFee) : coupon.potentialDiscount)}
           </div>
         )}
 
-        {!coupon.isEligible && coupon.reason && (
+        {forceDisabled && forceDisabledReason ? (
+          <div className="flex gap-1 mt-1.5 text-[13px] font-medium text-red-600">
+            <CircleAlert className="h-4 w-4 mt-0.5" />{forceDisabledReason}
+          </div>
+        ) : !coupon.isEligible && coupon.reason && (
           <div className="flex gap-1 mt-1.5 text-[13px] font-medium text-red-600">
             <CircleAlert className="h-4 w-4 mt-0.5" />{coupon.reason}
           </div>

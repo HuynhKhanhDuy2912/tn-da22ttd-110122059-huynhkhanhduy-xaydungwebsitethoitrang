@@ -23,6 +23,13 @@ import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 import { trackBehavior } from "../lib/tracking.js";
 import { formatProductName } from "../lib/productName.js";
+import {
+  FALLBACK_PRODUCT_IMAGE,
+  findFirstDistinctImage,
+  getProductGalleryImageUrls,
+  getProductImageUrls
+} from "../lib/productImages.js";
+import toast from "react-hot-toast";
 
 function getParentId(category) {
   if (!category?.parentId) return null;
@@ -128,7 +135,7 @@ function getColorGroups(product) {
 
   groups.forEach((group) => {
     if (!group.previewImage) {
-      group.previewImage = product.images?.[0] || "";
+      group.previewImage = getProductImageUrls(product)[0] || "";
     }
   });
 
@@ -136,7 +143,7 @@ function getColorGroups(product) {
     groups.set("Mặc định", {
       color: "Mặc định",
       hex: "#9CA3AF",
-      previewImage: product.images?.[0] || "",
+      previewImage: getProductImageUrls(product)[0] || "",
       variants: [],
     });
   }
@@ -195,8 +202,6 @@ export default function ProductsPage() {
   const [variants, setVariants] = useState([]);
   const [categories, setCategories] = useState([]);
   const [collections, setCollections] = useState([]);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showMobileCategoryPanel, setShowMobileCategoryPanel] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
@@ -267,7 +272,7 @@ export default function ProductsPage() {
           ),
         );
       } catch (loadError) {
-        setError(loadError.message);
+        toast.error(loadError.message);
       }
     };
 
@@ -293,7 +298,7 @@ export default function ProductsPage() {
           next.delete(product._id);
           return next;
         });
-        setMessage(`Đã bỏ ${formatProductName(product.name)} khỏi danh sách yêu thích`);
+        toast.success(`Đã bỏ ${formatProductName(product.name)} khỏi danh sách yêu thích`);
 
         // Track remove_from_wishlist behavior
         trackBehavior(token, {
@@ -311,7 +316,7 @@ export default function ProductsPage() {
           },
         });
         setWishlistProductIds((current) => new Set([...current, product._id]));
-        setMessage(`Đã thêm ${formatProductName(product.name)} vào danh sách yêu thích`);
+        toast.success(`Đã thêm ${formatProductName(product.name)} vào danh sách yêu thích`);
 
         // Track add_to_wishlist behavior (đối xứng với remove_from_wishlist)
         trackBehavior(token, {
@@ -326,7 +331,7 @@ export default function ProductsPage() {
         });
       }
     } catch (requestError) {
-      setError(requestError.message);
+      toast.error(requestError.message);
     }
   };
 
@@ -635,9 +640,9 @@ export default function ProductsPage() {
           addedFrom: "product_page",
         },
       });
-      setMessage(`Đã thêm ${formatProductName(product.name)} vào danh sách yêu thích`);
+      toast.success(`Đã thêm ${formatProductName(product.name)} vào danh sách yêu thích`);
     } catch (requestError) {
-      setError(requestError.message);
+      toast.error(requestError.message);
     }
   };
 
@@ -663,7 +668,7 @@ export default function ProductsPage() {
     }
 
     if (!variant?._id) {
-      setError("Sản phẩm chưa có biến thể phù hợp để thêm vào giỏ hàng.");
+      toast.error("Sản phẩm chưa có biến thể phù hợp để thêm vào giỏ hàng.");
       return;
     }
 
@@ -679,14 +684,14 @@ export default function ProductsPage() {
         },
       });
 
-      setMessage(`Đã thêm ${formatProductName(product.name)} vào giỏ hàng`);
+      toast.success(`Đã thêm ${formatProductName(product.name)} vào giỏ hàng`);
       setQuickAddByProduct((current) => {
         const clone = { ...current };
         delete clone[product._id];
         return clone;
       });
     } catch (requestError) {
-      setError(requestError.message);
+      toast.error(requestError.message);
     }
   };
 
@@ -945,18 +950,6 @@ export default function ProductsPage() {
             </div>
           </div>
         ) : null}
-
-        {message ? (
-          <p className="mt-4 border-l-4 border-black bg-gray-100 px-4 py-3 text-sm text-black">
-            {message}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-4 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
-          </p>
-        ) : null}
-
         {useNewAllProductsLayout && activeFilterChips.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {activeFilterChips.map((chip) => (
@@ -1039,15 +1032,20 @@ export default function ProductsPage() {
                     colorGroups.find(
                       (group) => group.color === activeColorName,
                     ) || colorGroups[0];
+                  const productImageUrls = getProductImageUrls(product);
                   const primaryImage =
                     activeColorGroup?.previewImage ||
-                    product.images?.[0] ||
-                    "https://placehold.co/900x1200/F5F5F5/222?text=Fashion";
+                    productImageUrls[0] ||
+                    FALLBACK_PRODUCT_IMAGE;
                   const secondaryImage =
-                    product.images?.[1] ||
-                    activeColorGroup?.variants?.find(
-                      (item) => item.image && item.image !== primaryImage,
-                    )?.image ||
+                    findFirstDistinctImage(
+                      [
+                        ...getProductGalleryImageUrls(product, activeColorGroup?.color),
+                        ...productImageUrls,
+                        ...(activeColorGroup?.variants || []).map((item) => item.image),
+                      ],
+                      primaryImage,
+                    ) ||
                     primaryImage;
 
                   const sizes = sortSizes([
@@ -1100,11 +1098,13 @@ export default function ProductsPage() {
                             src={primaryImage}
                             alt={displayName}
                             className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                            onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_PRODUCT_IMAGE; }}
                           />
                           <img
                             src={secondaryImage}
                             alt={displayName}
                             className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                            onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_PRODUCT_IMAGE; }}
                           />
                         </Link>
 

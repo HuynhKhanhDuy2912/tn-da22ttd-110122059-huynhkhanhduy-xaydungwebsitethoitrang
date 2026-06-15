@@ -5,6 +5,12 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 import { formatProductName } from "../lib/productName.js";
+import {
+  FALLBACK_PRODUCT_IMAGE,
+  findFirstDistinctImage,
+  getProductGalleryImageUrls,
+  getProductImageUrls
+} from "../lib/productImages.js";
 
 function getColorGroups(product) {
   const groups = new Map();
@@ -27,14 +33,14 @@ function getColorGroups(product) {
 
   groups.forEach((group) => {
     if (!group.previewImage) {
-      group.previewImage = product.images?.[0] || "";
+      group.previewImage = getProductImageUrls(product)[0] || "";
     }
   });
 
   if (groups.size === 0) {
     groups.set("Mặc định", {
       color: "Mặc định",
-      previewImage: product.images?.[0] || "",
+      previewImage: getProductImageUrls(product)[0] || "",
       variants: []
     });
   }
@@ -61,11 +67,18 @@ export default function ProductCard({
 
   const activeColorGroup =
     colorGroups.find((group) => group.color === activeColorName) || colorGroups[0];
+  const productImageUrls = getProductImageUrls(product);
   const primaryImage =
-    activeColorGroup?.previewImage || product.images?.[0] || "https://placehold.co/900x1200/F5F5F5/222?text=Fashion";
+    activeColorGroup?.previewImage || productImageUrls[0] || FALLBACK_PRODUCT_IMAGE;
   const secondaryImage =
-    product.images?.[1] ||
-    activeColorGroup?.variants?.find((item) => item.image && item.image !== primaryImage)?.image ||
+    findFirstDistinctImage(
+      [
+        ...getProductGalleryImageUrls(product, activeColorGroup?.color),
+        ...productImageUrls,
+        ...(activeColorGroup?.variants || []).map((item) => item.image)
+      ],
+      primaryImage
+    ) ||
     primaryImage;
 
   const sizes = sortSizes([...new Set((activeColorGroup?.variants || []).map((item) => item.size).filter(Boolean))]);
@@ -101,20 +114,20 @@ export default function ProductCard({
   };
 
   return (
-    <article className="group bg-white">
+    <article className="group/card bg-white">
       <div className="relative overflow-hidden bg-gray-100">
         <Link to={productPath} className="absolute inset-0 block">
           <img
             src={primaryImage}
             alt={displayName}
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/900x1200/F5F5F5/222?text=Fashion"; }}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover/card:opacity-0"
+            onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_PRODUCT_IMAGE; }}
           />
           <img
             src={secondaryImage}
             alt={displayName}
-            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/900x1200/F5F5F5/222?text=Fashion"; }}
+            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
+            onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_PRODUCT_IMAGE; }}
           />
         </Link>
 

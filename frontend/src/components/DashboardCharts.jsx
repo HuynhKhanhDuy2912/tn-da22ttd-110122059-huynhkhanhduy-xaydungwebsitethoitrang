@@ -162,36 +162,36 @@ export function StatusDonutChart({ data = [] }) {
           />
           {total > 0
             ? source.map((item) => {
-                const segmentLength =
-                  item.count > 0
-                    ? Math.max((item.count / total) * circumference - gap, 2)
-                    : 0;
-                const dashOffset = -offset;
-                offset += item.count > 0 ? segmentLength + gap : 0;
-                const isActive = activeStatus === item.status;
+              const segmentLength =
+                item.count > 0
+                  ? Math.max((item.count / total) * circumference - gap, 2)
+                  : 0;
+              const dashOffset = -offset;
+              offset += item.count > 0 ? segmentLength + gap : 0;
+              const isActive = activeStatus === item.status;
 
-                return (
-                  <circle
-                    key={item.status}
-                    cx="110"
-                    cy="110"
-                    r={radius}
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth={isActive ? strokeWidth + 3 : strokeWidth}
-                    strokeLinecap="round"
-                    strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
-                    strokeDashoffset={dashOffset}
-                    className="cursor-pointer transition-all duration-200"
-                    style={{
-                      opacity: activeStatus && !isActive ? 0.42 : 1,
-                      filter: isActive ? "drop-shadow(0 8px 14px rgba(15,23,42,0.18))" : "none",
-                    }}
-                    onMouseEnter={() => setActiveStatus(item.status)}
-                    onMouseLeave={() => setActiveStatus(null)}
-                  />
-                );
-              })
+              return (
+                <circle
+                  key={item.status}
+                  cx="110"
+                  cy="110"
+                  r={radius}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth={isActive ? strokeWidth + 3 : strokeWidth}
+                  strokeLinecap="round"
+                  strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
+                  strokeDashoffset={dashOffset}
+                  className="cursor-pointer transition-all duration-200"
+                  style={{
+                    opacity: activeStatus && !isActive ? 0.42 : 1,
+                    filter: isActive ? "drop-shadow(0 8px 14px rgba(15,23,42,0.18))" : "none",
+                  }}
+                  onMouseEnter={() => setActiveStatus(item.status)}
+                  onMouseLeave={() => setActiveStatus(null)}
+                />
+              );
+            })
             : null}
         </svg>
 
@@ -230,9 +230,8 @@ export function StatusDonutChart({ data = [] }) {
               onMouseEnter={() => setActiveStatus(item.status)}
               onFocus={() => setActiveStatus(item.status)}
               onBlur={() => setActiveStatus(null)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium transition ${
-                isActive ? "bg-slate-100 text-slate-950" : "text-slate-600 hover:bg-slate-50"
-              }`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-medium transition ${isActive ? "bg-slate-100 text-slate-950" : "text-slate-600 hover:bg-slate-50"
+                }`}
               title={`${item.label}: ${item.count} đơn hàng`}
             >
               <span

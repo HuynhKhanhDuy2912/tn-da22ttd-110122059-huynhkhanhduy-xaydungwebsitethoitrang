@@ -13,14 +13,14 @@ import {
   validateAndCalculateCoupon,
   applyCoupon,
   revokeCoupon,
-  generateDynamicRewardCoupon
+  generateDynamicRewardCoupon,
 } from "./coupon.service.js";
 
 const ORDER_POPULATE = [{ path: "userId", select: "username email fullname" }];
 
 const populateOrder = (query) => query.populate(ORDER_POPULATE);
 
-export const createOrderFromCart = async (user, body) => {
+const buildOrderDraftFromCart = async (user, body) => {
   const {
     shippingAddress,
     receiverName,
@@ -54,7 +54,10 @@ export const createOrderFromCart = async (user, body) => {
     : { cartId: cart._id };
 
   const cartItems = await CartItem.find(cartItemQuery)
-    .populate("productId", "name price discount images isDeleted categoryId style occasion")
+    .populate(
+      "productId",
+      "name price discount images isDeleted categoryId style occasion",
+    )
     .populate(
       "variantId",
       "size color sku stock priceAdjustment discount isActive image isDeleted",
@@ -68,9 +71,15 @@ export const createOrderFromCart = async (user, body) => {
   // Validate stock
   for (const item of cartItems) {
     if (!item.productId || item.productId.isDeleted) {
-      throw new Error(`Sản phẩm ${item.productId?.name || ""} không còn tồn tại`);
+      throw new Error(
+        `Sản phẩm ${item.productId?.name || ""} không còn tồn tại`,
+      );
     }
-    if (!item.variantId || item.variantId.isDeleted || !item.variantId.isActive) {
+    if (
+      !item.variantId ||
+      item.variantId.isDeleted ||
+      !item.variantId.isActive
+    ) {
       throw new Error(
         `Phân loại cho sản phẩm ${item.productId?.name} không còn khả dụng`,
       );
@@ -103,14 +112,14 @@ export const createOrderFromCart = async (user, body) => {
         name: item.productId.name,
         image: item.productId.images?.[0] || "",
         price: item.productId.price,
-        discount: item.productId.discount
+        discount: item.productId.discount,
       },
       variantSnapshot: {
         size: item.variantId.size,
         color: item.variantId.color,
         sku: item.variantId.sku,
-        image: item.variantId.image || ""
-      }
+        image: item.variantId.image || "",
+      },
     };
   });
 
@@ -128,7 +137,10 @@ export const createOrderFromCart = async (user, body) => {
   let appliedCoupon = null;
   if (couponCode) {
     const result = await validateAndCalculateCoupon(
-      couponCode, user._id, subTotal, shippingFee
+      couponCode,
+      user._id,
+      subTotal,
+      shippingFee,
     );
     if (result.coupon.discountType === "free_shipping") {
       throw new Error("Mã này là mã miễn phí ship, vui lòng chọn đúng loại");
@@ -142,7 +154,10 @@ export const createOrderFromCart = async (user, body) => {
   let appliedShippingCoupon = null;
   if (shippingCouponCode) {
     const result = await validateAndCalculateCoupon(
-      shippingCouponCode, user._id, subTotal, shippingFee
+      shippingCouponCode,
+      user._id,
+      subTotal,
+      shippingFee,
     );
     if (result.coupon.discountType !== "free_shipping") {
       throw new Error("Mã này không phải mã miễn phí ship");
@@ -152,26 +167,71 @@ export const createOrderFromCart = async (user, body) => {
   }
 
   const discount = couponDiscount + shippingDiscount;
-  const totalPrice = Math.max(subTotal - couponDiscount + shippingFee - shippingDiscount, 0);
+  const totalPrice = Math.max(
+    subTotal - couponDiscount + shippingFee - shippingDiscount,
+    0,
+  );
 
-  const order = await Order.create({
-    userId: user._id,
-    totalPrice,
-    subTotal,
-    shippingFee,
-    discount,
-    couponCode: appliedCoupon?.code || null,
-    shippingCouponCode: appliedShippingCoupon?.code || null,
+  return {
+    cart,
+    cartItems,
+    selectedItemIds,
+    orderItemsData,
+    appliedCoupon,
+    appliedShippingCoupon,
     couponDiscount,
     shippingDiscount,
-    status: "pending",
-    paymentMethod,
-    paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
-    shippingAddress,
-    receiverName,
-    receiverPhone,
-    note: note || "",
-  });
+    orderData: {
+      userId: user._id,
+      totalPrice,
+      subTotal,
+      shippingFee,
+      discount,
+      couponCode: appliedCoupon?.code || null,
+      shippingCouponCode: appliedShippingCoupon?.code || null,
+      couponDiscount,
+      shippingDiscount,
+      status: "pending",
+      paymentMethod,
+      paymentStatus: "pending",
+      shippingAddress,
+      receiverName,
+      receiverPhone,
+      note: note || "",
+    },
+  };
+};
+
+export const previewOrderFromCart = async (user, body) => {
+  const draft = await buildOrderDraftFromCart(user, body);
+
+  return {
+    totalPrice: draft.orderData.totalPrice,
+    subTotal: draft.orderData.subTotal,
+    shippingFee: draft.orderData.shippingFee,
+    discount: draft.orderData.discount,
+    couponDiscount: draft.orderData.couponDiscount,
+    shippingDiscount: draft.orderData.shippingDiscount,
+    selectedItemIds: draft.selectedItemIds,
+    itemCount: draft.cartItems.length,
+  };
+};
+
+export const createOrderFromCart = async (user, body) => {
+  const draft = await buildOrderDraftFromCart(user, body);
+  const {
+    cart,
+    cartItems,
+    selectedItemIds,
+    orderItemsData,
+    appliedCoupon,
+    appliedShippingCoupon,
+    couponDiscount,
+    shippingDiscount,
+    orderData,
+  } = draft;
+
+  const order = await Order.create(orderData);
 
   await OrderItem.insertMany(
     orderItemsData.map((d) => ({ ...d, orderId: order._id })),
@@ -180,8 +240,8 @@ export const createOrderFromCart = async (user, body) => {
   await Payment.create({
     orderId: order._id,
     userId: user._id,
-    amount: totalPrice,
-    paymentMethod,
+    amount: orderData.totalPrice,
+    paymentMethod: orderData.paymentMethod,
     paymentStatus: "pending",
   });
 
@@ -190,7 +250,12 @@ export const createOrderFromCart = async (user, body) => {
     await applyCoupon(appliedCoupon._id, user._id, order._id, couponDiscount);
   }
   if (appliedShippingCoupon) {
-    await applyCoupon(appliedShippingCoupon._id, user._id, order._id, shippingDiscount);
+    await applyCoupon(
+      appliedShippingCoupon._id,
+      user._id,
+      order._id,
+      shippingDiscount,
+    );
   }
 
   // KHÔNG trừ stock ngay - chỉ trừ khi đơn hàng được xác nhận (confirmed)
@@ -215,8 +280,8 @@ export const createOrderFromCart = async (user, body) => {
     metadata: {
       categoryId: item.productId.categoryId || null,
       style: toArray(item.productId.style),
-      occasion: toArray(item.productId.occasion)
-    }
+      occasion: toArray(item.productId.occasion),
+    },
   }));
   UserBehavior.insertMany(purchaseBehaviors).catch((err) => {
     console.error("Failed to track purchase behaviors:", err);
@@ -226,13 +291,13 @@ export const createOrderFromCart = async (user, body) => {
     orderId: order._id,
     orderNumber: order._id.toString().slice(-8).toUpperCase(),
     customerName: user.fullname || user.username || "Khách hàng",
-    totalPrice,
+    totalPrice: orderData.totalPrice,
     userName: user.fullname || user.username || "Khách hàng",
   });
 
   let awardedCoupons = [];
-  if (paymentMethod === "cod") {
-    awardedCoupons = await grantRewardCoupons(user._id, subTotal);
+  if (orderData.paymentMethod === "cod") {
+    awardedCoupons = await grantRewardCoupons(user._id, orderData.subTotal);
   }
 
   const populatedOrder = await populateOrder(Order.findById(order._id)).lean();
@@ -241,22 +306,22 @@ export const createOrderFromCart = async (user, body) => {
 
 export const grantRewardCoupons = async (userId, subTotal) => {
   const awardedCoupons = [];
-  if (subTotal >= 599000) {
+  if (subTotal >= 999000) {
     const reward10 = await generateDynamicRewardCoupon(
       "G10",
       "percentage",
       10,
-      "Giảm 10% cho đơn hàng đặc quyền"
+      "Giảm 10% cho đơn hàng đặc quyền",
     );
     awardedCoupons.push(reward10);
   }
-  
-  if (subTotal >= 999000) {
+
+  if (subTotal >= 1499000) {
     const rewardFree = await generateDynamicRewardCoupon(
       "F20K",
       "free_shipping",
       20000,
-      "Miễn phí vận chuyển 20k cho đơn hàng đặc quyền"
+      "Miễn phí vận chuyển 20k cho đơn hàng đặc quyền",
     );
     awardedCoupons.push(rewardFree);
   }
@@ -264,7 +329,7 @@ export const grantRewardCoupons = async (userId, subTotal) => {
   if (awardedCoupons.length > 0) {
     const couponIds = awardedCoupons.map((c) => c._id);
     await User.findByIdAndUpdate(userId, {
-      $addToSet: { savedCoupons: { $each: couponIds } }
+      $addToSet: { savedCoupons: { $each: couponIds } },
     });
   }
   return awardedCoupons;
@@ -279,7 +344,10 @@ export const getMyOrders = async (userId) => {
     orders.map(async (order) => {
       const items = await OrderItem.find({ orderId: order._id })
         .populate("productId", "name price discount images isDeleted")
-        .populate("variantId", "size color sku image priceAdjustment discount isDeleted");
+        .populate(
+          "variantId",
+          "size color sku image priceAdjustment discount isDeleted",
+        );
 
       if (order.status !== "completed") {
         const itemsWithReviewFlag = items.map((item) => ({

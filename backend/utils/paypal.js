@@ -32,11 +32,16 @@ const getAccessToken = async () => {
   }
 };
 
-export const createPayPalOrder = async (orderId, amount, currency = "USD") => {
+export const createPayPalOrder = async (referenceId, amount, currency = "USD") => {
   const accessToken = await getAccessToken();
   const returnUrl = process.env.PAYPAL_RETURN_URL || "http://localhost:5000/api/payment/paypal/callback";
   const baseUrl = returnUrl.replace("/paypal/callback", "");
-  const cancelUrl = `${baseUrl}/paypal/cancel?orderId=${orderId}`;
+  const cancelUrl = `${baseUrl}/paypal/cancel?sessionId=${encodeURIComponent(referenceId)}`;
+  const normalizedAmount = Number(amount);
+
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error("Invalid PayPal amount");
+  }
 
   try {
     const response = await axios.post(
@@ -45,10 +50,10 @@ export const createPayPalOrder = async (orderId, amount, currency = "USD") => {
         intent: "CAPTURE",
         purchase_units: [
           {
-            reference_id: orderId,
+            reference_id: referenceId,
             amount: {
               currency_code: currency,
-              value: amount.toFixed(2)
+              value: normalizedAmount.toFixed(2)
             }
           }
         ],

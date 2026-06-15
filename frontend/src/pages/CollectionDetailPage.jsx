@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Filter, Grid2X2, Grid3X3, Rows3 } from "lucide-react";
+import toast from "react-hot-toast";
 import ProductCard from "../components/ProductCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { attachVariantsToProducts } from "../lib/catalog.js";
+import { formatProductName } from "../lib/productName.js";
+import { trackBehavior } from "../lib/tracking.js";
 
 export default function CollectionDetailPage() {
   const { collectionId } = useParams();
@@ -14,6 +17,7 @@ export default function CollectionDetailPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [wishlistProductIds, setWishlistProductIds] = useState(new Set());
 
   useEffect(() => {
     const load = async () => {
@@ -31,11 +35,26 @@ export default function CollectionDetailPage() {
 
         if (col.products?.length > 0) {
           const productIds = col.products.map((product) => product._id || product);
-          const varRes = await apiRequest("/product-variants?limit=500");
+          const varRes = await apiRequest("/product-variants?limit=2000");
           const allVariants = varRes.data || [];
           setVariants(
             allVariants.filter((variant) => productIds.includes(variant.productId?._id || variant.productId))
           );
+        }
+
+        if (token) {
+          try {
+            const wishlistRes = await apiRequest("/wishlists/me", { token });
+            setWishlistProductIds(
+              new Set(
+                (wishlistRes?.data?.items || [])
+                  .map((item) => item.productId?._id)
+                  .filter(Boolean)
+              )
+            );
+          } catch {
+            // Bỏ qua lỗi tải wishlist, không ảnh hưởng hiển thị sản phẩm
+          }
         }
       } catch (e) {
         setError(e.message);
@@ -46,14 +65,27 @@ export default function CollectionDetailPage() {
 
     load();
     window.scrollTo(0, 0);
-  }, [collectionId]);
+  }, [collectionId, token]);
 
   const productsWithVariants = useMemo(() => {
     if (!collection?.products) return [];
-    return attachVariantsToProducts(collection.products, variants);
+    return attachVariantsToProducts(collection.products, variants).map((product) => ({
+      ...product,
+      collectionName: product.collectionName || collection?.name || null
+    }));
   }, [collection, variants]);
 
   const handleAddToCart = async (product, variant) => {
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      return;
+    }
+
+    if (!variant?._id) {
+      toast.error("Sản phẩm chưa có biến thể phù hợp để thêm vào giỏ hàng.");
+      return;
+    }
+
     try {
       await apiRequest("/carts/me/items", {
         method: "POST",
@@ -65,8 +97,64 @@ export default function CollectionDetailPage() {
           source: "collection"
         }
       });
+
+      toast.success(`Đã thêm ${formatProductName(product.name)} vào giỏ hàng`);
     } catch (e) {
-      console.error(e);
+      toast.error(e.message);
+    }
+  };
+
+  const handleWishlist = async (product) => {
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào yêu thích.");
+      return;
+    }
+
+    const productId = product?._id;
+    if (!productId) return;
+
+    const isWishlisted = wishlistProductIds.has(productId);
+
+    try {
+      if (isWishlisted) {
+        await apiRequest(`/wishlists/me/product/${productId}`, {
+          method: "DELETE",
+          token
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.delete(productId);
+          return next;
+        });
+        toast.success(`Đã bỏ ${formatProductName(product.name)} khỏi danh sách yêu thích`);
+        trackBehavior(token, {
+          actionType: "remove_from_wishlist",
+          productId,
+          source: "collection"
+        });
+      } else {
+        await apiRequest("/wishlists/me", {
+          method: "POST",
+          token,
+          body: {
+            productId,
+            addedFrom: "collection"
+          }
+        });
+        setWishlistProductIds((current) => {
+          const next = new Set(current);
+          next.add(productId);
+          return next;
+        });
+        toast.success(`Đã thêm ${formatProductName(product.name)} vào danh sách yêu thích`);
+        trackBehavior(token, {
+          actionType: "add_to_wishlist",
+          productId,
+          source: "collection"
+        });
+      }
+    } catch (requestError) {
+      toast.error(requestError.message);
     }
   };
 
@@ -174,7 +262,9 @@ export default function CollectionDetailPage() {
               <ProductCard
                 key={product._id}
                 product={product}
-                onAddToCart={token ? handleAddToCart : null}
+                onAddToCart={handleAddToCart}
+                onAddToWishlist={handleWishlist}
+                isWishlisted={wishlistProductIds.has(product._id)}
               />
             ))}
           </div>

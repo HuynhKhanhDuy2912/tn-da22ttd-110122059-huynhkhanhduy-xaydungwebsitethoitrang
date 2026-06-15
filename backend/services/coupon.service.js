@@ -126,6 +126,14 @@ export const validateAndCalculateCoupon = async (
   shippingFee = 0
 ) => {
   const coupon = await validateCoupon(code, userId, subtotal);
+
+  // Đơn đã được miễn phí vận chuyển thì không cho áp mã giảm phí vận chuyển
+  if (coupon.discountType === "free_shipping" && shippingFee <= 0) {
+    throw new Error(
+      "Đơn hàng đã được miễn phí vận chuyển, không thể áp dụng mã giảm phí vận chuyển"
+    );
+  }
+
   const discountAmount = calculateDiscount(coupon, subtotal, shippingFee);
 
   return { coupon, discountAmount };

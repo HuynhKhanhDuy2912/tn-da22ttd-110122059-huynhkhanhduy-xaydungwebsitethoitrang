@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Check, ChevronRight, CreditCard, Loader2, MapPin, Plus, Tag, Truck, Wallet, X } from "lucide-react";
+import { Check, ChevronRight, CreditCard, Loader2, MapPin, Plus, Tag, Truck, X } from "lucide-react";
 import toast from "react-hot-toast";
 import CouponPickerModal from "../components/CouponPickerModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -13,7 +13,7 @@ const CHECKOUT_SELECTION_KEY = "fashionstore_checkout_cart_item_ids";
 const formatCurrency = (value = 0) => `${Number(value).toLocaleString("vi-VN")} đ`;
 
 export default function CheckoutPage() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const { refreshCartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +25,10 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (restoredIdsParam) {
       sessionStorage.setItem(CHECKOUT_SELECTION_KEY, JSON.stringify(restoredIdsParam.split(",")));
+    }
+
+    if (errorParam) {
+      toast.error(errorParam, { id: "checkout-payment-return-error" });
     }
 
     if (restoredIdsParam || errorParam) {
@@ -58,7 +62,6 @@ export default function CheckoutPage() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [note, setNote] = useState("");
-  const [error, setError] = useState(searchParams.get("error") || "");
   const [loading, setLoading] = useState(false);
 
   const [shippingFee, setShippingFee] = useState(30000);
@@ -164,8 +167,21 @@ export default function CheckoutPage() {
     }
   }, [selectedAddress, subtotal, cartItems.length, token]);
 
+  // Đơn đã được miễn phí vận chuyển thì tự gỡ mã giảm phí ship (không cho áp chồng)
+  useEffect(() => {
+    if (shippingFee <= 0 && appliedShippingCoupon) {
+      setAppliedShippingCoupon(null);
+      toast("Đơn đã được miễn phí vận chuyển nên mã giảm phí ship đã được gỡ.");
+    }
+  }, [shippingFee, appliedShippingCoupon]);
+
   const couponDiscount = appliedCoupon?.potentialDiscount || 0;
-  const shippingDiscount = appliedShippingCoupon ? (appliedShippingCoupon.discountValue > 0 ? Math.min(appliedShippingCoupon.discountValue, shippingFee) : shippingFee) : 0;
+  const shippingDiscount =
+    shippingFee > 0 && appliedShippingCoupon
+      ? appliedShippingCoupon.discountValue > 0
+        ? Math.min(appliedShippingCoupon.discountValue, shippingFee)
+        : shippingFee
+      : 0;
   const total = Math.max(subtotal - couponDiscount + shippingFee - shippingDiscount, 0);
 
   const handleCouponApply = (productCoupon, shipCoupon) => {
@@ -177,36 +193,64 @@ export default function CheckoutPage() {
     e.preventDefault();
 
     if (!selectedAddress) {
-      setError("Vui lòng chọn địa chỉ giao hàng");
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error("Không có sản phẩm nào để thanh toán");
       return;
     }
 
     setLoading(true);
-    setError("");
+    toast.dismiss();
 
     try {
       const shippingAddress = `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.province}`;
+      const checkoutPayload = {
+        receiverName: selectedAddress.fullName,
+        receiverPhone: selectedAddress.phoneNumber,
+        shippingAddress,
+        note: note.trim(),
+        paymentMethod,
+        shippingFee,
+        ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
+        ...(appliedShippingCoupon ? { shippingCouponCode: appliedShippingCoupon.code } : {}),
+        ...(selectedItemIds.length ? { selectedItemIds } : {})
+      };
 
+      if (selectedItemIds.length) {
+        sessionStorage.setItem(CHECKOUT_SELECTION_KEY, JSON.stringify(selectedItemIds));
+      }
+
+      // PayPal & VNPay: tạo phiên thanh toán (chưa tạo đơn) rồi chuyển sang cổng
+      if (paymentMethod === "paypal" || paymentMethod === "vnpay") {
+        const endpoint =
+          paymentMethod === "paypal"
+            ? "/payment/paypal/create"
+            : "/payment/vnpay/create";
+        const paymentResponse = await apiRequest(endpoint, {
+          method: "POST",
+          token,
+          body: checkoutPayload
+        });
+
+        if (!paymentResponse.data?.paymentUrl) {
+          throw new Error("Không nhận được liên kết thanh toán");
+        }
+
+        window.location.href = paymentResponse.data.paymentUrl;
+        return;
+      }
+
+      // COD - tạo đơn ngay và chuyển đến trang đơn hàng
       const orderResponse = await apiRequest("/orders/checkout", {
         method: "POST",
         token,
-        body: {
-          receiverName: selectedAddress.fullName,
-          receiverPhone: selectedAddress.phoneNumber,
-          shippingAddress,
-          note: note.trim(),
-          paymentMethod,
-          shippingFee,
-          ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
-          ...(appliedShippingCoupon ? { shippingCouponCode: appliedShippingCoupon.code } : {}),
-          ...(selectedItemIds.length ? { selectedItemIds } : {})
-        }
+        body: checkoutPayload
       });
 
-      const orderId = orderResponse.data._id;
-      const orderTotal = orderResponse.data.totalPrice;
       const awardedCoupons = orderResponse.data.awardedCoupons;
-
       if (awardedCoupons && awardedCoupons.length > 0) {
         toast.success(
           "Chúc mừng! Bạn đã nhận được mã giảm giá phần thưởng. Vui lòng kiểm tra mục Mã giảm giá.",
@@ -214,31 +258,12 @@ export default function CheckoutPage() {
         );
       }
 
-      // Xử lý thanh toán theo phương thức
-      if (paymentMethod === "vnpay") {
-        const paymentResponse = await apiRequest("/payment/vnpay/create", {
-          method: "POST",
-          token,
-          body: { orderId, amount: orderTotal }
-        });
-        window.location.href = paymentResponse.data.paymentUrl;
-
-      } else if (paymentMethod === "paypal") {
-        const paymentResponse = await apiRequest("/payment/paypal/create", {
-          method: "POST",
-          token,
-          body: { orderId, amount: orderTotal }
-        });
-        window.location.href = paymentResponse.data.paymentUrl;
-      } else {
-        // COD - chuyển thẳng đến trang đơn hàng
-        localStorage.removeItem(CHECKOUT_SELECTION_KEY);
-        sessionStorage.removeItem(CHECKOUT_SELECTION_KEY);
-        await refreshCartCount();
-        navigate("/orders");
-      }
+      localStorage.removeItem(CHECKOUT_SELECTION_KEY);
+      sessionStorage.removeItem(CHECKOUT_SELECTION_KEY);
+      await refreshCartCount();
+      navigate("/orders");
     } catch (submitError) {
-      setError(submitError.message);
+      toast.error(submitError.message);
       setLoading(false);
     }
   };
@@ -501,12 +526,6 @@ export default function CheckoutPage() {
                   </label>
                 </div>
               </div>
-
-              {error && (
-                <div className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                  {error}
-                </div>
-              )}
 
               <button
                 type="button"

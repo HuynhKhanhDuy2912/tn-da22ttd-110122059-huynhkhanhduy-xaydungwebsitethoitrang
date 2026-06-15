@@ -9,7 +9,6 @@ import {
   Package,
   Search,
   TrendingDown,
-  TrendingUp,
   DollarSign,
   AlertTriangle,
   History,
@@ -587,7 +586,7 @@ export default function AdminInventoryPage() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`w-10 h-10 rounded-lg transition ${currentPage === page
+                        className={`w-8 h-8 rounded-lg transition ${currentPage === page
                           ? "bg-black text-white"
                           : "border border-gray-300 hover:bg-gray-50"
                           }`}

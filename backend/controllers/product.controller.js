@@ -4,6 +4,7 @@ import ProductVariant from "../models/ProductVariant.js";
 import OrderItem from "../models/OrderItem.js";
 import { createCrudControllers } from "./base.controller.js";
 import { clearRecommendationCache } from "../services/hybridRecommendation.service.js";
+import { attachGalleryImagesToProducts } from "../services/productImage.service.js";
 
 const productPopulate = [{ path: "categoryId", select: "name" }];
 
@@ -64,24 +65,26 @@ const addComputedFields = async (products) => {
 
   if (!ids.length) return Array.isArray(products) ? [] : products;
 
-  const soldRows = await OrderItem.aggregate([
-    { $match: { productId: { $in: ids } } },
-    {
-      $lookup: {
-        from: "orders",
-        localField: "orderId",
-        foreignField: "_id",
-        as: "order"
-      }
-    },
-    { $unwind: "$order" },
-    { $match: { "order.status": { $ne: "cancelled" } } },
-    { $group: { _id: "$productId", soldCount: { $sum: "$quantity" } } }
+  const [soldRows, productsWithGalleryImages] = await Promise.all([
+    OrderItem.aggregate([
+      { $match: { productId: { $in: ids } } },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "order"
+        }
+      },
+      { $unwind: "$order" },
+      { $match: { "order.status": { $ne: "cancelled" } } },
+      { $group: { _id: "$productId", soldCount: { $sum: "$quantity" } } }
+    ]),
+    attachGalleryImagesToProducts(items)
   ]);
 
   const soldByProduct = new Map(soldRows.map((row) => [String(row._id), row.soldCount]));
-  const decorated = items.map((item) => {
-    const plain = item.toObject ? item.toObject() : item;
+  const decorated = productsWithGalleryImages.map((plain) => {
     return {
       ...plain,
       slug: plain.slug || createSlug(plain.name),
