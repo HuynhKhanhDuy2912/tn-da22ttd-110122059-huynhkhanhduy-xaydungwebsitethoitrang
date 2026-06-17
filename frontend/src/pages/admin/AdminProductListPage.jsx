@@ -7,21 +7,22 @@ import { sortVariantsBySize } from "../../lib/sizes.js";
 import { formatProductName } from "../../lib/productName.js";
 import { getPaginationRange } from "../../lib/pagination.js";
 import {
-  Plus,
-  Search,
   X,
-  Package,
-  TrendingUp,
   Tag,
-  Grid3x3,
-  SlidersHorizontal,
+  Eye,
+  Plus,
   Edit2,
   Trash2,
-  TriangleAlert,
-  Eye,
+  Search,
   EyeOff,
+  Grid3x3,
+  Package,
+  TrendingUp,
   ChevronsLeft,
   ChevronsRight,
+  TriangleAlert,
+
+  SlidersHorizontal,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -57,6 +58,7 @@ export default function AdminProductListPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState(globalSearch);
+  const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [styleFilter, setStyleFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
@@ -70,6 +72,7 @@ export default function AdminProductListPage() {
 
   const loadProducts = async () => {
     try {
+      setLoading(true);
       const [prodRes, varRes, catRes] = await Promise.all([
         apiRequest("/products?limit=1000&isDeleted=all", { token }),
         apiRequest("/product-variants?limit=5000", { token }),
@@ -86,6 +89,8 @@ export default function AdminProductListPage() {
       setCategories(catRes.data || []);
     } catch (e) {
       toast.error(e.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -276,6 +281,17 @@ export default function AdminProductListPage() {
   const selectClass =
     "w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-600";
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-4 p-6">
       <AdminPageHeader
@@ -387,14 +403,14 @@ export default function AdminProductListPage() {
             <option value="oldest">Cũ nhất</option>
             <option value="name-asc">Tên A-Z</option>
             <option value="name-desc">Tên Z-A</option>
-            <option value="price-asc">Giá thấp → cao</option>
-            <option value="price-desc">Giá cao → thấp</option>
+            <option value="price-asc">Giá từ thấp &rarr; cao</option>
+            <option value="price-desc">Giá từ cao &rarr; thấp</option>
             <option value="variants">Nhiều biến thể nhất</option>
           </select>
 
           <button
             onClick={() => navigate("/admin/products/add")}
-            className="flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition hover:bg-gray-800"
+            className="flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-[13px] font-bold uppercase tracking-wider text-white transition hover:bg-gray-800"
           >
             <Plus size={16} />
             Thêm sản phẩm

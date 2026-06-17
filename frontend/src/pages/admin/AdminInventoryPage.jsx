@@ -318,7 +318,7 @@ export default function AdminInventoryPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Tìm kiếm
             </label>
             <div className="relative">
@@ -328,19 +328,19 @@ export default function AdminInventoryPage() {
                 placeholder="Sản phẩm, SKU, màu, size..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Danh mục
             </label>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
             >
               <option value="">Tất cả danh mục</option>
               {leafCategories.map((cat) => (
@@ -352,13 +352,13 @@ export default function AdminInventoryPage() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Trạng thái tồn kho
             </label>
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="in-stock">Còn hàng</option>
@@ -368,13 +368,13 @@ export default function AdminInventoryPage() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Sắp xếp
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
             >
               <option value="name-asc">Tên A-Z</option>
               <option value="name-desc">Tên Z-A</option>

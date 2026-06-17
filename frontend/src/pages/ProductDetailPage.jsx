@@ -13,7 +13,7 @@ import { getProductPath } from "../lib/slug.js";
 import { sortSizes } from "../lib/sizes.js";
 import { trackBehavior, trackBehaviorBeacon } from "../lib/tracking.js";
 import { formatProductName } from "../lib/productName.js";
-import { ChevronLeft, ChevronsRight, ChevronRight, Star, ZoomIn, ZoomOut, Plus, Ruler, ArrowLeft, ArrowRight } from "lucide-react";
+import { ChevronsRight, Star, Plus, Ruler, ArrowLeft, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 
 const CHECKOUT_SELECTION_KEY = "fashionstore_checkout_cart_item_ids";
@@ -50,7 +50,6 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
-  const [isZoomed, setIsZoomed] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewOrderId, setReviewOrderId] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -293,10 +292,94 @@ export default function ProductDetailPage() {
   };
 
   const activeIndex = galleryImages.indexOf(activeImage);
-  const goPrev = () => setActiveImage(galleryImages[(activeIndex - 1 + galleryImages.length) % galleryImages.length]);
-  const goNext = () => setActiveImage(galleryImages[(activeIndex + 1) % galleryImages.length]);
+  const hitEndBoundaryCount = useRef(0);
+  const hitStartBoundaryCount = useRef(0);
+
+  const goPrev = useCallback(() => {
+    setActiveImage(prev => {
+      const idx = galleryImages.indexOf(prev);
+      if (idx === -1) return prev;
+      if (idx === 0) {
+        if (hitStartBoundaryCount.current < 1) {
+          hitStartBoundaryCount.current += 1;
+          return prev;
+        } else {
+          hitStartBoundaryCount.current = 0;
+          return galleryImages[galleryImages.length - 1];
+        }
+      }
+      hitStartBoundaryCount.current = 0;
+      hitEndBoundaryCount.current = 0;
+      return galleryImages[idx - 1];
+    });
+  }, [galleryImages]);
+
+  const goNext = useCallback(() => {
+    setActiveImage(prev => {
+      const idx = galleryImages.indexOf(prev);
+      if (idx === -1) return prev;
+      if (idx === galleryImages.length - 1) {
+        if (hitEndBoundaryCount.current < 1) {
+          hitEndBoundaryCount.current += 1;
+          return prev;
+        } else {
+          hitEndBoundaryCount.current = 0;
+          return galleryImages[0];
+        }
+      }
+      hitEndBoundaryCount.current = 0;
+      hitStartBoundaryCount.current = 0;
+      return galleryImages[idx + 1];
+    });
+  }, [galleryImages]);
+
   const activeMediaIsVideo = isVideoMedia(activeImage);
 
+  const touchStartY = useRef(0);
+  const touchEndY = useRef(0);
+  const lastWheelTime = useRef(0);
+  const galleryRef = useRef(null);
+
+  useEffect(() => {
+    const el = galleryRef.current;
+    if (!el) return;
+
+    const handleNativeWheel = (e) => {
+      e.preventDefault();
+
+      // Bỏ qua các sự kiện cuộn quá nhỏ (quán tính của trackpad)
+      if (Math.abs(e.deltaY) < 15) return;
+
+      const now = Date.now();
+      // Tăng thời gian chờ lên 800ms để tránh nhận nhiều lệnh từ một lần vuốt trackpad
+      if (now - lastWheelTime.current < 800) return;
+
+      if (e.deltaY > 0) {
+        goNext();
+        lastWheelTime.current = now;
+      } else if (e.deltaY < 0) {
+        goPrev();
+        lastWheelTime.current = now;
+      }
+    };
+
+    el.addEventListener("wheel", handleNativeWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleNativeWheel);
+  }, [goNext, goPrev]);
+
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.changedTouches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndY.current = e.changedTouches[0].clientY;
+    const diff = touchStartY.current - touchEndY.current;
+    if (diff > 50) {
+      goNext();
+    } else if (diff < -50) {
+      goPrev();
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!selectedVariant) return;
@@ -578,10 +661,10 @@ export default function ProductDetailPage() {
         <span className="text-black truncate max-w-auto">{displayName}</span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_420px] gap-0 min-h-[80vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr_420px] gap-0 min-h-[80vh]">
 
         {/* ── Cột 1: Sidebar trái ── */}
-        <aside className="hidden lg:flex flex-col justify-end px-4 w-full max-w-[320px]">
+        <aside className="hidden lg:flex flex-col justify-end px-4 w-full max-w-[350px]">
 
           {/* Wrapper */}
           <div className="border border-gray-200 bg-white">
@@ -708,7 +791,7 @@ export default function ProductDetailPage() {
         </aside>
 
         {/* ── Cột 2: Ảnh sản phẩm ── */}
-        <div className="relative flex pl-1">
+        <div className="relative flex pl-1 h-full">
           {/* Thumbnail strip dọc bên trái */}
           {galleryImages.length > 1 && (
             <div className="hidden lg:flex flex-col gap-2 p-3 w-[80px] shrink-0">
@@ -716,7 +799,7 @@ export default function ProductDetailPage() {
                 <button
                   key={idx}
                   onClick={() => setActiveImage(img)}
-                  className={`w-full aspect-square border-2 overflow-hidden transition-all cursor-pointer p-0 bg-transparent ${activeImage === img ? "border-black" : "border-transparent opacity-40 hover:opacity-80"
+                  className={`w-full aspect-square overflow-hidden transition-all cursor-pointer p-0 bg-transparent ${activeImage === img ? "border-black border-[1.5px]" : "border-transparent"
                     }`}
                 >
                   {isVideoMedia(img) ? (
@@ -731,50 +814,40 @@ export default function ProductDetailPage() {
 
           {/* Ảnh chính */}
           <div
-            className="flex-1 relative bg-gray-50 overflow-hidden group flex items-center justify-center"
-            style={{ minHeight: "600px" }}
+            ref={galleryRef}
+            className="flex-1 relative overflow-hidden group h-full min-h-[600px]"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
-            {activeImage && activeMediaIsVideo ? (
-              <video
-                key={activeImage}
-                src={activeImage}
-                className="max-w-full max-h-[78vh] object-contain"
-                autoPlay
-                muted
-                controls
-                playsInline
-              />
-            ) : activeImage ? (
-              <img
-                key={activeImage}
-                src={activeImage}
-                alt={displayName}
-                className={`max-w-full max-h-[78vh] object-contain transition-transform duration-300 ${isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"
-                  }`}
-                onClick={() => setIsZoomed(z => !z)}
-              />
-            ) : (
+            {galleryImages.length === 0 ? (
               <div className="w-full h-full flex items-center justify-center text-gray-300">Chưa có ảnh</div>
-            )}
-
-            {!activeMediaIsVideo && (
-              <button
-                onClick={() => setIsZoomed(z => !z)}
-                className="absolute bottom-4 right-4 w-9 h-9 bg-white/80 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border border-gray-200 shadow-sm"
+            ) : (
+              <div
+                className="absolute inset-0 flex flex-col w-full h-full transition-transform duration-500 ease-out"
+                style={{ transform: `translateY(-${activeIndex * 100}%)` }}
               >
-                {isZoomed ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
-              </button>
-            )}
-
-            {galleryImages.length > 1 && (
-              <>
-                <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none shadow-md">
-                  <ChevronLeft size={18} />
-                </button>
-                <button onClick={goNext} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-none shadow-md">
-                  <ChevronRight size={18} />
-                </button>
-              </>
+                {galleryImages.map((img, idx) => (
+                  <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center relative">
+                    {isVideoMedia(img) ? (
+                      <video
+                        src={img}
+                        className="max-w-full h-full object-contain"
+                        autoPlay={activeImage === img}
+                        muted
+                        controls
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={img}
+                        alt={`${displayName} - ${idx + 1}`}
+                        draggable="false"
+                        className="max-w-full h-full object-contain"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
 
             {galleryImages.length > 1 && (
@@ -870,9 +943,19 @@ export default function ProductDetailPage() {
           {/* Màu sắc */}
           {availableColors.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-black">
-                {selectedColor}
-              </p>
+              <div className="mb-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-black">
+                  {selectedColor}
+                </p>
+                {(() => {
+                  const selectedColorVariants = variants.filter(v => v.color === selectedColor);
+                  const isSelectedColorOutOfStock = selectedColorVariants.length > 0 && selectedColorVariants.every(v => Number(v.stock || 0) === 0);
+                  if (isSelectedColorOutOfStock) {
+                    return <p className="text-[15px] font-bold text-[#c24b33] mt-1">Sản phẩm hết hàng</p>;
+                  }
+                  return null;
+                })()}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {availableColors.map(color => {
                   const colorVariants = variants.filter(v => v.color === color);
@@ -1027,7 +1110,7 @@ export default function ProductDetailPage() {
               toast.error(err.message);
             }
           }}
-        wishlistProductIds={wishlistProductIds}
+          wishlistProductIds={wishlistProductIds}
         />
       </div>
 
@@ -1059,7 +1142,7 @@ export default function ProductDetailPage() {
             toast.error(err.message);
           }
         }}
-      wishlistProductIds={wishlistProductIds}
+        wishlistProductIds={wishlistProductIds}
       />
 
       <ProductInfoModal

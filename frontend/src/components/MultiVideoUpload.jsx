@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Film, Loader2, UploadCloud, X } from "lucide-react";
+import { Video, Loader2, UploadCloud, X } from "lucide-react";
 import { apiRequest } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -123,7 +123,7 @@ export default function MultiVideoUpload({ values = [], onChange, label = "VIDEO
 
       {!values.length ? (
         <div className="flex items-center gap-2 border border-gray-100 bg-gray-50 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-          <Film size={14} />
+          <Video size={14} />
           Chưa có video sản phẩm
         </div>
       ) : null}

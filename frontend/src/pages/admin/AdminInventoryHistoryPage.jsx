@@ -164,7 +164,7 @@ export default function AdminInventoryHistoryPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Tìm kiếm
             </label>
             <div className="relative">
@@ -176,13 +176,13 @@ export default function AdminInventoryHistoryPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, search: e.target.value })
                 }
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Loại giao dịch
             </label>
             <select
@@ -191,7 +191,7 @@ export default function AdminInventoryHistoryPage() {
                 setFilters({ ...filters, type: e.target.value });
                 setTimeout(loadTransactions, 100);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
             >
               <option value="">Tất cả loại giao dịch</option>
               <option value="import">Nhập hàng</option>
@@ -202,11 +202,10 @@ export default function AdminInventoryHistoryPage() {
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Từ ngày
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="date"
                 value={filters.startDate}
@@ -214,17 +213,16 @@ export default function AdminInventoryHistoryPage() {
                   setFilters({ ...filters, startDate: e.target.value });
                   setTimeout(loadTransactions, 100);
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-gray-500 mb-2">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
               Đến ngày
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="date"
                 value={filters.endDate}
@@ -232,7 +230,7 @@ export default function AdminInventoryHistoryPage() {
                   setFilters({ ...filters, endDate: e.target.value });
                   setTimeout(loadTransactions, 100);
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
               />
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   UserCheck,
   UserX,
+  UserPlus,
   Edit2,
   Trash2,
   X,
@@ -16,6 +17,9 @@ import {
   User,
   ChevronsLeft,
   ChevronsRight,
+  Eye,
+  EyeOff,
+  SlidersHorizontal,
 } from "lucide-react";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -38,6 +42,15 @@ const STATUS_FILTERS = [
   { value: "all", label: "Tất cả trạng thái" },
   { value: "active", label: "Đang hoạt động" },
   { value: "inactive", label: "Bị khóa" },
+];
+
+const LAST_ACCESS_FILTERS = [
+  { value: "all", label: "Tất cả" },
+  { value: "7days", label: "Hoạt động trong 7 ngày" },
+  { value: "30days", label: "Hoạt động trong 30 ngày" },
+  { value: "inactive30", label: "Không hoạt động 30+ ngày" },
+  { value: "inactive90", label: "Không hoạt động 90+ ngày" },
+  { value: "never", label: "Chưa từng đăng nhập" },
 ];
 
 const PAGE_SIZE = 10;
@@ -96,11 +109,26 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState(globalSearch);
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [lastAccessFilter, setLastAccessFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [editUser, setEditUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const emptyNewUser = {
+    username: "",
+    email: "",
+    password: "",
+    fullname: "",
+    phone_number: "",
+    role: "user",
+    isActive: true,
+  };
+  const [newUser, setNewUser] = useState(emptyNewUser);
 
   const loadUsers = async () => {
     try {
@@ -151,8 +179,25 @@ export default function AdminUsersPage() {
       result = result.filter((u) => u.role === roleFilter);
     if (statusFilter === "active") result = result.filter((u) => u.isActive);
     if (statusFilter === "inactive") result = result.filter((u) => !u.isActive);
+
+    if (lastAccessFilter !== "all") {
+      const now = Date.now();
+      const DAY = 86400000;
+      if (lastAccessFilter === "never") {
+        result = result.filter((u) => !u.lastLoginAt);
+      } else if (lastAccessFilter === "7days") {
+        result = result.filter((u) => u.lastLoginAt && (now - new Date(u.lastLoginAt).getTime()) <= 7 * DAY);
+      } else if (lastAccessFilter === "30days") {
+        result = result.filter((u) => u.lastLoginAt && (now - new Date(u.lastLoginAt).getTime()) <= 30 * DAY);
+      } else if (lastAccessFilter === "inactive30") {
+        result = result.filter((u) => !u.lastLoginAt || (now - new Date(u.lastLoginAt).getTime()) > 30 * DAY);
+      } else if (lastAccessFilter === "inactive90") {
+        result = result.filter((u) => !u.lastLoginAt || (now - new Date(u.lastLoginAt).getTime()) > 90 * DAY);
+      }
+    }
+
     return result;
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter, lastAccessFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -165,6 +210,7 @@ export default function AdminUsersPage() {
     setSearchTerm("");
     setRoleFilter("all");
     setStatusFilter("all");
+    setLastAccessFilter("all");
     setPage(1);
   };
 
@@ -227,11 +273,70 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Create user
+  const handleCreateUser = async () => {
+    if (!newUser.username.trim()) {
+      toast.error("Tên đăng nhập là bắt buộc");
+      return;
+    }
+    if (!newUser.email.trim()) {
+      toast.error("Email là bắt buộc");
+      return;
+    }
+    if (!newUser.password || newUser.password.length < 6) {
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+    try {
+      setCreating(true);
+      await apiRequest("/users", {
+        method: "POST",
+        token,
+        body: {
+          ...newUser,
+          authProviders: ["email"],
+        },
+      });
+      toast.success("Tạo người dùng thành công");
+      setShowCreateModal(false);
+      setNewUser(emptyNewUser);
+      setShowPassword(false);
+      loadUsers();
+    } catch (err) {
+      toast.error(err.message || "Không thể tạo người dùng");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-4 p-6">
       <AdminPageHeader
         title="QUẢN LÝ NGƯỜI DÙNG"
         description="Xem, tìm kiếm, phân quyền và quản lý tài khoản người dùng trong hệ thống."
+        aside={
+          <button
+            onClick={() => {
+              setNewUser(emptyNewUser);
+              setShowPassword(false);
+              setShowCreateModal(true);
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+          >
+            <UserPlus className="h-4 w-4" /> Thêm người dùng
+          </button>
+        }
       />
 
       {/* Stats */}
@@ -296,87 +401,113 @@ export default function AdminUsersPage() {
 
       {/* Filters */}
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            <label className="mb-1.5 block text-[13px] font-bold text-gray-500">
-              Tìm kiếm
-            </label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                value={searchTerm}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[280px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Tên, email, số điện thoại..."
+              className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
+            className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition ${showFilters
+              ? "border-black bg-gray-100 text-black"
+              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Bộ lọc
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="mt-4 grid gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
+                Vai trò
+              </label>
+              <select
+                value={roleFilter}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setRoleFilter(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Tên, email, số điện thoại..."
-                className="w-full rounded-xl border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
-              />
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+              >
+                {ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
+                Trạng thái
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+              >
+                {STATUS_FILTERS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
+                Truy cập cuối
+              </label>
+              <select
+                value={lastAccessFilter}
+                onChange={(e) => {
+                  setLastAccessFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+              >
+                {LAST_ACCESS_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2 lg:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-4 py-3 border border-gray-200">
+              <div className="text-sm text-gray-600">
+                Tìm thấy{" "}
+                <span className="font-semibold text-black">
+                  {filtered.length}
+                </span>{" "}
+                người dùng phù hợp
+              </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+              >
+                Xóa bộ lọc
+              </button>
             </div>
           </div>
-
-          <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-gray-500">
-              Vai trò
-            </label>
-            <select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-gray-500">
-              Trạng thái
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
-            >
-              {STATUS_FILTERS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3">
-          <span className="text-sm text-gray-600">
-            Tìm thấy{" "}
-            <span className="font-semibold text-black">{filtered.length}</span>{" "}
-            người dùng
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={resetFilters}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
-            >
-              Xóa bộ lọc
-            </button>
-            <button
-              onClick={loadUsers}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Làm mới
-            </button>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* Table */}
@@ -741,6 +872,181 @@ export default function AdminUsersPage() {
                 className="rounded-xl bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
               >
                 {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
+                  <UserPlus className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase">
+                    Tạo người dùng mới
+                  </h3>
+                  <p className="text-xs text-gray-400">Điền thông tin để tạo tài khoản mới</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 transition hover:text-black"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                    Tên đăng nhập <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={newUser.username}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, username: e.target.value }))
+                    }
+                    placeholder="vd: nguyenvana"
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                    Họ và tên
+                  </label>
+                  <input
+                    value={newUser.fullname}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, fullname: e.target.value }))
+                    }
+                    placeholder="vd: Nguyễn Văn A"
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, email: e.target.value }))
+                    }
+                    placeholder="vd: nguyenvana@email.com"
+                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                  Mật khẩu <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newUser.password}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, password: e.target.value }))
+                    }
+                    placeholder="Tối thiểu 6 ký tự"
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 pr-10 text-sm outline-none transition focus:border-black"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Tối thiểu 6 ký tự</p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                  Số điện thoại
+                </label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={newUser.phone_number}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, phone_number: e.target.value }))
+                    }
+                    placeholder="vd: 0901234567"
+                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-black"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                    Vai trò
+                  </label>
+                  <select
+                    value={newUser.role}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, role: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+                  >
+                    <option value="user">Người dùng</option>
+                    <option value="admin">Quản trị viên</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                    Trạng thái
+                  </label>
+                  <select
+                    value={newUser.isActive ? "active" : "inactive"}
+                    onChange={(e) =>
+                      setNewUser((u) => ({
+                        ...u,
+                        isActive: e.target.value === "active",
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Bị khóa</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateUser}
+                disabled={creating}
+                className="flex items-center gap-1.5 rounded-xl bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
+              >
+                <UserPlus className="h-4 w-4" />
+                {creating ? "Đang tạo..." : "Tạo người dùng"}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import ImageUpload from "../../components/ImageUpload.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { apiRequest } from "../../lib/api.js";
+import { Plus, Pencil, Trash2, Eye, EyeOff, RefreshCw } from "lucide-react";
 
 const initialForm = {
   title: "",
@@ -153,7 +154,7 @@ export default function AdminBannersPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
         <form className="bg-white border border-gray-200 p-7 rounded-md grid gap-5 sticky top-6" onSubmit={handleSubmit}>
           <h3 className="text-black text-sm m-0 mb-2 pb-4 border-b border-gray-200 font-bold uppercase">
-            {editingId ? "SỬA BANNER" : "THÊM BANNER MỚI"}
+            {editingId ? "CẬP NHẬT BANNER" : "THÊM BANNER MỚI"}
           </h3>
 
           <label className={labelClass}>
@@ -210,10 +211,10 @@ export default function AdminBannersPage() {
 
           <div className="flex gap-3 pt-4 border-t border-gray-200 mt-2">
             <button
-              className="px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-md text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none"
+              className="flex items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-widest rounded text-white bg-black hover:bg-gray-800 transition-colors cursor-pointer border-none"
               type="submit"
             >
-              {editingId ? "CẬP NHẬT" : "THÊM MỚI"}
+              {editingId ? <><RefreshCw size={16} />CẬP NHẬT</> : <><Plus size={16} />THÊM MỚI</>}
             </button>
             {editingId ? (
               <button
@@ -264,25 +265,25 @@ export default function AdminBannersPage() {
                     onBlur={(event) => handleOrderUpdate(banner._id, event.target.value)}
                   />
                   <button
-                    className={`flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-blue-700 ${banner.isActive
-                      ? "text-green-700 border-green-700 hover:bg-green-700 hover:text-white"
-                      : "text-gray-600 border-gray-400 hover:bg-gray-600 hover:text-white"
+                    className={`flex items-center gap-1.5 rounded border px-2 py-1.5 text-[12px] font-semibold text-black transition hover:bg-blue-700 ${banner.isActive
+                      ? "text-white bg-green-600 border-green-600 hover:bg-green-500 hover:text-white"
+                      : "text-white bg-gray-500 border-gray-500 hover:bg-gray-400 hover:text-white"
                       }`}
                     onClick={() => handleToggleStatus(banner._id)}
                   >
-                    {banner.isActive ? "HIỆN" : "ẨN"}
+                    {banner.isActive ? <><Eye size={13} />Hiện</> : <><EyeOff size={13} />Ẩn</>}
                   </button>
                   <button
-                    className="flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    className="flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-2 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blue-700"
                     onClick={() => handleEdit(banner)}
                   >
-                    SỬA
+                    <Pencil size={13} />Sửa
                   </button>
                   <button
-                    className="flex items-center gap-1.5 rounded border border-red-600 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                    className="flex items-center gap-1.5 rounded border border-red-600 bg-red-600 px-2 py-1.5 text-[12px] font-semibold text-white transition hover:bg-red-700"
                     onClick={() => handleDelete(banner._id)}
                   >
-                    XÓA
+                    <Trash2 size={13} />Xóa
                   </button>
                 </div>
               </div>

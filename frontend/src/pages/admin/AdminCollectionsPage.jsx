@@ -11,6 +11,8 @@ import {
   EyeOff,
   X,
   Search,
+  Plus,
+  RefreshCw
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -33,6 +35,7 @@ export default function AdminCollectionsPage() {
   const [allProducts, setAllProducts] = useState([]);
   const [productSearch, setProductSearch] = useState("");
   const [showProductPicker, setShowProductPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // ── Load data ──
   const loadCollections = async () => {
@@ -54,8 +57,12 @@ export default function AdminCollectionsPage() {
   };
 
   useEffect(() => {
-    loadCollections();
-    loadProducts();
+    const fetchAll = async () => {
+      setLoading(true);
+      await Promise.all([loadCollections(), loadProducts()]);
+      setLoading(false);
+    };
+    fetchAll();
   }, [token]);
 
   // ── Form handlers ──
@@ -198,6 +205,17 @@ export default function AdminCollectionsPage() {
   const btnSecondary =
     "px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-md text-black bg-white hover:bg-gray-100 transition-colors cursor-pointer border border-gray-300";
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-6 p-6">
       <AdminPageHeader
@@ -206,7 +224,7 @@ export default function AdminCollectionsPage() {
       />
 
       {/* ── FORM ── */}
-      <div className="bg-white border border-gray-200 p-6 rounded-md">
+      <div className="bg-white border border-gray-200 p-6 rounded">
         <h3 className="text-xs font-bold uppercase tracking-widest text-black pb-4 border-b border-gray-100 m-0 mb-5">
           {editingId ? "SỬA BỘ SƯU TẬP" : "TẠO BỘ SƯU TẬP MỚI"}
         </h3>
@@ -416,7 +434,11 @@ export default function AdminCollectionsPage() {
           {/* Action buttons */}
           <div className="flex gap-3 pt-2">
             <button type="submit" className={btnPrimary}>
-              {editingId ? "CẬP NHẬT" : "TẠO BỘ SƯU TẬP"}
+              {editingId ? <>
+                <RefreshCw size={16} />
+                CẬP NHẬT</> : <>
+                <Plus size={16} />
+                TẠO BỘ SƯU TẬP</>}
             </button>
             {editingId && (
               <button
@@ -526,11 +548,12 @@ export default function AdminCollectionsPage() {
               <button
                 type="button"
                 onClick={() => handleToggleActive(col)}
-                className={`flex items-center justify-center text-xs font-bold uppercase tracking-widest cursor-pointer bg-transparent border-none p-0 ${col.isActive ? "text-green-600" : "text-gray-400"
+                className={`flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition ${col.isActive
+                  ? "border-green-600 bg-green-600 hover:bg-green-700"
+                  : "border-gray-400 bg-gray-400 hover:bg-gray-500"
                   }`}
-                title={col.isActive ? "Bấm để ẩn" : "Bấm để hiện"}
               >
-                {col.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                {col.isActive ? <><Eye size={12} /> Hiện</> : <><EyeOff size={12} /> Ẩn</>}
               </button>
 
               {/* Actions */}

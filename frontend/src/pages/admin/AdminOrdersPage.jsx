@@ -258,6 +258,17 @@ export default function AdminOrdersPage() {
     closeCancelModal();
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-4 p-6">
       <AdminPageHeader
@@ -391,7 +402,6 @@ export default function AdminOrdersPage() {
                 Ngày tạo từ
               </label>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm">
-                <Calendar className="h-4 w-4 text-gray-400" />
                 <input
                   type="date"
                   value={dateFrom}
@@ -406,7 +416,6 @@ export default function AdminOrdersPage() {
                 Ngày tạo đến
               </label>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm">
-                <Calendar className="h-4 w-4 text-gray-400" />
                 <input
                   type="date"
                   value={dateTo}
@@ -571,7 +580,7 @@ export default function AdminOrdersPage() {
                       <td className="px-3 py-4">
                         <Link
                           to={`/admin/orders/${order._id}`}
-                          className="inline-flex rounded-lg bg-blue-600 border px-2 py-2 text-xs font-semibold text-white transition hover:bg-blue-800"
+                          className="inline-flex rounded-lg bg-black border px-2 py-2 text-xs font-semibold text-white transition hover:bg-gray-800"
                         >
                           Xem chi tiết
                         </Link>

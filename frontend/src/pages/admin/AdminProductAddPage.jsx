@@ -13,9 +13,12 @@ import {
   Copy,
   ArrowLeft,
   Plus,
+  RefreshCw,
   Save,
   Tag,
-  FolderOpen,
+  BookOpen,
+  Video,
+  Image
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -495,14 +498,14 @@ export default function AdminProductAddPage() {
           token,
           body: { ...baseBody, size: sizes[0] },
         });
-        
+
         // THÊM MỚI: Tự động đồng bộ ảnh vừa up cho tất cả các size khác cùng màu
         if (baseBody.image) {
           const otherVariantsSameColor = variants.filter(
             v => v.color === variantForm.color.trim() && v._id !== editingVariantId
           );
           if (otherVariantsSameColor.length > 0) {
-            await Promise.all(otherVariantsSameColor.map(v => 
+            await Promise.all(otherVariantsSameColor.map(v =>
               apiRequest(`/product-variants/${v._id}`, {
                 method: "PUT",
                 token,
@@ -511,7 +514,7 @@ export default function AdminProductAddPage() {
             ));
           }
         }
-        
+
         toast.success("Đã cập nhật biến thể thành công!");
 
         // Fix 3: đồng bộ gallery khi update biến thể có ảnh mới
@@ -566,7 +569,7 @@ export default function AdminProductAddPage() {
               galleryImages.map((i) => i.imageUrl),
             );
             const newImages = otherImages.filter((url) => !existingUrls.has(url));
-            
+
             if (newImages.length > 0) {
               await Promise.all(
                 newImages.map((url) =>
@@ -619,7 +622,7 @@ export default function AdminProductAddPage() {
                 color: newColor,
               },
             });
-            
+
             // THÊM: Cũng đẩy luôn các ảnh phụ còn lại của biến thể này lên
             const otherImages = variantForm.images.filter(
               (url) => url !== baseBody.image,
@@ -766,7 +769,7 @@ export default function AdminProductAddPage() {
       {/* Header */}
       <div className="p-6">
         <AdminPageHeader
-          title={editId ? "SỬA SẢN PHẨM" : "THÊM SẢN PHẨM MỚI"}
+          title={editId ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"}
           description={`Sản phẩm / ${editId ? "Chỉnh sửa" : "Thêm mới"}`}
           aside={
             <button
@@ -1095,7 +1098,7 @@ export default function AdminProductAddPage() {
             <div className={cardCls}>
               <h2 className={headingCls}>
                 <span className="flex items-center gap-2">
-                  <FolderOpen size={14} />
+                  <BookOpen size={14} />
                   Bộ sưu tập
                 </span>
               </h2>
@@ -1157,7 +1160,12 @@ export default function AdminProductAddPage() {
 
             {!editId && (
               <div className={cardCls}>
-                <h2 className={headingCls}>Bộ sưu tập ảnh</h2>
+                <h2 className={headingCls}>
+                  <span className="flex items-center gap-2">
+                    <Image size={16} />
+                    Bộ sưu tập ảnh
+                  </span>
+                </h2>
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest m-0">
                   Tải lên nhiều ảnh và chọn 1 ảnh làm đại diện (ảnh chính)
                 </p>
@@ -1174,7 +1182,12 @@ export default function AdminProductAddPage() {
             )}
 
             <div className={cardCls}>
-              <h2 className={headingCls}>Video sản phẩm</h2>
+              <h2 className={headingCls}>
+                <span className="flex items-center gap-2">
+                  <Video size={16} />
+                  Video sản phẩm
+                </span>
+              </h2>
               <MultiVideoUpload
                 label=""
                 values={form.videos}
@@ -1184,10 +1197,11 @@ export default function AdminProductAddPage() {
 
             {editId && (
               <div className={cardCls}>
-                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-black m-0">
+                <div className={headingCls}>
+                  <span className="flex items-center gap-2">
+                    <Image size={16} />
                     Ảnh Gallery ({galleryImages.length})
-                  </h2>
+                  </span>
                   {/* Nút dọn ảnh trùng - chỉ hiện khi có duplicate */}
                   {(() => {
                     const urls = galleryImages.map((i) => i.imageUrl);
@@ -1354,7 +1368,7 @@ export default function AdminProductAddPage() {
               className="bg-gray-50 border border-gray-200 p-5 grid gap-5"
             >
               <p className="text-xs font-bold uppercase tracking-widest text-black m-0">
-                {editingVariantId ? "SỬA BIẾN THỂ" : "THÊM BIẾN THỂ MỚI"}
+                {editingVariantId ? "Cập nhật biến thể" : "Thêm biến thể mới"}
               </p>
 
               <div className="grid grid-cols-[1fr_1fr_320px] gap-3 items-stretch">
@@ -1378,7 +1392,7 @@ export default function AdminProductAddPage() {
                 </label>
 
                 {/* IMAGE PREVIEW */}
-                <div className="row-span-2 min-h-[170px]">
+                <div className="row-span-2 min-h-[160px]">
                   <MultiImageUpload
                     label="Ảnh biến thể"
                     values={variantForm.images}
@@ -1468,9 +1482,13 @@ export default function AdminProductAddPage() {
                 <div className="flex gap-2 items-end">
                   <button
                     type="submit"
-                    className="flex-1 h-[46px] text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-gray-800 border-none cursor-pointer transition-colors"
+                    className="flex items-center justify-center gap-2 w-full h-[46px] bg-black px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-gray-800"
                   >
-                    {editingVariantId ? "CẬP NHẬT" : "THÊM"}
+                    {editingVariantId ? <>
+                      <RefreshCw size={16} />
+                      CẬP NHẬT BIẾN THỂ</> : <>
+                      <Plus size={16} />
+                      THÊM BIẾN THỂ</>}
                   </button>
 
                   {editingVariantId && (

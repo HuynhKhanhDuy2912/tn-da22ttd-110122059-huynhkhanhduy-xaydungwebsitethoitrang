@@ -138,6 +138,34 @@ const adminSearchTargets = [
     icon: Mail,
     keywords: ["contact", "lien he", "yeu cau", "tin nhan"],
   },
+  {
+    label: "Bộ sưu tập",
+    description: "Tìm kiếm bộ sưu tập sản phẩm",
+    path: "/admin/collections",
+    icon: Layers,
+    keywords: ["collection", "bo suu tap", "nhom san pham"],
+  },
+  {
+    label: "Banner",
+    description: "Quản lý hình ảnh quảng cáo",
+    path: "/admin/banners",
+    icon: Image,
+    keywords: ["banner", "quang cao", "hinh anh", "slider"],
+  },
+  {
+    label: "Bảng size",
+    description: "Cấu hình hướng dẫn chọn size",
+    path: "/admin/size-guides",
+    icon: Ruler,
+    keywords: ["size", "bang size", "kich thuoc", "so do"],
+  },
+  {
+    label: "Lịch sử tồn kho",
+    description: "Xem lịch sử nhập, xuất, điều chỉnh kho",
+    path: "/admin/inventory/history",
+    icon: History,
+    keywords: ["history", "lich su kho", "nhap xuat", "giao dich"],
+  },
 ];
 
 function normalizeSearchText(value) {
@@ -201,7 +229,7 @@ export default function AdminLayout() {
 
   const filteredSearchTargets = useMemo(() => {
     const keyword = normalizeSearchText(adminSearch.trim());
-    if (!keyword) return adminSearchTargets.slice(0, 6);
+    if (!keyword) return adminSearchTargets.slice(0, 8);
 
     return adminSearchTargets
       .map((target) => {
@@ -216,7 +244,7 @@ export default function AdminLayout() {
       })
       .filter((target) => target.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 6);
+      .slice(0, 8);
   }, [adminSearch]);
 
   useEffect(() => {
@@ -275,7 +303,6 @@ export default function AdminLayout() {
 
   const runAdminSearch = (target = activeSearchTarget) => {
     const keyword = adminSearch.trim();
-    if (!keyword) return;
 
     const destination =
       target || filteredSearchTargets[0] || adminSearchTargets[0];

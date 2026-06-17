@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit3, Save, X, Upload, Image as ImageIcon, Ruler, ChevronDown } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Trash2, Pencil, Save, X, Image as ImageIcon, Ruler } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { apiRequest } from "../../lib/api.js";
@@ -10,7 +10,7 @@ export default function AdminSizeGuidesPage() {
   const [sizeGuides, setSizeGuides] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // null or sizeGuide object
+  const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -48,11 +48,22 @@ export default function AdminSizeGuidesPage() {
     }
   };
 
+  const leafCategories = useMemo(() => {
+    const getParentId = (cat) => cat?.parentId?._id || cat?.parentId || null;
+    const catById = new Map(categories.map((cat) => [cat._id, cat]));
+    return categories.filter((cat) => {
+      const parentId = getParentId(cat);
+      if (!parentId) return false; // cấp 1
+      const parent = catById.get(parentId);
+      return Boolean(parent && getParentId(parent)); // cha có cha => cấp 3
+    });
+  }, [categories]);
+
   const usedCategoryIds = sizeGuides
     .filter((g) => !editing || g._id !== editing._id)
     .map((g) => (typeof g.categoryId === "object" ? g.categoryId._id : g.categoryId));
 
-  const availableCategories = categories.filter(
+  const availableCategories = leafCategories.filter(
     (c) => !usedCategoryIds.includes(c._id)
   );
 
@@ -229,6 +240,17 @@ export default function AdminSizeGuidesPage() {
     return cat?.name || "—";
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="grid gap-4 p-6">
       <AdminPageHeader
@@ -269,7 +291,7 @@ export default function AdminSizeGuidesPage() {
                   className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black disabled:bg-gray-50"
                 >
                   <option value="">Chọn danh mục</option>
-                  {(editing._isNew ? availableCategories : categories).map((c) => (
+                  {(editing._isNew ? availableCategories : leafCategories).map((c) => (
                     <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
@@ -528,11 +550,7 @@ export default function AdminSizeGuidesPage() {
       )}
 
       {/* ═══ LIST ═══ */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-6 w-6 animate-spin border-2 border-black border-t-transparent rounded-full" />
-        </div>
-      ) : sizeGuides.length === 0 && !editing ? (
+      {sizeGuides.length === 0 && !editing ? (
         <div className="border border-gray-200 bg-white py-20 text-center rounded-md">
           <Ruler size={40} className="mx-auto mb-3 text-gray-300" />
           <p className="text-sm text-gray-500">Chưa có bảng size nào</p>
@@ -575,7 +593,7 @@ export default function AdminSizeGuidesPage() {
                   onClick={() => handleEdit(guide)}
                   className="flex items-center gap-1.5 rounded border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
                 >
-                  <Edit3 size={13} /> Sửa
+                  <Pencil size={13} /> Sửa
                 </button>
                 <button
                   type="button"

@@ -1,8 +1,8 @@
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import multer from 'multer';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import multer from "multer";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -15,13 +15,15 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'fashionstore',
-    resource_type: 'auto',
-    allowedFormats: ['jpg', 'png', 'jpeg', 'webp', 'mp4', 'mov', 'webm'],
+    folder: "fashionstore",
+    resource_type: "auto",
+    allowedFormats: ["jpg", "png", "jpeg", "webp", "mp4", "mov", "webm"],
     public_id: (req, file) => {
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 8);
-      const originalName = file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
+      const originalName = file.originalname
+        .split(".")[0]
+        .replace(/[^a-zA-Z0-9]/g, "_");
       return `${originalName}_${timestamp}_${randomString}`;
     },
   },
@@ -30,15 +32,15 @@ const storage = new CloudinaryStorage({
 export const upload = multer({ storage: storage });
 
 const mediaReferenceQueries = [
-  { collection: 'products', fields: ['images', 'videos'] },
-  { collection: 'productimages', fields: ['imageUrl'] },
-  { collection: 'productvariants', fields: ['image'] },
-  { collection: 'banners', fields: ['imageUrl'] },
-  { collection: 'categories', fields: ['imageUrl'] },
-  { collection: 'collections', fields: ['coverImage', 'bannerImage'] },
-  { collection: 'sizeguides', fields: ['measurementImage'] },
-  { collection: 'reviews', fields: ['imageUrls', 'videoUrls'] },
-  { collection: 'users', fields: ['avatar'] },
+  { collection: "products", fields: ["images", "videos"] },
+  { collection: "productimages", fields: ["imageUrl"] },
+  { collection: "productvariants", fields: ["image"] },
+  { collection: "banners", fields: ["imageUrl"] },
+  { collection: "categories", fields: ["imageUrl"] },
+  { collection: "collections", fields: ["coverImage", "bannerImage"] },
+  { collection: "sizeguides", fields: ["measurementImage"] },
+  { collection: "reviews", fields: ["imageUrls", "videoUrls"] },
+  { collection: "users", fields: ["avatar"] },
 ];
 
 const getCloudinaryPublicId = (mediaUrl = "") => {
@@ -46,24 +48,30 @@ const getCloudinaryPublicId = (mediaUrl = "") => {
 
   try {
     const parsedUrl = new URL(mediaUrl);
-    const segments = parsedUrl.pathname.split('/').filter(Boolean);
-    const uploadIndex = segments.indexOf('upload');
+    const segments = parsedUrl.pathname.split("/").filter(Boolean);
+    const uploadIndex = segments.indexOf("upload");
 
     if (uploadIndex === -1 || uploadIndex === segments.length - 1) return null;
 
-    const resourceType = segments[uploadIndex - 1] === 'video' ? 'video' : 'image';
+    const resourceType =
+      segments[uploadIndex - 1] === "video" ? "video" : "image";
     let publicIdParts = segments.slice(uploadIndex + 1);
-    const versionIndex = publicIdParts.findIndex((part) => /^v\d+$/i.test(part));
+    const versionIndex = publicIdParts.findIndex((part) =>
+      /^v\d+$/i.test(part),
+    );
 
     if (versionIndex >= 0) {
       publicIdParts = publicIdParts.slice(versionIndex + 1);
     }
 
     const lastIndex = publicIdParts.length - 1;
-    publicIdParts[lastIndex] = publicIdParts[lastIndex].replace(/\.[^/.]+$/, '');
+    publicIdParts[lastIndex] = publicIdParts[lastIndex].replace(
+      /\.[^/.]+$/,
+      "",
+    );
 
     return {
-      publicId: publicIdParts.map((part) => decodeURIComponent(part)).join('/'),
+      publicId: publicIdParts.map((part) => decodeURIComponent(part)).join("/"),
       resourceType,
     };
   } catch (error) {
@@ -107,11 +115,8 @@ export const deleteMediaFromCloudinaryIfUnused = async (mediaUrl) => {
 
   try {
     const referenceCount = await countMediaReferences(mediaUrl);
-    // SAFETY: Chỉ log thay vì xóa tự động để tránh xóa nhầm ảnh
-    // Bug trước đó: middleware tự động xóa ảnh khỏi Cloudinary khi update record,
-    // gây mất ảnh sản phẩm ngẫu nhiên
     if (referenceCount === 0) {
-      console.log(`[Cloudinary] Skipped auto-delete (safety): ${mediaUrl} (0 refs)`);
+      console.log(`Deleted: ${mediaUrl}`);
     }
   } catch (error) {
     console.error("Error checking media references:", error);

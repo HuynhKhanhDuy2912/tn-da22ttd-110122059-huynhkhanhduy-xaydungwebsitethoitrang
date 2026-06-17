@@ -271,7 +271,7 @@ export default function AdminProductQuestionsPage() {
                             </button>
                             <button
                               onClick={() => { setAnsweringId(null); setAnswerText(""); }}
-                              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:border-gray-400 transition cursor-pointer bg-white"
+                              className="rounded-lg border border-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-700 cursor-pointer bg-red-600 font-bold"
                             >
                               Huỷ
                             </button>
