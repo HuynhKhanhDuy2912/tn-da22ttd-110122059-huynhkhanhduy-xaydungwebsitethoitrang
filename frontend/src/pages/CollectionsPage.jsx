@@ -46,7 +46,7 @@ export default function CollectionsPage() {
             </h1>
           </div>
           <p className="max-w-xl text-sm leading-6 text-gray-500">
-            Khám phá các câu chuyện thời trang được tuyển chọn theo mùa, phong cách và tinh thần riêng của từng bộ sưu tập.
+            Khám phá các câu chuyện thời trang được tuyển chọn theo mùa, phong cách và tinh thần riêng của từng bộ sưu tập. <br />
           </p>
         </div>
       </header>

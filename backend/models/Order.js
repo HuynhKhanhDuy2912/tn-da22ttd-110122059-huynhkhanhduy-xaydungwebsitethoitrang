@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema({
 
   paymentStatus: {
     type: String,
-    enum: ["pending", "paid", "failed"],
+    enum: ["pending", "paid", "failed", "refunded"],
     default: "pending"
   },
 
@@ -42,7 +42,10 @@ const orderSchema = new mongoose.Schema({
 
   completedAt: { type: Date, default: null },
   cancelledAt: { type: Date, default: null },
-  cancellationReason: { type: String, trim: true, default: "" }
+  cancellationReason: { type: String, trim: true, default: "" },
+
+  refundedAt: { type: Date, default: null },
+  refundReason: { type: String, trim: true, default: "" }
 
 }, { timestamps: true });
 

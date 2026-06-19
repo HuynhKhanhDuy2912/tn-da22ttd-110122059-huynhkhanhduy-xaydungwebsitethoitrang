@@ -10,6 +10,7 @@ import {
   getOrderDetail,
   markOrderAsReceivedByUser,
   updateAdminOrderStatus,
+  refundAdminOrder,
 } from "../services/order.service.js";
 
 const baseOrderController = createCrudControllers(Order, {
@@ -191,6 +192,28 @@ export const updateAdminOrder = async (req, res) => {
   }
 };
 
+export const refundOrder = async (req, res) => {
+  try {
+    const order = await refundAdminOrder(
+      req.params.orderId,
+      req.body.refundReason || "",
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Order refunded successfully",
+      data: order,
+    });
+  } catch (error) {
+    const statusCode = error.message === "Khôn tìm thấy đơn hàng!" ? 404 : 400;
+
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export default {
   ...baseOrderController,
   checkoutMyOrder,
@@ -202,4 +225,5 @@ export default {
   getAdminDashboardStatsHandler,
   getAdminOrderById,
   updateAdminOrder,
+  refundOrder,
 };

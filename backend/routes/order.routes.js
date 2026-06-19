@@ -13,6 +13,12 @@ router.patch(
   authorize("admin"),
   orderController.updateAdminOrder
 );
+router.patch(
+  "/admin/:orderId/refund",
+  protect,
+  authorize("admin"),
+  orderController.refundOrder
+);
 
 router.get("/me", protect, orderController.getMyOrderList);
 router.get("/me/:orderId", protect, orderController.getMyOrderById);

@@ -443,6 +443,43 @@ export const cancelOrder = async (userId, orderId, cancellationReason = "") => {
   return order;
 };
 
+export const refundAdminOrder = async (orderId, refundReason = "") => {
+  const reason = refundReason.trim();
+  if (!reason) throw new Error("Refund reason is required");
+
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Khôn tìm thấy đơn hàng!");
+
+  // Trục TIỀN: chỉ hoàn được khi đã thực sự thu tiền.
+  if (order.paymentStatus !== "paid") {
+    throw new Error("Chỉ có thể hoàn tiền cho đơn đã thanh toán");
+  }
+  // Idempotent: đã hoàn rồi thì chặn, tránh hoàn 2 lần.
+  if (order.paymentStatus === "refunded") {
+    throw new Error("Đơn hàng đã được hoàn tiền");
+  }
+
+  // Trục VẬN HÀNH: chỉ hoàn khi đơn đã kết thúc (hủy hoặc hoàn thành).
+  if (!["cancelled", "completed"].includes(order.status)) {
+    throw new Error("Đơn cần được hủy hoặc hoàn thành trước khi hoàn tiền");
+  }
+
+  // KHÔNG đụng kho ở đây: đơn 'cancelled' (từ confirmed) đã được hoàn kho
+  // trong cancelOrder/updateAdminOrderStatus. Refund chỉ xử lý TIỀN.
+
+  order.paymentStatus = "refunded";
+  order.refundedAt = new Date();
+  order.refundReason = reason;
+  await order.save();
+
+  await Payment.findOneAndUpdate(
+    { orderId: order._id },
+    { paymentStatus: "refunded" },
+  );
+
+  return order;
+};
+
 export const getAdminOrders = async () => {
   return Order.find({}).sort({ createdAt: -1 }).populate(ORDER_POPULATE);
 };

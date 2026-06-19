@@ -1180,7 +1180,7 @@ export default function ProductsPage() {
                                     handleAddToCart(product, selectedVariant)
                                   }
                                   disabled={!selectedVariant || Number(selectedVariant?.stock || 0) <= 0}
-                                  className="w-full bg-black py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-full bg-black py-2 px-2 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {Number(selectedVariant?.stock || 0) <= 0 ? "Hết hàng" : "Thêm giỏ hàng"}
                                 </button>

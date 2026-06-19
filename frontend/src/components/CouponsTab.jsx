@@ -116,6 +116,7 @@ export default function CouponsTab({ token }) {
                 coupon={coupon}
                 copiedCode={copiedCode}
                 onCopy={handleCopy}
+                onClick={() => setSelectedCoupon(coupon)}
               />
             ))}
           </div>

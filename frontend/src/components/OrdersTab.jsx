@@ -25,8 +25,16 @@ const STATUS_FILTERS = [
   { value: "confirmed", label: "Đang xử lý" },
   { value: "shipping", label: "Đang giao" },
   { value: "completed", label: "Hoàn thành" },
+  { value: "pending_review", label: "Chờ đánh giá" },
   { value: "cancelled", label: "Đã hủy" },
 ];
+
+const hasPendingReview = (order) =>
+  order.status === "completed" &&
+  order.items?.some(
+    (item) =>
+      item.productId?._id && !item.productId.isDeleted && !item.isReviewed,
+  );
 
 export default function OrdersTab({ token }) {
   const navigate = useNavigate();
@@ -72,7 +80,9 @@ export default function OrdersTab({ token }) {
     }
 
     // Filter by status
-    if (statusFilter !== "all") {
+    if (statusFilter === "pending_review") {
+      result = result.filter((order) => hasPendingReview(order));
+    } else if (statusFilter !== "all") {
       result = result.filter((order) => order.status === statusFilter);
     }
 
@@ -420,7 +430,7 @@ export default function OrdersTab({ token }) {
                                         to={`/products/${item.productId._id}?color=${encodeURIComponent(
                                           pColor,
                                         )}#reviews`}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
                                       >
                                         <Eye size={14} />
                                         Xem đánh giá
@@ -430,7 +440,7 @@ export default function OrdersTab({ token }) {
                                         to={`/products/${item.productId._id}?color=${encodeURIComponent(
                                           pColor,
                                         )}&review=true&orderId=${order._id}`}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
                                       >
                                         <Star size={14} />
                                         Đánh giá

@@ -8,6 +8,7 @@ import {
   MapPin,
   Package,
   Phone,
+  RotateCcw,
   Truck,
   User,
   Wallet,
@@ -31,27 +32,27 @@ const orderStatuses = [
 const statusMap = {
   pending: {
     label: "Chờ xác nhận",
-    className: "border-yellow-200 bg-yellow-50 text-yellow-700",
+    className: "border-yellow-200 bg-yellow-50 text-yellow-600",
     icon: Clock3,
   },
   confirmed: {
     label: "Đã xác nhận",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
+    className: "border-blue-200 bg-blue-50 text-blue-600",
     icon: CheckCircle2,
   },
   shipping: {
     label: "Đang giao",
-    className: "border-purple-200 bg-purple-50 text-purple-700",
+    className: "border-purple-200 bg-purple-50 text-purple-600",
     icon: Truck,
   },
   completed: {
     label: "Hoàn thành",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-600",
     icon: CheckCircle2,
   },
   cancelled: {
     label: "Đã hủy",
-    className: "border-gray-200 bg-gray-100 text-gray-700",
+    className: "border-red-200 bg-red-50 text-red-600",
     icon: XCircle,
   },
 };
@@ -69,10 +70,40 @@ const getAllowedStatuses = (currentStatus) => {
   return [currentStatus, ...nextStatuses];
 };
 
-const paymentStatusText = {
-  pending: "Chờ thanh toán",
-  paid: "Đã thanh toán",
-  failed: "Thanh toán thất bại",
+const paymentStatusMap = {
+  pending: {
+    label: "Chờ thanh toán",
+    className: "border-yellow-200 bg-yellow-50 text-yellow-600",
+    icon: Clock3,
+  },
+  paid: {
+    label: "Đã thanh toán",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-600",
+    icon: CheckCircle2,
+  },
+  failed: {
+    label: "Thanh toán thất bại",
+    className: "border-red-200 bg-red-50 text-red-600",
+    icon: XCircle,
+  },
+  refunded: {
+    label: "Đã hoàn tiền",
+    className: "border-purple-200 bg-purple-50 text-purple-600",
+    icon: RotateCcw,
+  },
+};
+
+const getRefundEligibility = (order) => {
+  if (order.paymentStatus === "refunded") {
+    return { ok: false, reason: "Đơn hàng đã được hoàn tiền" };
+  }
+  if (order.paymentStatus !== "paid") {
+    return { ok: false, reason: "Đơn hàng chưa thanh toán, không thể hoàn tiền" };
+  }
+  if (!["cancelled", "completed"].includes(order.status)) {
+    return { ok: false, reason: "Đơn cần được hủy hoặc hoàn thành trước khi hoàn tiền" };
+  }
+  return { ok: true, reason: "" };
 };
 
 const paymentMethodText = {
@@ -106,6 +137,10 @@ export default function AdminOrderDetailPage() {
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refunding, setRefunding] = useState(false);
 
   const loadOrderDetail = async () => {
     try {
@@ -172,6 +207,40 @@ export default function AdminOrderDetailPage() {
     closeCancelModal();
   };
 
+  const closeRefundModal = () => {
+    if (refunding) return;
+    setShowRefundModal(false);
+    setRefundReason("");
+  };
+
+  const confirmRefundOrder = async () => {
+    if (refunding) return;
+    if (!getRefundEligibility(order).ok) return;
+
+    const reason = refundReason.trim();
+    if (!reason) {
+      toast.error("Vui lòng nhập lý do hoàn tiền");
+      return;
+    }
+
+    try {
+      setRefunding(true);
+      await apiRequest(`/orders/admin/${orderId}/refund`, {
+        method: "PATCH",
+        token,
+        body: { refundReason: reason },
+      });
+      toast.success("Hoàn tiền đơn hàng thành công");
+      setShowRefundModal(false);
+      setRefundReason("");
+      await loadOrderDetail();
+    } catch (requestError) {
+      toast.error(requestError.message || "Hoàn tiền thất bại");
+    } finally {
+      setRefunding(false);
+    }
+  };
+
   if (loading) {
     return (
       <section className="min-h-screen bg-slate-50 p-6">
@@ -216,8 +285,11 @@ export default function AdminOrderDetailPage() {
 
   const statusConfig = statusMap[order.status] || statusMap.pending;
   const StatusIcon = statusConfig.icon;
+  const paymentConfig = paymentStatusMap[order.paymentStatus] || paymentStatusMap.pending;
+  const PaymentIcon = paymentConfig.icon;
   const allowedStatuses = getAllowedStatuses(order.status);
   const isFinalStatus = ["completed", "cancelled"].includes(order.status);
+  const refundEligibility = getRefundEligibility(order);
 
   return (
     <section className="min-h-screen bg-slate-50 p-6">
@@ -311,39 +383,40 @@ export default function AdminOrderDetailPage() {
                     onChange={(event) => handleStatusChange(event.target.value)}
                     className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-slate-900 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                   >
-                    {orderStatuses
-                      .filter((status) =>
-                        allowedStatuses.includes(status.value),
-                      )
-                      .map((status) => (
-                        <option key={status.value} value={status.value}>
+                    {orderStatuses.map((status) => {
+                      const isAllowed = allowedStatuses.includes(status.value);
+                      return (
+                        <option
+                          key={status.value}
+                          value={status.value}
+                          disabled={!isAllowed}
+                        >
                           {status.label}
+                          {!isAllowed ? " (không khả dụng)" : ""}
                         </option>
-                      ))}
+                      );
+                    })}
                   </select>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500">Trạng thái hiện tại</p>
-                    <p className="mt-1 font-bold text-slate-900">
+                    <p className={`inline-flex items-center gap-2 py-2 text-sm font-bold ${statusConfig.className}`}>
+                      <StatusIcon className="h-4 w-4" />
                       {statusConfig.label}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500">Trạng thái thanh toán</p>
+
                     <p
-                      className={`mt-1 font-bold ${order.paymentStatus === "paid"
-                        ? "text-emerald-600"
-                        : order.paymentStatus === "failed"
-                          ? "text-red-600"
-                          : "text-amber-600"
-                        }`}
+                      className={`inline-flex items-center gap-2 py-2 text-sm font-bold ${paymentConfig.className}`}
                     >
-                      {paymentStatusText[order.paymentStatus] ||
-                        order.paymentStatus ||
-                        "-"}
+                      <PaymentIcon className="h-4 w-4" />
+
+                      {paymentConfig.label}
                     </p>
                   </div>
                 </div>
@@ -373,6 +446,44 @@ export default function AdminOrderDetailPage() {
                     Hủy: {formatDateTime(order.cancelledAt)}
                   </span>
                 )}
+                {order.refundedAt && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 font-medium text-rose-700">
+                    <RotateCcw className="h-4 w-4" />
+                    Hoàn tiền: {formatDateTime(order.refundedAt)}
+                  </span>
+                )}
+              </div>
+
+              {order.paymentStatus === "refunded" && order.refundReason && (
+                <div className="mt-5 rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                  <p className="text-sm font-bold text-rose-900">Lý do hoàn tiền</p>
+                  <p className="mt-1 text-sm leading-relaxed text-rose-700">
+                    {order.refundReason}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Hoàn tiền cho khách</p>
+                  {!refundEligibility.ok && (
+                    <p className="mt-0.5 text-xs text-slate-400">{refundEligibility.reason}</p>
+                  )}
+                </div>
+                <span title={!refundEligibility.ok ? refundEligibility.reason : ""}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRefundReason("");
+                      setShowRefundModal(true);
+                    }}
+                    disabled={!refundEligibility.ok || refunding}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 sm:w-auto"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Hoàn tiền
+                  </button>
+                </span>
               </div>
             </div>
           </section>
@@ -571,9 +682,7 @@ export default function AdminOrderDetailPage() {
                     "-"}
                 </p>
                 <p className="mt-1 text-sm text-slate-300">
-                  {paymentStatusText[order.paymentStatus] ||
-                    order.paymentStatus ||
-                    "-"}
+                  {paymentConfig.label || order.paymentStatus || "-"}
                 </p>
               </div>
 
@@ -679,6 +788,74 @@ export default function AdminOrderDetailPage() {
                 className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 {updating ? "Đang xử lý..." : "Xác nhận hủy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Hoàn tiền đơn hàng</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Xác nhận hoàn lại tiền cho khách hàng
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeRefundModal}
+                className="grid h-9 w-9 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-rose-900">Số tiền hoàn</span>
+                  <span className="text-lg font-bold text-rose-700">
+                    {formatCurrency(order.totalPrice)}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-rose-600">
+                  Đơn #{order._id.slice(-8).toUpperCase()} · Hoàn toàn bộ giá trị đã thanh toán
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Lý do hoàn tiền <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={refundReason}
+                  onChange={(event) => setRefundReason(event.target.value)}
+                  rows={4}
+                  placeholder="Ví dụ: Khách trả hàng do sản phẩm bị lỗi"
+                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeRefundModal}
+                disabled={refunding}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={confirmRefundOrder}
+                disabled={refunding}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {refunding ? "Đang xử lý..." : "Xác nhận hoàn tiền"}
               </button>
             </div>
           </div>
