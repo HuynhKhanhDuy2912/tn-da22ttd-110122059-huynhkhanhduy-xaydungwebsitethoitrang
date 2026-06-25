@@ -9,10 +9,26 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 
+// Danh sách các origin được phép truy cập
+const allowedOrigins = [
+  "https://kd-fashion-store.pages.dev",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: "https://kd-fashion-store.pages.dev",
-    //origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: function (origin, callback) {
+      // Cho phép requests không có origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      // Cho phép domain chính và tất cả preview deployments của Cloudflare Pages
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".kd-fashion-store.pages.dev")
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
