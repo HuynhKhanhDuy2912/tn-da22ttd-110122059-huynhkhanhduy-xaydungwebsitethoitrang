@@ -219,6 +219,8 @@ export default function ProductsPage() {
     soldOnly: searchParams.get("bestSeller") === "1",
     discountOnly:
       searchParams.get("sale") === "1" || searchParams.get("tag") === "uu-dai",
+    minPrice: "",
+    maxPrice: "",
   });
 
   const selectedCategoryId = searchParams.get("categoryId") || "";
@@ -562,6 +564,8 @@ export default function ProductsPage() {
       occasion: "",
       soldOnly: isBestSellerContext,
       discountOnly: isSaleContext,
+      minPrice: "",
+      maxPrice: "",
     });
     setSortBy("newest");
   };
@@ -584,6 +588,15 @@ export default function ProductsPage() {
       : null,
     filters.occasion
       ? { key: "occasion", label: `Dịp sử dụng: ${getOccasionLabel(filters.occasion)}` }
+      : null,
+    filters.discountOnly && !isSaleContext
+      ? { key: "discountOnly", label: "Đang giảm giá" }
+      : null,
+    filters.minPrice || filters.maxPrice
+      ? {
+        key: "price",
+        label: `Giá: ${filters.minPrice ? formatPrice(filters.minPrice) : "0 đ"} – ${filters.maxPrice ? formatPrice(filters.maxPrice) : "∞"}`,
+      }
       : null,
     sortBy !== "newest"
       ? { key: "sort", label: `Sắp xếp: ${sortLabelMap[sortBy]}` }
@@ -621,6 +634,14 @@ export default function ProductsPage() {
       if (next.get("tag") === "uu-dai") next.delete("tag");
       setSearchParams(next);
       setFilters((current) => ({ ...current, discountOnly: false }));
+      return;
+    }
+    if (key === "discountOnly") {
+      setFilters((current) => ({ ...current, discountOnly: false }));
+      return;
+    }
+    if (key === "price") {
+      setFilters((current) => ({ ...current, minPrice: "", maxPrice: "" }));
       return;
     }
     setFilters((current) => ({ ...current, [key]: "" }));
@@ -733,15 +754,18 @@ export default function ProductsPage() {
                     key={item._id}
                     className="inline-flex items-center gap-3"
                   >
-                    <span
-                      className={
-                        index === breadcrumbPath.length - 1
-                          ? "font-semibold text-black"
-                          : "text-gray-600"
-                      }
-                    >
-                      {item.name}
-                    </span>
+                    {index === breadcrumbPath.length - 1 ? (
+                      <span className="font-semibold text-black">
+                        {item.name}
+                      </span>
+                    ) : (
+                      <Link
+                        to={`/products?category=${item._id}`}
+                        className="text-gray-600 hover:text-black"
+                      >
+                        {item.name}
+                      </Link>
+                    )}
                     {index !== breadcrumbPath.length - 1 ? (
                       <span className="text-gray-400">&gt;</span>
                     ) : null}
@@ -940,14 +964,66 @@ export default function ProductsPage() {
               </select>
             </label>
 
-            <div className="col-span-full flex justify-end">
-              <button
-                type="button"
-                className="border border-black px-4 py-2 text-[13px] font-bold transition hover:bg-black hover:text-white"
-                onClick={clearFiltersKeepCategory}
-              >
-                Xóa bộ lọc
-              </button>
+            <div className="col-span-full flex flex-wrap items-end gap-5">
+              <div className="flex items-end gap-2">
+                <div>
+                  <span className={labelClass}>Giá từ</span>
+                  <input
+                    type="number"
+                    min="0"
+                    className={`${inputClass} w-[140px]`}
+                    placeholder="0"
+                    value={filters.minPrice}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        minPrice: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <span className="pb-2.5 text-gray-400">–</span>
+                <div>
+                  <span className={labelClass}>Giá đến</span>
+                  <input
+                    type="number"
+                    min="0"
+                    className={`${inputClass} w-[140px]`}
+                    placeholder="∞"
+                    value={filters.maxPrice}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        maxPrice: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={filters.discountOnly}
+                  onChange={(e) =>
+                    setFilters((current) => ({
+                      ...current,
+                      discountOnly: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4"
+                />
+                Chỉ sản phẩm đang giảm giá
+              </label>
+
+              <div className="ml-auto">
+                <button
+                  type="button"
+                  className="border border-black px-4 py-2 text-[13px] font-bold transition hover:bg-black hover:text-white"
+                  onClick={clearFiltersKeepCategory}
+                >
+                  Xóa bộ lọc
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

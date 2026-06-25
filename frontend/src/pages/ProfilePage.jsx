@@ -629,7 +629,7 @@ export default function ProfilePage() {
             )}
 
             {activeTab === "address" && (
-              <AddressManager token={token} />
+              <AddressManager token={token} user={user} />
             )}
 
             {activeTab === "coupons" && (

@@ -51,13 +51,41 @@ export function filterProducts(products, filters) {
         (variant) => Number(variant.discount || 0) > 0,
       );
 
+    // Lọc theo khoảng giá hiển thị (giá đã giảm)
+    let matchesPrice = true;
+    if (filters.minPrice || filters.maxPrice) {
+      const basePrice = Number(product.price || 0);
+      const variants = product.availableVariants || [];
+      const firstVariant = variants[0] || null;
+      const priceAdjustment = Number(firstVariant?.priceAdjustment || 0);
+      const priceBeforeDiscount = basePrice + priceAdjustment;
+      const productDiscount = product.discount || 0;
+      const variantDiscount = firstVariant?.discount;
+      const effectiveDiscount =
+        variantDiscount !== null && variantDiscount !== undefined
+          ? variantDiscount
+          : productDiscount;
+      const displayPrice =
+        effectiveDiscount > 0
+          ? Math.round(priceBeforeDiscount * (1 - effectiveDiscount / 100))
+          : priceBeforeDiscount;
+
+      if (filters.minPrice && displayPrice < Number(filters.minPrice)) {
+        matchesPrice = false;
+      }
+      if (filters.maxPrice && displayPrice > Number(filters.maxPrice)) {
+        matchesPrice = false;
+      }
+    }
+
     return (
       matchesSearch &&
       matchesStyle &&
       matchesGender &&
       matchesOccasion &&
       matchesSoldOnly &&
-      matchesDiscountOnly
+      matchesDiscountOnly &&
+      matchesPrice
     );
   });
 }

@@ -127,9 +127,9 @@ function FacebookLogo({ className }) {
 }
 
 const footerSocials = [
-  { label: "Instagram", icon: InstagramLogo, href: "https://instagram.com" },
-  { label: "TikTok", icon: TikTokLogo, href: "https://tiktok.com" },
-  { label: "Facebook", icon: FacebookLogo, href: "https://facebook.com" },
+  { label: "Instagram", icon: InstagramLogo, href: "https://www.instagram.com/khanhduy.2912?igsh=MTl1d3J2NGx0cXg3eQ==" },
+  { label: "TikTok", icon: TikTokLogo, href: "https://www.tiktok.com/@khanhduy291204" },
+  { label: "Facebook", icon: FacebookLogo, href: "https://www.facebook.com/share/1PtKjq2TYg/" },
 ];
 
 function HighlightIcon({ type }) {
@@ -629,14 +629,14 @@ export default function Layout() {
               <div className="mt-6 space-y-3 text-sm text-white/70">
                 <div className="flex items-start gap-3">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                  <span>123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh</span>
+                  <span>Thành Thới, Vĩnh Long, Việt Nam</span>
                 </div>
                 <a
-                  href="tel:0901234567"
+                  href="tel:0972144904"
                   className="flex items-center gap-3 transition hover:text-white"
                 >
                   <Phone className="h-4 w-4 shrink-0 text-white" />
-                  <span>0901 234 567</span>
+                  <span>0972 144 904</span>
                 </a>
                 <a
                   href="mailto:support@fashionstore.vn"

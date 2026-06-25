@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Loader2, Plus, Trash2, X } from "lucide-react";
 import { apiRequest } from "../lib/api.js";
 
-export default function AddressManager({ token }) {
+export default function AddressManager({ token, user }) {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -167,21 +167,54 @@ export default function AddressManager({ token }) {
       }
     } else {
       setEditingId(null);
+
+      // Pre-fill from user profile
+      let prefillLastName = "";
+      let prefillFirstName = "";
+      let prefillPhone = "";
+      let prefillProvince = "";
+      let prefillProvinceId = "";
+
+      if (user) {
+        const fullname = (user.fullname || "").trim();
+        if (fullname) {
+          const parts = fullname.split(" ");
+          prefillFirstName = parts.length > 1 ? parts[parts.length - 1] : parts[0] || "";
+          prefillLastName = parts.length > 1 ? parts.slice(0, -1).join(" ") : "";
+        }
+        prefillPhone = (user.phone_number || "").replace(/^\+84/, "0");
+
+        if (user.city && provinces.length > 0) {
+          const matchedProvince = provinces.find((p) => 
+            p.ProvinceName.toLowerCase().includes(user.city.toLowerCase()) || 
+            user.city.toLowerCase().includes(p.ProvinceName.toLowerCase())
+          );
+          if (matchedProvince) {
+            prefillProvince = matchedProvince.ProvinceName;
+            prefillProvinceId = matchedProvince.ProvinceID;
+            await loadDistricts(matchedProvince.ProvinceID);
+          }
+        }
+      }
+
+      // Auto-set default if this will be the first address
+      const shouldBeDefault = addresses.length === 0;
+
       setFormData({
-        lastName: "",
-        firstName: "",
-        phoneNumber: "",
-        province: "",
+        lastName: prefillLastName,
+        firstName: prefillFirstName,
+        phoneNumber: prefillPhone,
+        province: prefillProvince,
         district: "",
         ward: "",
         street: "",
         addressDetail: "",
-        isDefault: false,
-        provinceId: "",
+        isDefault: shouldBeDefault,
+        provinceId: prefillProvinceId,
         districtId: "",
         wardCode: ""
       });
-      setDistricts([]);
+      if (!prefillProvinceId) setDistricts([]);
       setWards([]);
     }
     setShowModal(true);

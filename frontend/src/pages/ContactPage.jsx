@@ -44,14 +44,14 @@ const directContacts = [
     icon: Phone,
     title: "Hotline",
     items: [
-      { label: "Bán hàng / Khiếu nại", value: "0901 234 567", href: "tel:+84901234567" },
+      { label: "Bán hàng / Khiếu nại", value: "0972 144 904", href: "tel:+84972144904" },
     ],
   },
   {
     icon: MapPin,
     title: "Cửa hàng",
     items: [
-      { label: "Địa chỉ", value: "123 Nguyễn Trãi, Quận 1, TP. Hồ Chí Minh", href: "https://www.google.com/maps/search/?api=1&query=123%20Nguyen%20Trai%20Quan%201%20TP%20Ho%20Chi%20Minh" },
+      { label: "Địa chỉ", value: "Thành Thới, Vĩnh Long, Việt Nam", href: "https://www.google.com/maps?q=Thành+Thới,+Vĩnh+Long,+Việt+Nam&output=embed" },
     ],
   },
   {
@@ -97,9 +97,9 @@ function FacebookLogo({ className }) {
 }
 
 const socialLinks = [
-  { label: "Instagram", icon: InstagramLogo, href: "https://instagram.com" },
-  { label: "TikTok", icon: TikTokLogo, href: "https://tiktok.com" },
-  { label: "Facebook", icon: FacebookLogo, href: "https://facebook.com" },
+  { label: "Instagram", icon: InstagramLogo, href: "https://www.instagram.com/khanhduy.2912?igsh=MTl1d3J2NGx0cXg3eQ==" },
+  { label: "TikTok", icon: TikTokLogo, href: "https://www.tiktok.com/@khanhduy291204" },
+  { label: "Facebook", icon: FacebookLogo, href: "https://www.facebook.com/share/1PtKjq2TYg/" },
 ];
 
 function validate(values) {
@@ -365,7 +365,7 @@ export default function ContactPage() {
           <div className="min-h-[360px] overflow-hidden border border-[#E4DED6] bg-white">
             <iframe
               title="FashionStore location"
-              src="https://www.google.com/maps?q=123%20Nguyen%20Trai%2C%20Quan%201%2C%20Ho%20Chi%20Minh%20City&output=embed"
+              src="https://www.google.com/maps?q=Thành+Thới,+Vĩnh+Long,+Việt+Nam&output=embed"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="h-full min-h-[360px] w-full border-0"

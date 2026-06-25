@@ -24,6 +24,10 @@ export default function AdminInventoryHistoryPage() {
     endDate: "",
   });
 
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportRange, setExportRange] = useState("all");
+  const [exportDates, setExportDates] = useState({ startDate: "", endDate: "" });
+
   useEffect(() => {
     loadTransactions();
   }, [token]);
@@ -49,13 +53,29 @@ export default function AdminInventoryHistoryPage() {
     }
   };
 
-  const handleExport = async () => {
+  const confirmExport = async () => {
     try {
       setExporting(true);
       const params = new URLSearchParams();
       if (filters.type) params.append("type", filters.type);
-      if (filters.startDate) params.append("startDate", filters.startDate);
-      if (filters.endDate) params.append("endDate", filters.endDate);
+
+      const now = new Date();
+      let start = "";
+      let end = "";
+
+      if (exportRange === "thisMonth") {
+        start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+      } else if (exportRange === "lastMonth") {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+        end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+      } else if (exportRange === "custom") {
+        start = exportDates.startDate;
+        end = exportDates.endDate;
+      }
+
+      if (start) params.append("startDate", start);
+      if (end) params.append("endDate", end);
 
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/inventory/transactions/export?${params.toString()}`,
@@ -81,6 +101,7 @@ export default function AdminInventoryHistoryPage() {
       document.body.removeChild(a);
 
       toast.success("Xuất file thành công");
+      setShowExportModal(false);
     } catch (e) {
       toast.error("Không thể xuất file");
     } finally {
@@ -150,12 +171,11 @@ export default function AdminInventoryHistoryPage() {
         description="Xem lịch sử nhập xuất và điều chỉnh tồn kho"
         aside={
           <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition"
           >
             <Download className="w-4 h-4" />
-            {exporting ? "Đang xuất..." : "Xuất CSV"}
+            Xuất CSV
           </button>
         }
       />
@@ -413,6 +433,79 @@ export default function AdminInventoryHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-xl font-bold text-gray-900">Tùy chọn xuất file CSV</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Thời gian xuất dữ liệu
+                </label>
+                <select
+                  value={exportRange}
+                  onChange={(e) => setExportRange(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-black"
+                >
+                  <option value="all">Toàn bộ dữ liệu</option>
+                  <option value="thisMonth">Tháng này</option>
+                  <option value="lastMonth">Tháng trước</option>
+                  <option value="custom">Tùy chỉnh khoảng thời gian</option>
+                </select>
+              </div>
+
+              {exportRange === "custom" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500">Từ ngày</label>
+                    <input
+                      type="date"
+                      value={exportDates.startDate}
+                      onChange={(e) => setExportDates({ ...exportDates, startDate: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500">Đến ngày</label>
+                    <input
+                      type="date"
+                      value={exportDates.endDate}
+                      onChange={(e) => setExportDates({ ...exportDates, endDate: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-black"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmExport}
+                disabled={exporting || (exportRange === "custom" && (!exportDates.startDate || !exportDates.endDate))}
+                className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {exporting ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  "Xác nhận xuất"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

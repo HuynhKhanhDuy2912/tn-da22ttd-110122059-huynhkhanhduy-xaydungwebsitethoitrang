@@ -10,13 +10,14 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [lastCheckedAt, setLastCheckedAt] = useState(null);
+  const lastCheckedAtRef = useRef(null);
   const timerRef = useRef(null);
+  const focusHandlerRef = useRef(null);
 
   const resetNotifications = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);
-    setLastCheckedAt(null);
+    lastCheckedAtRef.current = null;
   }, []);
 
   const fetchUnreadCount = useCallback(async () => {
@@ -46,8 +47,8 @@ export function NotificationProvider({ children }) {
       const query = new URLSearchParams();
       query.set("limit", "50");
 
-      if (onlyNew && lastCheckedAt) {
-        query.set("lastCheckedAt", lastCheckedAt);
+      if (onlyNew && lastCheckedAtRef.current) {
+        query.set("lastCheckedAt", lastCheckedAtRef.current);
       }
 
       const response = await apiRequest(`/notifications?${query.toString()}`, { token });
@@ -63,7 +64,7 @@ export function NotificationProvider({ children }) {
         setNotifications(incoming);
       }
 
-      setLastCheckedAt(new Date().toISOString());
+      lastCheckedAtRef.current = new Date().toISOString();
       await fetchUnreadCount();
     } catch (_error) {
       if (!onlyNew) {
@@ -72,7 +73,7 @@ export function NotificationProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchUnreadCount, isAuthenticated, lastCheckedAt, resetNotifications, token, user?.role]);
+  }, [fetchUnreadCount, isAuthenticated, resetNotifications, token, user?.role]);
 
   const markNotificationAsRead = useCallback(async (notificationId) => {
     if (!notificationId || !token) return;
@@ -150,19 +151,39 @@ export function NotificationProvider({ children }) {
 
     fetchNotifications({ onlyNew: false });
 
-    timerRef.current = setInterval(() => {
-      fetchNotifications({ onlyNew: true });
-    }, 30000);
+    const startPolling = () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        fetchNotifications({ onlyNew: true });
+      }, 30000);
+    };
 
-    const onFocus = () => fetchNotifications({ onlyNew: true });
-    window.addEventListener("focus", onFocus);
-
-    return () => {
+    const stopPolling = () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      window.removeEventListener("focus", onFocus);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications({ onlyNew: true });
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    focusHandlerRef.current = () => fetchNotifications({ onlyNew: true });
+
+    startPolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", focusHandlerRef.current);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", focusHandlerRef.current);
     };
   }, [fetchNotifications, isAuthenticated, resetNotifications, token, user?.role]);
 
