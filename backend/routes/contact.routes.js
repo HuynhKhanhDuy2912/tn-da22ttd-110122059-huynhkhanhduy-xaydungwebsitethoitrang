@@ -10,5 +10,6 @@ router.get("/unread-count", protect, authorize("admin"), contactController.getUn
 router.get("/:id", protect, authorize("admin"), contactController.getContactRequestById);
 router.patch("/:id/read", protect, authorize("admin"), contactController.markContactRequestAsRead);
 router.post("/:id/reply", protect, authorize("admin"), contactController.replyContactRequest);
+router.delete("/:id", protect, authorize("admin"), contactController.deleteContactRequest);
 
 export default router;

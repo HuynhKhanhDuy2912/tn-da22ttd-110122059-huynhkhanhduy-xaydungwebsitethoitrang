@@ -52,9 +52,10 @@ function distributeIntoColumns(items, columnCount = 4) {
 }
 
 const highlightItems = [
+  { key: "all", label: "Tất cả sản phẩm", type: "all" },
   { key: "new", label: "Hàng Mới", type: "new" },
   { key: "sale", label: "Ưu đãi", type: "sale" },
-  { key: "best-seller", label: "Bán Chạy", type: "hot" },
+  { key: "best-seller", label: "Bán Chạy", type: "hot" }
 ];
 
 const footerShopLinks = [
@@ -138,7 +139,7 @@ const footerSocials = [
 function HighlightIcon({ type }) {
   if (type === "new") {
     return (
-      <div className="grid h-10 w-10 place-items-center bg-green-700 text-[11px] font-bold uppercase text-white">
+      <div className="grid h-10 w-10 place-items-center bg-[#389E0D] text-[11px] font-bold uppercase text-white">
         NEW
       </div>
     );
@@ -146,7 +147,7 @@ function HighlightIcon({ type }) {
 
   if (type === "sale") {
     return (
-      <div className="grid h-10 w-10 place-items-center bg-orange-600 text-[11px] font-bold uppercase text-white">
+      <div className="grid h-10 w-10 place-items-center bg-[#F7811E] text-[11px] font-bold uppercase text-white">
         SALE
       </div>
     );
@@ -154,15 +155,15 @@ function HighlightIcon({ type }) {
 
   if (type === "hot") {
     return (
-      <div className="grid h-10 w-10 place-items-center bg-red-500 text-[11px] font-bold uppercase text-white">
+      <div className="grid h-10 w-10 place-items-center bg-[#F41C11] text-[11px] font-bold uppercase text-white">
         HOT
       </div>
     );
   }
 
   return (
-    <div className="grid h-10 w-10 place-items-center text-blue-600">
-      <Store size={26} strokeWidth={1.8} />
+    <div className="grid h-10 w-10 place-items-center bg-[#2563EB] text-[11px] font-bold uppercase text-white">
+      ALL
     </div>
   );
 }

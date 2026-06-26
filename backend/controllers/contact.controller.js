@@ -284,6 +284,29 @@ export const replyContactRequest = async (req, res) => {
   }
 };
 
+export const deleteContactRequest = async (req, res) => {
+  try {
+    const contactRequest = await ContactRequest.findByIdAndDelete(req.params.id);
+
+    if (!contactRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tin nhắn liên hệ.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Đã xóa tin nhắn liên hệ.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export default {
   createContactRequest,
   getContactRequests,
@@ -291,4 +314,5 @@ export default {
   getContactRequestById,
   markContactRequestAsRead,
   replyContactRequest,
+  deleteContactRequest,
 };

@@ -200,3 +200,15 @@ export const show = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+// DELETE /product-questions/:id
+export const deleteQuestion = async (req, res) => {
+  try {
+    const q = await ProductQuestion.findByIdAndDelete(req.params.id);
+    if (!q) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy câu hỏi." });
+    }
+    return res.status(200).json({ success: true, message: "Đã xóa câu hỏi." });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

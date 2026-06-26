@@ -16,6 +16,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { getPaginationRange } from "../../lib/pagination.js";
 import toast from "react-hot-toast";
@@ -52,6 +54,10 @@ export default function AdminProductQuestionsPage() {
   const [answeringId, setAnsweringId] = useState(null);
   const [answerText, setAnswerText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Delete state
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const loadQuestions = useCallback(
     async (page = 1) => {
@@ -121,6 +127,25 @@ export default function AdminProductQuestionsPage() {
       loadQuestions(pagination.page);
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      setIsDeleting(true);
+      await apiRequest(`/product-questions/${deleteConfirm._id}`, {
+        method: "DELETE",
+        token,
+      });
+      toast.success("Đã xóa câu hỏi.");
+      setDeleteConfirm(null);
+      loadQuestions(pagination.page);
+    } catch (err) {
+      toast.error(err.message || "Không thể xóa câu hỏi.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,6 +347,13 @@ export default function AdminProductQuestionsPage() {
                         >
                           {q.isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
                         </button>
+                        <button
+                          onClick={() => setDeleteConfirm(q)}
+                          className="rounded-lg border border-red-200 px-2 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 cursor-pointer"
+                          title="Xóa câu hỏi"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -379,6 +411,42 @@ export default function AdminProductQuestionsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-gray-300 bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900">Xóa câu hỏi</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Bạn có chắc chắn muốn xóa câu hỏi này?
+            </p>
+            <p className="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">
+              {deleteConfirm.question}
+            </p>
+            <p className="mt-2 flex gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn câu hỏi này.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex flex-1 items-center justify-center gap-2 rounded bg-red-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {isDeleting ? "Đang xóa..." : "Xóa"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={isDeleting}
+                className="flex-1 rounded border border-gray-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

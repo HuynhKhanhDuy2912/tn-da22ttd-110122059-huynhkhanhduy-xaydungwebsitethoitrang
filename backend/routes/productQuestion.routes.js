@@ -17,5 +17,6 @@ router.post("/", protect, questionController.create);
 router.patch("/:id/answer", protect, authorize("admin"), questionController.answer);
 router.patch("/:id/hide",   protect, authorize("admin"), questionController.hide);
 router.patch("/:id/show",   protect, authorize("admin"), questionController.show);
+router.delete("/:id", protect, authorize("admin"), questionController.deleteQuestion);
 
 export default router;

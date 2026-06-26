@@ -11,6 +11,8 @@ import {
   Search,
   Send,
   User,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import AdminPageHeader from "../../components/AdminPageHeader.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -80,6 +82,8 @@ export default function AdminContactMessagesPage() {
     message: "",
   });
   const [replying, setReplying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -91,7 +95,7 @@ export default function AdminContactMessagesPage() {
       const response = await apiRequest(`/contact?${params.toString()}`, { token });
       setMessages(response.data || []);
     } catch (error) {
-      toast.error(error.message || "Không thể tải danh sách tin nhắn.");
+      toast.error(error.message || "Không thể tải danh sách yêu cầu.");
     } finally {
       setLoadingList(false);
     }
@@ -120,7 +124,7 @@ export default function AdminContactMessagesPage() {
         loadMessages();
       }
     } catch (error) {
-      toast.error(error.message || "Không thể tải tin nhắn.");
+      toast.error(error.message || "Không thể tải yêu cầu.");
       setSelectedMessage(null);
     } finally {
       setLoadingDetail(false);
@@ -198,11 +202,32 @@ export default function AdminContactMessagesPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!selectedMessage) return;
+
+    try {
+      setIsDeleting(true);
+      await apiRequest(`/contact/${selectedMessage._id}`, {
+        method: "DELETE",
+        token,
+      });
+      toast.success("Đã xóa yêu cầu liên hệ.");
+      setSelectedMessage(null);
+      setDeleteConfirm(false);
+      navigate("/admin/contact-messages");
+      loadMessages();
+    } catch (error) {
+      toast.error(error.message || "Không thể xóa yêu cầu.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <section className="grid gap-4 p-6">
       <AdminPageHeader
-        title="QUẢN LÝ TIN NHẮN LIÊN HỆ"
-        description={`${stats.total} tin nhắn, ${stats.unread} chưa đọc, ${stats.unresolved} chưa hoàn tất`}
+        title="QUẢN LÝ YÊU CẦU LIÊN HỆ"
+        description={`${stats.total} yêu cầu, ${stats.unread} chưa đọc, ${stats.unresolved} chưa hoàn tất`}
       />
 
       <div className="grid gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -244,7 +269,7 @@ export default function AdminContactMessagesPage() {
             {loadingList ? (
               <div className="px-4 py-12 text-center text-sm text-gray-500">Đang tải hộp thư...</div>
             ) : messages.length === 0 ? (
-              <div className="px-4 py-12 text-center text-sm text-gray-500">Chưa có tin nhắn liên hệ</div>
+              <div className="px-4 py-12 text-center text-sm text-gray-500">Chưa có yêu cầu liên hệ</div>
             ) : (
               messages.map((item) => (
                 <button
@@ -282,7 +307,7 @@ export default function AdminContactMessagesPage() {
             <div className="grid h-full min-h-[620px] place-items-center px-6 text-center">
               <div>
                 <Inbox className="mx-auto h-12 w-12 text-gray-300" />
-                <h2 className="mt-4 text-md font-bold text-black">Chọn một tin nhắn để xem chi tiết</h2>
+                <h2 className="mt-4 text-md font-bold text-black">Chọn một yêu cầu để xem chi tiết</h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-gray-500">
                   Tin mới từ trang liên hệ sẽ xuất hiện ở đây để bạn theo dõi và xử lý.
                 </p>
@@ -293,7 +318,7 @@ export default function AdminContactMessagesPage() {
           ) : !selectedMessage ? (
             <div className="grid min-h-[620px] place-items-center px-6 text-center">
               <div>
-                <h2 className="text-lg font-bold text-black">Không tìm thấy tin nhắn</h2>
+                <h2 className="text-xl font-bold text-black">Không tìm thấy yêu cầu</h2>
                 <Link to="/admin/contact-messages" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
                   <ArrowLeft className="h-4 w-4" />
                   Quay lại hộp thư
@@ -314,6 +339,15 @@ export default function AdminContactMessagesPage() {
                   <p className="mt-1 text-sm text-gray-500">Gửi lúc {formatDateTime(selectedMessage.createdAt)}</p>
                 </div>
 
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Xóa yêu cầu
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -330,7 +364,7 @@ export default function AdminContactMessagesPage() {
               <section className="grid gap-4">
                 <div className="flex items-center gap-2">
                   <MessageSquareReply className="h-5 w-5 text-gray-500" />
-                  <h2 className="text-lg font-bold text-black">Phản hồi</h2>
+                  <h2 className="text-xl font-bold text-black">Phản hồi</h2>
                 </div>
 
                 {selectedMessage.replies?.length ? (
@@ -402,6 +436,41 @@ export default function AdminContactMessagesPage() {
           )}
         </main>
       </div>
+
+      {deleteConfirm && selectedMessage ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-gray-300 bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900">Xóa yêu cầu liên hệ</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Bạn có chắc chắn muốn xóa yêu cầu này?
+            </p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">
+              {selectedMessage.ticketCode} - {selectedMessage.topic}
+            </p>
+            <p className="mt-2 flex gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Hành động này không thể hoàn tác và mọi lịch sử phản hồi cũng sẽ bị xóa.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex flex-1 items-center justify-center gap-2 rounded bg-red-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {isDeleting ? "Đang xóa..." : "Xóa"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="flex-1 rounded border border-gray-300 bg-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
