@@ -88,6 +88,8 @@ Xây dựng hệ thống thương mại điện tử thời trang tích hợp tr
 
 ![Dashboard](docs/images/system-architecture.png)
 
+---
+
 ### 📂 Database Schema (MongoDB)
 
 ![Dashboard](docs/images/erd.png)
